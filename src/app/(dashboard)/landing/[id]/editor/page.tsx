@@ -515,10 +515,14 @@ export default function LandingEditorPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] text-xs font-medium transition-colors">
+          <Link
+            href="/l/faja-reductora-premium"
+            target="_blank"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] text-xs font-medium transition-colors"
+          >
             <Eye size={13} />
             <span className="hidden sm:inline">Vista previa</span>
-          </button>
+          </Link>
           <button
             onClick={() => setPublished(!published)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${

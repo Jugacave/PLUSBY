@@ -361,11 +361,14 @@ function LandingCard({
         >
           Editar
         </Link>
-        {landing.published && (
-          <button className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-[#2A2A3A] hover:border-[#3A3A4A] text-[#8888A0] hover:text-[#F0F0F5] text-xs font-medium transition-all">
-            <ExternalLink size={12} />
-          </button>
-        )}
+        <Link
+          href={`/l/${landing.slug}`}
+          target="_blank"
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-[#2A2A3A] hover:border-[#3A3A4A] text-[#8888A0] hover:text-[#F0F0F5] text-xs font-medium transition-all"
+          title="Ver landing pública"
+        >
+          <ExternalLink size={12} />
+        </Link>
       </div>
     </div>
   );
