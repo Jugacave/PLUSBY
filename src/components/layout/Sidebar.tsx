@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Sparkles,
@@ -75,7 +77,27 @@ const navGroups: NavGroup[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { isOpen, close } = useSidebarStore();
+  const [userEmail, setUserEmail] = useState("");
+  const [userName, setUserName] = useState("Usuario");
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserEmail(user.email ?? "");
+        setUserName(user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Usuario");
+      }
+    });
+  }, []);
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <>
@@ -181,14 +203,17 @@ export function Sidebar() {
         <div className="border-t border-[#2A2A3A] p-3">
           <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#1C1C26] transition-colors cursor-pointer">
             <div className="w-8 h-8 rounded-full bg-[#FF6B35] flex items-center justify-center text-white text-sm font-bold shrink-0">
-              U
+              {userName[0]?.toUpperCase() ?? "U"}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[#F0F0F5] text-sm font-medium truncate">Usuario</p>
-              <p className="text-[#555568] text-xs truncate">usuario@email.com</p>
+              <p className="text-[#F0F0F5] text-sm font-medium truncate">{userName}</p>
+              <p className="text-[#555568] text-xs truncate">{userEmail}</p>
             </div>
           </div>
-          <button className="mt-1 w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[#8888A0] hover:bg-[#1C1C26] hover:text-[#EF4444] transition-all text-sm">
+          <button
+            onClick={handleLogout}
+            className="mt-1 w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[#8888A0] hover:bg-[#1C1C26] hover:text-[#EF4444] transition-all text-sm"
+          >
             <LogOut size={15} />
             <span>Cerrar Sesión</span>
           </button>
