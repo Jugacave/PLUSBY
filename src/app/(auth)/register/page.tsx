@@ -40,7 +40,7 @@ export default function RegisterPage() {
     if (authError) {
       setError(authError.message === "User already registered"
         ? "Ya existe una cuenta con ese correo."
-        : "No se pudo crear la cuenta. Intenta de nuevo.");
+        : authError.message);
       setLoading(false);
       return;
     }
