@@ -131,23 +131,19 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SectionId>("perfil");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // Perfil
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Mi Tienda
   const [storeName, setStoreName] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
   const [storeSlug, setStoreSlug] = useState("");
   const [savingStore, setSavingStore] = useState(false);
 
-  // Redes Sociales
   const [socialWhat, setSocialWhat] = useState("");
   const [socialHashtags, setSocialHashtags] = useState("");
   const [savingSocial, setSavingSocial] = useState(false);
 
-  // Meta Ads
   const [metaAccessToken, setMetaAccessToken] = useState("");
   const [metaPixelId, setMetaPixelId] = useState("");
   const [metaBmId, setMetaBmId] = useState("");
@@ -155,18 +151,15 @@ export default function SettingsPage() {
   const [showMetaToken, setShowMetaToken] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
 
-  // Modelos IA
   const [modelKeys, setModelKeys] = useState<Record<string, string>>({});
   const [savingModels, setSavingModels] = useState(false);
 
-  // Seguridad
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
-  // Cuenta
   const [deleteConfirm, setDeleteConfirm] = useState("");
 
   useEffect(() => {
@@ -269,7 +262,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Nav lateral */}
         <div className="lg:w-52 shrink-0">
           <nav className="flex lg:flex-col gap-1 flex-wrap">
             {SECTIONS.map((s) => {
@@ -295,7 +287,6 @@ export default function SettingsPage() {
 
         <div className="flex-1 min-w-0 space-y-4">
 
-          {/* ── PERFIL ── */}
           {activeSection === "perfil" && (
             <SectionCard title="Información personal" description="Tu nombre público y datos de cuenta.">
               <div className="flex items-center gap-4 mb-6 pb-6 border-b border-[#2A2A3A]">
@@ -305,9 +296,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-[#F0F0F5] font-semibold">{fullName || "Sin nombre"}</p>
                   <p className="text-[#8888A0] text-sm">{email}</p>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#1C1C26] text-[#555568] border border-[#2A2A3A] mt-1 inline-block">
-                    Plan Free
-                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#1C1C26] text-[#555568] border border-[#2A2A3A] mt-1 inline-block">Plan Free</span>
                 </div>
               </div>
               <form onSubmit={handleSaveProfile} className="space-y-4">
@@ -318,94 +307,45 @@ export default function SettingsPage() {
             </SectionCard>
           )}
 
-          {/* ── MI TIENDA ── */}
           {activeSection === "tienda" && (
             <SectionCard title="Mi Tienda" description="Configura el nombre y la URL pública de tu tienda.">
               <form onSubmit={handleSaveStore} className="space-y-4">
-                <InputField
-                  label="Nombre de la tienda"
-                  value={storeName}
-                  onChange={setStoreName}
-                  placeholder="Ej: Gadgets Colombia"
-                />
+                <InputField label="Nombre de la tienda" value={storeName} onChange={setStoreName} placeholder="Ej: Gadgets Colombia" />
                 <div>
-                  <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5">
-                    Slug de la URL pública
-                  </label>
+                  <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5">Slug de la URL pública</label>
                   <div className="flex gap-2">
-                    <div className="flex items-center px-3 py-3 rounded-l-xl bg-[#1C1C26] border border-r-0 border-[#2A2A3A] text-[#555568] text-sm whitespace-nowrap">
-                      plusby.app/l/
-                    </div>
-                    <input
-                      type="text"
-                      value={storeSlug}
-                      onChange={(e) => setStoreSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                      placeholder="mi-tienda"
-                      className="flex-1 px-4 py-3 rounded-r-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm"
-                    />
+                    <div className="flex items-center px-3 py-3 rounded-l-xl bg-[#1C1C26] border border-r-0 border-[#2A2A3A] text-[#555568] text-sm whitespace-nowrap">plusby.app/l/</div>
+                    <input type="text" value={storeSlug} onChange={(e) => setStoreSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="mi-tienda" className="flex-1 px-4 py-3 rounded-r-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm" />
                   </div>
                   <p className="text-[#555568] text-xs mt-1">Solo letras minúsculas, números y guiones.</p>
                 </div>
-
                 {storeSlug && (
                   <div className="flex items-center gap-2 p-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A]">
                     <Globe size={13} className="text-[#555568] shrink-0" />
                     <span className="text-[#8888A0] text-xs flex-1 truncate">{publicUrl}</span>
-                    <button type="button" onClick={() => copyToClipboard(publicUrl)} className="text-[#555568] hover:text-[#FF6B35] transition-colors">
-                      <Copy size={13} />
-                    </button>
-                    <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="text-[#555568] hover:text-[#FF6B35] transition-colors">
-                      <ExternalLink size={13} />
-                    </a>
+                    <button type="button" onClick={() => copyToClipboard(publicUrl)} className="text-[#555568] hover:text-[#FF6B35] transition-colors"><Copy size={13} /></button>
+                    <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="text-[#555568] hover:text-[#FF6B35] transition-colors"><ExternalLink size={13} /></a>
                   </div>
                 )}
-
-                <InputField
-                  label="URL externa (Shopify, tienda propia…)"
-                  value={storeUrl}
-                  onChange={setStoreUrl}
-                  placeholder="https://tutienda.com"
-                  hint="Opcional. Úsala si ya tienes una tienda fuera de Plusby."
-                />
+                <InputField label="URL externa (Shopify, tienda propia…)" value={storeUrl} onChange={setStoreUrl} placeholder="https://tutienda.com" hint="Opcional. Úsala si ya tienes una tienda fuera de Plusby." />
                 <SaveButton loading={savingStore} />
               </form>
             </SectionCard>
           )}
 
-          {/* ── REDES SOCIALES ── */}
           {activeSection === "redes" && (
-            <SectionCard title="Publicación en Redes Sociales" description="Configura el contenido predeterminado para tus publicaciones en Facebook, Instagram, TikTok y más.">
+            <SectionCard title="Publicación en Redes Sociales" description="Configura el contenido predeterminado para tus publicaciones.">
               <form onSubmit={handleSaveSocial} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5 flex items-center gap-1.5">
-                    <Hash size={13} className="text-[#FF6B35]" />
-                    ¿Qué publicas habitualmente?
-                  </label>
-                  <textarea
-                    value={socialWhat}
-                    onChange={(e) => setSocialWhat(e.target.value)}
-                    placeholder="Ej: Productos de salud y bienestar para mujeres entre 25 y 45 años. Enfoque en transformación física y resultados rápidos."
-                    rows={3}
-                    className="w-full px-4 py-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm resize-none"
-                  />
+                  <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5">¿Qué publicas habitualmente?</label>
+                  <textarea value={socialWhat} onChange={(e) => setSocialWhat(e.target.value)} placeholder="Ej: Productos de salud y bienestar para mujeres entre 25 y 45 años." rows={3} className="w-full px-4 py-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm resize-none" />
                   <p className="text-[#555568] text-xs mt-1">La IA usará esto como contexto para generar copies y creativos.</p>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5 flex items-center gap-1.5">
-                    <Hash size={13} className="text-[#8888A0]" />
-                    Hashtags predeterminados
-                  </label>
-                  <input
-                    type="text"
-                    value={socialHashtags}
-                    onChange={(e) => setSocialHashtags(e.target.value)}
-                    placeholder="#dropshipping #colombia #emprendimiento #negocio"
-                    className="w-full px-4 py-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm"
-                  />
+                  <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5">Hashtags predeterminados</label>
+                  <input type="text" value={socialHashtags} onChange={(e) => setSocialHashtags(e.target.value)} placeholder="#dropshipping #colombia #emprendimiento" className="w-full px-4 py-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm" />
                   <p className="text-[#555568] text-xs mt-1">Se añadirán automáticamente a tus publicaciones generadas.</p>
                 </div>
-
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                   {["Instagram", "Facebook", "TikTok", "YouTube"].map((red) => (
                     <div key={red} className="flex items-center gap-2 p-2.5 rounded-xl bg-[#1C1C26] border border-[#2A2A3A]">
@@ -415,105 +355,43 @@ export default function SettingsPage() {
                   ))}
                 </div>
                 <p className="text-[#555568] text-xs">Conexión directa con redes — próximamente.</p>
-
                 <SaveButton loading={savingSocial} label="Guardar configuración" />
               </form>
             </SectionCard>
           )}
 
-          {/* ── META ADS ── */}
           {activeSection === "metaads" && (
             <div className="space-y-4">
               <SectionCard title="Meta Ads" description="Conecta tu cuenta de Meta para lanzar anuncios directamente desde Plusby.">
                 <div className="p-3 rounded-xl bg-[rgba(14,165,233,0.06)] border border-[rgba(14,165,233,0.15)] mb-5">
-                  <p className="text-[#8888A0] text-xs leading-relaxed">
-                    Para usar Meta Ads necesitas un <span className="text-[#F0F0F5]">Business Manager</span> activo.
-                    Ve a <span className="text-[#0EA5E9]">business.facebook.com</span> → Settings → Business Info para obtener tu ID.
-                  </p>
+                  <p className="text-[#8888A0] text-xs leading-relaxed">Para usar Meta Ads necesitas un <span className="text-[#F0F0F5]">Business Manager</span> activo.</p>
                 </div>
                 <form onSubmit={handleSaveMeta} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5">
-                      Meta Access Token
-                    </label>
+                    <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5">Meta Access Token</label>
                     <div className="relative">
-                      <input
-                        type={showMetaToken ? "text" : "password"}
-                        value={metaAccessToken}
-                        onChange={(e) => setMetaAccessToken(e.target.value)}
-                        placeholder="EAAxxxxxxxxx..."
-                        className="w-full px-4 py-3 pr-10 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm"
-                      />
-                      <button type="button" onClick={() => setShowMetaToken(!showMetaToken)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555568] hover:text-[#8888A0]">
-                        {showMetaToken ? <EyeOff size={15} /> : <Eye size={15} />}
-                      </button>
+                      <input type={showMetaToken ? "text" : "password"} value={metaAccessToken} onChange={(e) => setMetaAccessToken(e.target.value)} placeholder="EAAxxxxxxxxx..." className="w-full px-4 py-3 pr-10 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm" />
+                      <button type="button" onClick={() => setShowMetaToken(!showMetaToken)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555568] hover:text-[#8888A0]">{showMetaToken ? <EyeOff size={15} /> : <Eye size={15} />}</button>
                     </div>
-                    <p className="text-[#555568] text-xs mt-1">Token de usuario o de sistema con permisos ads_management.</p>
                   </div>
-
-                  <InputField
-                    label="Pixel ID"
-                    value={metaPixelId}
-                    onChange={setMetaPixelId}
-                    placeholder="123456789012345"
-                    hint="Encuéntralo en Events Manager → tu Pixel → Settings."
-                  />
-
-                  <InputField
-                    label="Business Manager ID"
-                    value={metaBmId}
-                    onChange={setMetaBmId}
-                    placeholder="123456789012345"
-                    hint="business.facebook.com → Settings → Business Info → Business Manager ID."
-                  />
-
+                  <InputField label="Pixel ID" value={metaPixelId} onChange={setMetaPixelId} placeholder="123456789012345" hint="Encuéntralo en Events Manager → tu Pixel → Settings." />
+                  <InputField label="Business Manager ID" value={metaBmId} onChange={setMetaBmId} placeholder="123456789012345" hint="business.facebook.com → Settings → Business Info." />
                   <div>
-                    <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5">
-                      System User Access Token <span className="text-[#555568] font-normal">(opcional)</span>
-                    </label>
-                    <textarea
-                      value={metaSystemToken}
-                      onChange={(e) => setMetaSystemToken(e.target.value)}
-                      placeholder="Token del System User para automatizaciones avanzadas..."
-                      rows={3}
-                      className="w-full px-4 py-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm resize-none font-mono"
-                    />
+                    <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5">System User Access Token <span className="text-[#555568] font-normal">(opcional)</span></label>
+                    <textarea value={metaSystemToken} onChange={(e) => setMetaSystemToken(e.target.value)} placeholder="Token del System User..." rows={3} className="w-full px-4 py-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm resize-none font-mono" />
                   </div>
-
                   <div className="flex gap-2 pt-1">
-                    <button
-                      type="button"
-                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[#2A2A3A] hover:border-[#3A3A4A] text-[#8888A0] hover:text-[#F0F0F5] text-sm font-medium transition-colors"
-                    >
-                      Probar conexión
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={savingMeta}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white text-sm font-semibold transition-colors disabled:opacity-60"
-                    >
-                      {savingMeta && <Loader2 size={14} className="animate-spin" />}
-                      {savingMeta ? "Guardando..." : "Guardar configuración"}
-                    </button>
+                    <button type="button" className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[#2A2A3A] hover:border-[#3A3A4A] text-[#8888A0] hover:text-[#F0F0F5] text-sm font-medium transition-colors">Probar conexión</button>
+                    <button type="submit" disabled={savingMeta} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white text-sm font-semibold transition-colors disabled:opacity-60">{savingMeta && <Loader2 size={14} className="animate-spin" />}{savingMeta ? "Guardando..." : "Guardar configuración"}</button>
                   </div>
                 </form>
               </SectionCard>
-
-              {/* Guía Business Manager */}
               <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl p-5">
                 <p className="text-[#F0F0F5] font-semibold text-sm mb-3">¿Cómo obtener tu Business Manager ID?</p>
                 <ol className="space-y-2">
-                  {[
-                    "Ve a business.facebook.com e inicia sesión",
-                    "Haz clic en Configuración (ícono de engranaje)",
-                    "Selecciona Info del negocio",
-                    "Copia el ID del Business Manager",
-                    "Para el System User Token: Usuarios → Usuarios del sistema → Generar token",
-                  ].map((step, i) => (
+                  {["Ve a business.facebook.com e inicia sesión","Haz clic en Configuración (ícono de engranaje)","Selecciona Info del negocio","Copia el ID del Business Manager","Para el System User Token: Usuarios → Usuarios del sistema → Generar token"].map((step, i) => (
                     <li key={i} className="flex gap-2.5 text-xs text-[#8888A0]">
-                      <span className="w-5 h-5 rounded-full bg-[#1C1C26] border border-[#2A2A3A] flex items-center justify-center text-[#555568] font-bold shrink-0 text-[10px]">
-                        {i + 1}
-                      </span>
+                      <span className="w-5 h-5 rounded-full bg-[#1C1C26] border border-[#2A2A3A] flex items-center justify-center text-[#555568] font-bold shrink-0 text-[10px]">{i + 1}</span>
                       {step}
                     </li>
                   ))}
@@ -522,7 +400,6 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ── MODELOS IA ── */}
           {activeSection === "modelos" && (
             <div className="space-y-4">
               <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl p-6">
@@ -530,61 +407,31 @@ export default function SettingsPage() {
                   <Key size={16} className="text-[#8B5CF6]" />
                   <h2 className="text-[#F0F0F5] font-bold text-lg">Modelos IA (BYOK)</h2>
                 </div>
-                <p className="text-[#8888A0] text-sm mb-1">
-                  Trae tus propias claves API para usar modelos específicos. Cada clave se guarda de forma cifrada.
-                </p>
-                <p className="text-[#555568] text-xs mb-6">
-                  Si no configuras una clave, Plusby usará el modelo predeterminado del sistema.
-                </p>
-
+                <p className="text-[#8888A0] text-sm mb-1">Trae tus propias claves API para usar modelos específicos.</p>
+                <p className="text-[#555568] text-xs mb-6">Si no configuras una clave, Plusby usará el modelo predeterminado del sistema.</p>
                 <form onSubmit={handleSaveModels} className="space-y-3">
                   {AI_MODELS.map((model) => (
                     <div key={model.key} className="flex items-center gap-3 p-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] hover:border-[#3A3A4A] transition-colors">
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-white text-xs font-bold"
-                        style={{ background: model.color + "20", color: model.color }}
-                      >
-                        {model.label[0]}
-                      </div>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold" style={{ background: model.color + "20", color: model.color }}>{model.label[0]}</div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[#F0F0F5] text-xs font-semibold">{model.label}</p>
                         <p className="text-[#555568] text-[10px] truncate">{model.description}</p>
                       </div>
-                      <input
-                        type="password"
-                        value={modelKeys[model.key] ?? ""}
-                        onChange={(e) => setModelKeys((prev) => ({ ...prev, [model.key]: e.target.value }))}
-                        placeholder={model.placeholder}
-                        className="w-36 px-3 py-2 rounded-lg bg-[#13131A] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-xs font-mono"
-                      />
+                      <input type="password" value={modelKeys[model.key] ?? ""} onChange={(e) => setModelKeys((prev) => ({ ...prev, [model.key]: e.target.value }))} placeholder={model.placeholder} className="w-36 px-3 py-2 rounded-lg bg-[#13131A] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-xs font-mono" />
                     </div>
                   ))}
-
                   <div className="flex justify-end pt-2">
-                    <button
-                      type="submit"
-                      disabled={savingModels}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-semibold transition-colors disabled:opacity-60"
-                    >
-                      {savingModels && <Loader2 size={14} className="animate-spin" />}
-                      {savingModels ? "Guardando..." : "Guardar claves"}
-                    </button>
+                    <button type="submit" disabled={savingModels} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-semibold transition-colors disabled:opacity-60">{savingModels && <Loader2 size={14} className="animate-spin" />}{savingModels ? "Guardando..." : "Guardar claves"}</button>
                   </div>
                 </form>
               </div>
-
               <div className="p-4 rounded-2xl bg-[rgba(139,92,246,0.06)] border border-[rgba(139,92,246,0.2)]">
-                <p className="text-[#A78BFA] text-xs font-semibold mb-1 flex items-center gap-1.5">
-                  <Shield size={12} /> Seguridad
-                </p>
-                <p className="text-[#8888A0] text-xs leading-relaxed">
-                  Tus claves API se cifran antes de almacenarse y nunca se exponen en el cliente. Plusby las usa únicamente para procesar tus solicitudes.
-                </p>
+                <p className="text-[#A78BFA] text-xs font-semibold mb-1 flex items-center gap-1.5"><Shield size={12} /> Seguridad</p>
+                <p className="text-[#8888A0] text-xs leading-relaxed">Tus claves API se cifran antes de almacenarse y nunca se exponen en el cliente.</p>
               </div>
             </div>
           )}
 
-          {/* ── SEGURIDAD ── */}
           {activeSection === "seguridad" && (
             <SectionCard title="Cambiar contraseña" description="Usa una contraseña segura de mínimo 8 caracteres.">
               <form onSubmit={handleChangePassword} className="space-y-4">
@@ -592,18 +439,14 @@ export default function SettingsPage() {
                   <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5">Nueva contraseña</label>
                   <div className="relative">
                     <input type={showNew ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 8 caracteres" required className="w-full px-4 py-3 pr-10 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm" />
-                    <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555568] hover:text-[#8888A0]">
-                      {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
+                    <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555568] hover:text-[#8888A0]">{showNew ? <EyeOff size={15} /> : <Eye size={15} />}</button>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#F0F0F5] mb-1.5">Confirmar contraseña</label>
                   <div className="relative">
                     <input type={showConfirm ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repite la contraseña" required className="w-full px-4 py-3 pr-10 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm" />
-                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555568] hover:text-[#8888A0]">
-                      {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
+                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555568] hover:text-[#8888A0]">{showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}</button>
                   </div>
                 </div>
                 {newPassword.length > 0 && (
@@ -618,7 +461,6 @@ export default function SettingsPage() {
             </SectionCard>
           )}
 
-          {/* ── PLAN ── */}
           {activeSection === "plan" && (
             <div className="space-y-4">
               <SectionCard title="Tu plan actual">
@@ -627,15 +469,11 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2 mb-5">
                   {["10 créditos IA al mes", "5 landings activas", "Catálogo básico de productos", "Academia limitada"].map((f) => (
-                    <div key={f} className="flex items-center gap-2 text-sm text-[#8888A0]">
-                      <CheckCircle2 size={14} className="text-[#555568] shrink-0" />
-                      {f}
-                    </div>
+                    <div key={f} className="flex items-center gap-2 text-sm text-[#8888A0]"><CheckCircle2 size={14} className="text-[#555568] shrink-0" />{f}</div>
                   ))}
                 </div>
                 <p className="text-[#555568] text-xs">Plan gratuito permanente.</p>
               </SectionCard>
-
               <div className="bg-gradient-to-br from-[rgba(255,107,53,0.08)] to-[rgba(124,58,237,0.05)] border border-[rgba(255,107,53,0.2)] rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-1">
                   <Zap size={16} className="text-[#FF6B35]" />
@@ -645,59 +483,28 @@ export default function SettingsPage() {
                 <p className="text-[#8888A0] text-sm mb-4">Todo lo que necesitas para escalar tu dropshipping.</p>
                 <div className="space-y-2 mb-5">
                   {["Créditos IA ilimitados", "Landings ilimitadas + dominio custom", "+500 productos con análisis completo", "Academia completa + Coaching", "Soporte prioritario", "Meta Ads integrado"].map((f) => (
-                    <div key={f} className="flex items-center gap-2 text-sm text-[#F0F0F5]">
-                      <CheckCircle2 size={14} className="text-[#FF6B35] shrink-0" />
-                      {f}
-                    </div>
+                    <div key={f} className="flex items-center gap-2 text-sm text-[#F0F0F5]"><CheckCircle2 size={14} className="text-[#FF6B35] shrink-0" />{f}</div>
                   ))}
                 </div>
-                <button className="w-full py-3 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
-                  <Zap size={15} />
-                  Mejorar a Pro
-                </button>
+                <button className="w-full py-3 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"><Zap size={15} />Mejorar a Pro</button>
               </div>
             </div>
           )}
 
-          {/* ── CUENTA ── */}
           {activeSection === "cuenta" && (
             <div className="space-y-4">
               <SectionCard title="Sesión" description="Cierra sesión en este dispositivo.">
-                <button onClick={handleLogout} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#2A2A3A] hover:border-[#3A3A4A] text-[#8888A0] hover:text-[#F0F0F5] text-sm font-semibold transition-colors">
-                  <LogOut size={15} />
-                  Cerrar sesión
-                </button>
+                <button onClick={handleLogout} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#2A2A3A] hover:border-[#3A3A4A] text-[#8888A0] hover:text-[#F0F0F5] text-sm font-semibold transition-colors"><LogOut size={15} />Cerrar sesión</button>
               </SectionCard>
-
               <div className="bg-[#13131A] border border-red-500/20 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-1">
-                  <Trash2 size={16} className="text-red-400" />
-                  <h2 className="text-red-400 font-bold text-lg">Zona de peligro</h2>
-                </div>
-                <p className="text-[#8888A0] text-sm mb-4">
-                  Acción irreversible. Se eliminarán todos tus datos, landings y configuraciones.
-                </p>
+                <div className="flex items-center gap-2 mb-1"><Trash2 size={16} className="text-red-400" /><h2 className="text-red-400 font-bold text-lg">Zona de peligro</h2></div>
+                <p className="text-[#8888A0] text-sm mb-4">Acción irreversible. Se eliminarán todos tus datos, landings y configuraciones.</p>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-[#8888A0] mb-1.5">
-                      Escribe <span className="text-red-400 font-bold">ELIMINAR</span> para confirmar
-                    </label>
-                    <input
-                      type="text"
-                      value={deleteConfirm}
-                      onChange={(e) => setDeleteConfirm(e.target.value)}
-                      placeholder="ELIMINAR"
-                      className="w-full px-4 py-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-red-500/50 transition-colors text-sm"
-                    />
+                    <label className="block text-sm font-medium text-[#8888A0] mb-1.5">Escribe <span className="text-red-400 font-bold">ELIMINAR</span> para confirmar</label>
+                    <input type="text" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} placeholder="ELIMINAR" className="w-full px-4 py-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-red-500/50 transition-colors text-sm" />
                   </div>
-                  <button
-                    onClick={handleDeleteAccount}
-                    disabled={deleteConfirm !== "ELIMINAR"}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 size={14} />
-                    Eliminar mi cuenta
-                  </button>
+                  <button onClick={handleDeleteAccount} disabled={deleteConfirm !== "ELIMINAR"} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 size={14} />Eliminar mi cuenta</button>
                 </div>
               </div>
             </div>
