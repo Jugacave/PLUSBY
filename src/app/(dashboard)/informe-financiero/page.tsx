@@ -82,7 +82,7 @@ function KpiCard({
 }
 
 function SectionHeader({ title, icon: Icon, color, badge }: {
-  title: string; icon: React.ComponentType<{ size?: number; className?: string }>;
+  title: string; icon: React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>;
   color: string; badge?: string | number;
 }) {
   return (
@@ -569,7 +569,7 @@ export default function InformeFinancieroPage() {
         <div className="mt-4 h-2 bg-[#2A2A3A] rounded-full overflow-hidden">
           <div
             className="h-full rounded-full bg-gradient-to-r from-[#10B981] to-[#8B5CF6] transition-all"
-            style={{ width: `${Math.min(Math.max(pct(utilidadFinal, recaudo), 0), 100)}%` }}
+            style={{ width: `${Math.min(Math.max(parseFloat(pct(utilidadFinal, recaudo)), 0), 100)}%` }}
           />
         </div>
         <p className="text-center text-[#555568] text-xs mt-2">
