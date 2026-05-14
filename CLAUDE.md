@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-@AGENTS.md
+> **This is NOT the Next.js you know.** This project runs Next.js 16.2.6 — a version with breaking changes that may differ from training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any Next.js-specific code. Heed deprecation notices.
 
 ## Commands
 
