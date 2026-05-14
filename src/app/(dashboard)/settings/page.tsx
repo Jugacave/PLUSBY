@@ -49,15 +49,15 @@ const SECTIONS: Section[] = [
 ];
 
 const AI_MODELS = [
-  { key: "gemini", label: "Gemini", description: "Mejor para conversaciones con texto flexible", color: "#4285F4", placeholder: "AIza..." },
-  { key: "gpt_image", label: "GPT Image", description: "Generación de imágenes avanzadas", color: "#10A37F", placeholder: "sk-..." },
-  { key: "claude", label: "Claude / Sonnet", description: "Razonamiento y análisis profundo", color: "#FF6B35", placeholder: "sk-ant-..." },
-  { key: "blendercloud", label: "BlenderCloud", description: "Backup de estilos e imágenes en CFP URLs", color: "#EA7500", placeholder: "bc_..." },
-  { key: "ideamaker", label: "Ideamaker", description: "Ideas visuales para productos", color: "#7C3AED", placeholder: "im_..." },
-  { key: "gala", label: "Gala", description: "Estilos de alta calidad fotográfica", color: "#EC4899", placeholder: "gala_..." },
-  { key: "cloudflare", label: "Cloudflare AI", description: "Inferencia rápida sin cold start", color: "#F38020", placeholder: "cf_..." },
-  { key: "frames", label: "Frames", description: "Publicaciones y videos de marca", color: "#06B6D4", placeholder: "fr_..." },
-  { key: "metahub", label: "Meta Hub AI", description: "Publicación directa con Meta Hub link via Claude AI", color: "#0082FB", placeholder: "mh_..." },
+  { key: "gemini", label: "Gemini", description: "Mejor para conversaciones con texto flexible", color: "#4285F4", placeholder: "AIza...", apiUrl: "https://aistudio.google.com/apikey" },
+  { key: "gpt_image", label: "GPT Image", description: "Generación de imágenes avanzadas", color: "#10A37F", placeholder: "sk-...", apiUrl: "https://platform.openai.com/api-keys" },
+  { key: "claude", label: "Claude / Sonnet", description: "Razonamiento y análisis profundo", color: "#FF6B35", placeholder: "sk-ant-...", apiUrl: "https://console.anthropic.com/settings/keys" },
+  { key: "blendercloud", label: "BlenderCloud", description: "Backup de estilos e imágenes en CFP URLs", color: "#EA7500", placeholder: "bc_...", apiUrl: "https://cloud.blender.org/settings" },
+  { key: "ideamaker", label: "Ideamaker", description: "Ideas visuales para productos", color: "#7C3AED", placeholder: "im_...", apiUrl: "https://ideamaker.ai/settings/api" },
+  { key: "gala", label: "Gala", description: "Estilos de alta calidad fotográfica", color: "#EC4899", placeholder: "gala_...", apiUrl: "https://app.gala.art/settings" },
+  { key: "cloudflare", label: "Cloudflare AI", description: "Inferencia rápida sin cold start", color: "#F38020", placeholder: "cf_...", apiUrl: "https://dash.cloudflare.com/profile/api-tokens" },
+  { key: "frames", label: "Frames", description: "Publicaciones y videos de marca", color: "#06B6D4", placeholder: "fr_...", apiUrl: "https://frames.so/settings/api" },
+  { key: "metahub", label: "Meta Hub AI", description: "Publicación directa con Meta Hub link via Claude AI", color: "#0082FB", placeholder: "mh_...", apiUrl: "https://developers.facebook.com/apps" },
 ];
 
 function Toast({ message, type }: { message: string; type: "success" | "error" }) {
@@ -539,24 +539,35 @@ export default function SettingsPage() {
 
                 <form onSubmit={handleSaveModels} className="space-y-3">
                   {AI_MODELS.map((model) => (
-                    <div key={model.key} className="flex items-center gap-3 p-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] hover:border-[#3A3A4A] transition-colors">
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-white text-xs font-bold"
-                        style={{ background: model.color + "20", color: model.color }}
+                    <div key={model.key} className="p-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] hover:border-[#3A3A4A] transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-white text-xs font-bold"
+                          style={{ background: model.color + "20", color: model.color }}
+                        >
+                          {model.label[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[#F0F0F5] text-xs font-semibold">{model.label}</p>
+                          <p className="text-[#555568] text-[10px] truncate">{model.description}</p>
+                        </div>
+                        <input
+                          type="password"
+                          value={modelKeys[model.key] ?? ""}
+                          onChange={(e) => setModelKeys((prev) => ({ ...prev, [model.key]: e.target.value }))}
+                          placeholder={model.placeholder}
+                          className="w-36 px-3 py-2 rounded-lg bg-[#13131A] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-xs font-mono"
+                        />
+                      </div>
+                      <a
+                        href={model.apiUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 ml-11 inline-flex items-center gap-1 text-[#8B5CF6] hover:text-[#A78BFA] text-[11px] font-medium transition-colors"
                       >
-                        {model.label[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[#F0F0F5] text-xs font-semibold">{model.label}</p>
-                        <p className="text-[#555568] text-[10px] truncate">{model.description}</p>
-                      </div>
-                      <input
-                        type="password"
-                        value={modelKeys[model.key] ?? ""}
-                        onChange={(e) => setModelKeys((prev) => ({ ...prev, [model.key]: e.target.value }))}
-                        placeholder={model.placeholder}
-                        className="w-36 px-3 py-2 rounded-lg bg-[#13131A] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-xs font-mono"
-                      />
+                        <ExternalLink size={11} />
+                        Obtener API Key
+                      </a>
                     </div>
                   ))}
 
