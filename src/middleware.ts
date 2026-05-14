@@ -41,6 +41,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
+  if (pathname.startsWith("/admin")) {
+    const role = user?.user_metadata?.role;
+    if (role !== "superadmin") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+  }
+
   return response;
 }
 

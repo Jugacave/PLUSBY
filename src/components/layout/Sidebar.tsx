@@ -22,6 +22,7 @@ import {
   LogOut,
   X,
   Zap,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/sidebar";
@@ -81,6 +82,7 @@ export function Sidebar() {
   const { isOpen, close } = useSidebarStore();
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("Usuario");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -88,6 +90,7 @@ export function Sidebar() {
       if (user) {
         setUserEmail(user.email ?? "");
         setUserName(user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Usuario");
+        setIsAdmin(user.user_metadata?.role === "superadmin");
       }
     });
   }, []);
@@ -197,6 +200,34 @@ export function Sidebar() {
               </ul>
             </div>
           ))}
+
+          {isAdmin && (
+            <div className="mb-4">
+              <p className="px-3 py-1 text-[10px] font-semibold tracking-widest text-[#FF6B35] uppercase">
+                SUPER ADMIN
+              </p>
+              <ul className="space-y-0.5">
+                <li>
+                  <Link
+                    href="/admin"
+                    onClick={close}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all",
+                      pathname === "/admin"
+                        ? "bg-[rgba(255,107,53,0.15)] text-[#FF6B35] border-l-2 border-[#FF6B35] pl-[10px]"
+                        : "text-[#FF6B35]/60 hover:bg-[rgba(255,107,53,0.08)] hover:text-[#FF6B35]"
+                    )}
+                  >
+                    <ShieldCheck size={16} className="text-[#FF6B35]" />
+                    <span className="flex-1 font-medium">Panel Admin</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[rgba(255,107,53,0.15)] text-[#FF6B35] font-semibold">
+                      SA
+                    </span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
         </nav>
 
         {/* User profile */}
