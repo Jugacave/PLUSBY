@@ -88,7 +88,7 @@ const INIT_USERS: AdminUser[] = [
   { id: "u3", name: "Valentina Cruz", email: "vale@hotmail.com", plan: "free", role: "user", joinedAt: "2025-04-02", active: true, avatar: "VC" },
   { id: "u4", name: "Julián García", email: "julian@plusby.co", plan: "premium", role: "mentor", joinedAt: "2025-01-05", active: true, avatar: "JG" },
   { id: "u5", name: "Mariana López", email: "mariana@gmail.com", plan: "basico", role: "user", joinedAt: "2025-05-01", active: false, avatar: "ML" },
-  { id: "u6", name: "Admin Principal", email: "admin@plusby.co", plan: "superadmin", role: "superadmin", joinedAt: "2024-12-01", active: true, avatar: "AP" },
+  { id: "u6", name: "Juan Carranza", email: "jcarranza715@gmail.com", plan: "superadmin", role: "superadmin", joinedAt: "2024-12-01", active: true, avatar: "JC" },
 ];
 
 const INIT_SUPPLIERS: AdminSupplier[] = [
