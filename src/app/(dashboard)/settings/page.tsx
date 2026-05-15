@@ -52,16 +52,75 @@ const SECTIONS: Section[] = [
   { id: "cuenta", label: "Cuenta", icon: Shield },
 ];
 
-const AI_MODELS = [
-  { key: "gemini", label: "Gemini", description: "Mejor para conversaciones con texto flexible", color: "#4285F4", placeholder: "AIza...", apiUrl: "https://aistudio.google.com/apikey" },
-  { key: "gpt_image", label: "GPT Image", description: "Generación de imágenes avanzadas", color: "#10A37F", placeholder: "sk-...", apiUrl: "https://platform.openai.com/api-keys" },
-  { key: "claude", label: "Claude / Sonnet", description: "Razonamiento y análisis profundo", color: "#FF6B35", placeholder: "sk-ant-...", apiUrl: "https://console.anthropic.com/settings/keys" },
-  { key: "blendercloud", label: "BlenderCloud", description: "Backup de estilos e imágenes en CFP URLs", color: "#EA7500", placeholder: "bc_...", apiUrl: "https://cloud.blender.org/settings" },
-  { key: "ideamaker", label: "Ideamaker", description: "Ideas visuales para productos", color: "#7C3AED", placeholder: "im_...", apiUrl: "https://ideamaker.ai/settings/api" },
-  { key: "gala", label: "Gala", description: "Estilos de alta calidad fotográfica", color: "#EC4899", placeholder: "gala_...", apiUrl: "https://app.gala.art/settings" },
-  { key: "cloudflare", label: "Cloudflare AI", description: "Inferencia rápida sin cold start", color: "#F38020", placeholder: "cf_...", apiUrl: "https://dash.cloudflare.com/profile/api-tokens" },
-  { key: "frames", label: "Frames", description: "Publicaciones y videos de marca", color: "#06B6D4", placeholder: "fr_...", apiUrl: "https://frames.so/settings/api" },
-  { key: "metahub", label: "Meta Hub AI", description: "Publicación directa con Meta Hub link via Claude AI", color: "#0082FB", placeholder: "mh_...", apiUrl: "https://developers.facebook.com/apps" },
+interface AIModel {
+  key: string;
+  label: string;
+  sublabel: string;
+  specificModel: string;
+  costNote: string;
+  costDetail: string;
+  domain: string;
+  color: string;
+  placeholder: string;
+  apiUrl: string;
+  tip?: { title: string; body: string; link?: { label: string; url: string } };
+}
+
+const AI_MODELS: AIModel[] = [
+  {
+    key: "gemini", label: "Google AI", sublabel: "Gemini",
+    specificModel: "Gemini 2.5 Flash Image", costNote: "~$0.02/img", costDetail: "Mejor para texto en imágenes",
+    domain: "google.com", color: "#4285F4", placeholder: "AIza...", apiUrl: "https://aistudio.google.com/apikey",
+    tip: {
+      title: "Evita sustos en tu tarjeta",
+      body: "Google permite cargar saldo prepago sin auto-renovación. Carga $10 una vez y nunca podrán cobrarte más.",
+      link: { label: "Configurar prepago en Google AI", url: "https://aistudio.google.com/billing" },
+    },
+  },
+  {
+    key: "gpt_image", label: "OpenAI", sublabel: "GPT Image",
+    specificModel: "GPT Image 1", costNote: "~$0.04/img", costDetail: "Alta calidad fotorealista",
+    domain: "openai.com", color: "#10A37F", placeholder: "sk-...", apiUrl: "https://platform.openai.com/api-keys",
+  },
+  {
+    key: "claude", label: "Anthropic", sublabel: "Claude / Sonnet",
+    specificModel: "claude-sonnet-4-6", costNote: "~$0.003/1k tokens", costDetail: "Razonamiento avanzado",
+    domain: "anthropic.com", color: "#FF6B35", placeholder: "sk-ant-...", apiUrl: "https://console.anthropic.com/settings/keys",
+  },
+  {
+    key: "cloudflare", label: "Cloudflare AI", sublabel: "Workers AI",
+    specificModel: "Flux / SDXL", costNote: "~$0.00", costDetail: "10k neurons/día gratis",
+    domain: "cloudflare.com", color: "#F38020", placeholder: "cf_...", apiUrl: "https://dash.cloudflare.com/profile/api-tokens",
+    tip: {
+      title: "Tier gratuito muy generoso",
+      body: "Con el plan Free tienes 10,000 neurons/día (~333 imágenes). Sin tarjeta de crédito requerida.",
+    },
+  },
+  {
+    key: "blendercloud", label: "BlenderCloud", sublabel: "CFP URLs",
+    specificModel: "BlenderCloud API", costNote: "Variable", costDetail: "Backup de estilos e imágenes",
+    domain: "blendercloud.com", color: "#EA7500", placeholder: "bc_...", apiUrl: "https://cloud.blender.org/settings",
+  },
+  {
+    key: "ideamaker", label: "Ideamaker", sublabel: "Ideamaker AI",
+    specificModel: "Ideamaker", costNote: "~$0.02/img", costDetail: "Ideas visuales para productos",
+    domain: "ideamaker.ai", color: "#7C3AED", placeholder: "im_...", apiUrl: "https://ideamaker.ai/settings/api",
+  },
+  {
+    key: "gala", label: "Gala Art", sublabel: "Gala",
+    specificModel: "Gala Image Gen", costNote: "~$0.03/img", costDetail: "Alta calidad fotográfica",
+    domain: "gala.art", color: "#EC4899", placeholder: "gala_...", apiUrl: "https://app.gala.art/settings",
+  },
+  {
+    key: "frames", label: "Frames", sublabel: "Frames.so",
+    specificModel: "Frames Video", costNote: "~$0.10/video", costDetail: "Videos y publicaciones de marca",
+    domain: "frames.so", color: "#06B6D4", placeholder: "fr_...", apiUrl: "https://frames.so/settings/api",
+  },
+  {
+    key: "metahub", label: "Meta", sublabel: "Meta Hub AI",
+    specificModel: "Meta AI API", costNote: "Variable", costDetail: "Publicación directa a Meta Ads",
+    domain: "meta.com", color: "#0082FB", placeholder: "mh_...", apiUrl: "https://developers.facebook.com/apps",
+  },
 ];
 
 function Toast({ message, type }: { message: string; type: "success" | "error" }) {
@@ -109,6 +168,24 @@ function InputField({
         {children}
       </div>
       {hint && <p className="text-[#555568] text-xs mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+function ProviderIcon({ domain, label, color }: { domain: string; label: string; color: string }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  return (
+    <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shrink-0" style={{ background: color + "22" }}>
+      {!imgFailed ? (
+        <img
+          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+          alt={label}
+          className="w-6 h-6 object-contain"
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        <span className="font-bold text-sm" style={{ color }}>{label[0]}</span>
+      )}
     </div>
   );
 }
@@ -169,7 +246,8 @@ export default function SettingsPage() {
 
   // Modelos IA
   const [modelKeys, setModelKeys] = useState<Record<string, string>>({});
-  const [savingModels, setSavingModels] = useState(false);
+  const [modelSaveStates, setModelSaveStates] = useState<Record<string, "idle" | "saving" | "saved">>({});
+  const [showModelKey, setShowModelKey] = useState<Record<string, boolean>>({});
 
   // Seguridad
   const [newPassword, setNewPassword] = useState("");
@@ -274,12 +352,11 @@ export default function SettingsPage() {
     showToast("Configuración de Meta Ads guardada.", "success");
   }
 
-  async function handleSaveModels(e: React.FormEvent) {
-    e.preventDefault();
-    setSavingModels(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setSavingModels(false);
-    showToast("Claves de modelos guardadas.", "success");
+  async function handleSaveModel(key: string) {
+    setModelSaveStates((prev) => ({ ...prev, [key]: "saving" }));
+    await new Promise((r) => setTimeout(r, 700));
+    setModelSaveStates((prev) => ({ ...prev, [key]: "saved" }));
+    setTimeout(() => setModelSaveStates((prev) => ({ ...prev, [key]: "idle" })), 2500);
   }
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -736,65 +813,112 @@ export default function SettingsPage() {
 
           {/* ── MODELOS IA ── */}
           {activeSection === "modelos" && (
-            <div className="space-y-4">
-              <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-1">
-                  <Key size={16} className="text-[#8B5CF6]" />
-                  <h2 className="text-[#F0F0F5] font-bold text-lg">Modelos IA (BYOK)</h2>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between mb-1">
+                <div>
+                  <h2 className="text-[#F0F0F5] font-bold text-lg flex items-center gap-2">
+                    <Key size={16} className="text-[#8B5CF6]" /> Modelos IA (BYOK)
+                  </h2>
+                  <p className="text-[#8888A0] text-sm mt-0.5">Conecta tus propias claves. Cada clave se guarda cifrada.</p>
                 </div>
-                <p className="text-[#8888A0] text-sm mb-1">
-                  Trae tus propias claves API para usar modelos específicos. Cada clave se guarda de forma cifrada.
-                </p>
-                <p className="text-[#555568] text-xs mb-6">
-                  Si no configuras una clave, Plusby usará el modelo predeterminado del sistema.
-                </p>
+              </div>
 
-                <form onSubmit={handleSaveModels} className="space-y-3">
-                  {AI_MODELS.map((model) => (
-                    <div key={model.key} className="p-3 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] hover:border-[#3A3A4A] transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-white text-xs font-bold"
-                          style={{ background: model.color + "20", color: model.color }}
-                        >
-                          {model.label[0]}
+              {AI_MODELS.map((model) => {
+                const saveState = modelSaveStates[model.key] ?? "idle";
+                const isConfigured = !!(modelKeys[model.key]?.trim());
+                const isVisible = !!showModelKey[model.key];
+                return (
+                  <div key={model.key} className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl p-5 hover:border-[#3A3A4A] transition-colors">
+                    {/* Header row */}
+                    <div className="flex items-start gap-3 mb-4">
+                      <ProviderIcon domain={model.domain} label={model.label} color={model.color} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[#F0F0F5] font-bold text-base leading-tight">{model.label}</span>
+                          <span className="text-[#555568] text-xs font-medium">{model.sublabel}</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[#F0F0F5] text-xs font-semibold">{model.label}</p>
-                          <p className="text-[#555568] text-[10px] truncate">{model.description}</p>
-                        </div>
+                        <p className="text-[#555568] text-[11px] mt-0.5">
+                          Para: <span className="text-[#8888A0]">{model.specificModel}</span>
+                          {" · "}
+                          <span className="text-[#F59E0B] font-semibold">{model.costNote}</span>
+                          {" · "}{model.costDetail}
+                        </p>
+                      </div>
+                      {/* Status badge */}
+                      {isConfigured ? (
+                        <span className="shrink-0 flex items-center gap-1 text-[#10B981] text-[11px] font-bold bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.25)] px-2.5 py-1 rounded-lg">
+                          <CheckCircle2 size={11} /> Configurada
+                        </span>
+                      ) : (
+                        <span className="shrink-0 flex items-center gap-1 text-[#555568] text-[11px] font-medium bg-[#1C1C26] border border-[#2A2A3A] px-2.5 py-1 rounded-lg">
+                          Sin clave
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Input + save row */}
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
                         <input
-                          type="password"
+                          type={isVisible ? "text" : "password"}
                           value={modelKeys[model.key] ?? ""}
                           onChange={(e) => setModelKeys((prev) => ({ ...prev, [model.key]: e.target.value }))}
                           placeholder={model.placeholder}
-                          className="w-36 px-3 py-2 rounded-lg bg-[#13131A] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-xs font-mono"
+                          className="w-full px-4 py-2.5 pr-10 rounded-xl bg-[#0A0A0F] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm font-mono"
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowModelKey((prev) => ({ ...prev, [model.key]: !prev[model.key] }))}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555568] hover:text-[#8888A0] transition-colors"
+                        >
+                          {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
                       </div>
-                      <a
-                        href={model.apiUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 ml-11 inline-flex items-center gap-1 text-[#8B5CF6] hover:text-[#A78BFA] text-[11px] font-medium transition-colors"
+                      <button
+                        type="button"
+                        onClick={() => handleSaveModel(model.key)}
+                        disabled={saveState === "saving"}
+                        className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors disabled:opacity-60 ${
+                          saveState === "saved"
+                            ? "bg-[#10B981]"
+                            : "bg-[#8B5CF6] hover:bg-[#7C3AED]"
+                        }`}
                       >
-                        <ExternalLink size={11} />
-                        Obtener API Key
-                      </a>
+                        {saveState === "saving" && <Loader2 size={13} className="animate-spin" />}
+                        {saveState === "saved" ? "✓ Guardada" : saveState === "saving" ? "Guardando" : "Guardar"}
+                      </button>
                     </div>
-                  ))}
 
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="submit"
-                      disabled={savingModels}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-semibold transition-colors disabled:opacity-60"
+                    {/* Obtain API key link */}
+                    <a
+                      href={model.apiUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-[#8B5CF6] hover:text-[#A78BFA] text-[11px] font-medium transition-colors"
                     >
-                      {savingModels && <Loader2 size={14} className="animate-spin" />}
-                      {savingModels ? "Guardando..." : "Guardar claves"}
-                    </button>
+                      <ExternalLink size={10} /> Obtener API Key
+                    </a>
+
+                    {/* Tip */}
+                    {model.tip && (
+                      <div className="mt-3 p-3 rounded-xl bg-[rgba(245,158,11,0.06)] border border-[rgba(245,158,11,0.2)]">
+                        <p className="text-[#F59E0B] text-xs font-semibold mb-0.5">💡 {model.tip.title}</p>
+                        <p className="text-[#8888A0] text-xs leading-relaxed">{model.tip.body}</p>
+                        {model.tip.link && (
+                          <a
+                            href={model.tip.link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1.5 inline-flex items-center gap-1 text-[#F59E0B] hover:text-[#FCD34D] text-xs font-semibold transition-colors"
+                          >
+                            {model.tip.link.label} <ExternalLink size={10} />
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </form>
-              </div>
+                );
+              })}
 
               <div className="p-4 rounded-2xl bg-[rgba(139,92,246,0.06)] border border-[rgba(139,92,246,0.2)]">
                 <p className="text-[#A78BFA] text-xs font-semibold mb-1 flex items-center gap-1.5">
