@@ -83,9 +83,23 @@ const AI_MODELS: AIModel[] = [
     domain: "openai.com", color: "#10A37F", placeholder: "sk-...", apiUrl: "https://platform.openai.com/api-keys",
   },
   {
+    key: "fal", label: "Fal.ai", sublabel: "Flux Pro",
+    specificModel: "Flux Pro / Schnell", costNote: "~$0.003/img", costDetail: "Mejor ratio calidad/precio",
+    domain: "fal.ai", color: "#6366F1", placeholder: "fal-...", apiUrl: "https://fal.ai/dashboard/keys",
+    tip: {
+      title: "El más eficiente para dropshipping",
+      body: "Flux Schnell genera imágenes en ~1s por $0.003. Flux Pro da calidad fotorealista a $0.05. Ambos disponibles con la misma clave.",
+    },
+  },
+  {
     key: "claude", label: "Anthropic", sublabel: "Claude / Sonnet",
     specificModel: "claude-sonnet-4-6", costNote: "~$0.003/1k tokens", costDetail: "Razonamiento avanzado",
     domain: "anthropic.com", color: "#FF6B35", placeholder: "sk-ant-...", apiUrl: "https://console.anthropic.com/settings/keys",
+  },
+  {
+    key: "grok", label: "xAI", sublabel: "Grok",
+    specificModel: "Grok-2", costNote: "~$0.002/1k tokens", costDetail: "Alternativa a GPT-4, acceso web",
+    domain: "x.ai", color: "#94A3B8", placeholder: "xai-...", apiUrl: "https://console.x.ai/",
   },
   {
     key: "cloudflare", label: "Cloudflare AI", sublabel: "Workers AI",
@@ -97,24 +111,28 @@ const AI_MODELS: AIModel[] = [
     },
   },
   {
-    key: "blendercloud", label: "BlenderCloud", sublabel: "CFP URLs",
-    specificModel: "BlenderCloud API", costNote: "Variable", costDetail: "Backup de estilos e imágenes",
-    domain: "blendercloud.com", color: "#EA7500", placeholder: "bc_...", apiUrl: "https://cloud.blender.org/settings",
+    key: "replicate", label: "Replicate", sublabel: "Models Hub",
+    specificModel: "SDXL / Flux / ControlNet", costNote: "~$0.005/img", costDetail: "Acceso a cientos de modelos",
+    domain: "replicate.com", color: "#0EA5E9", placeholder: "r8_...", apiUrl: "https://replicate.com/account/api-tokens",
   },
   {
-    key: "ideamaker", label: "Ideamaker", sublabel: "Ideamaker AI",
-    specificModel: "Ideamaker", costNote: "~$0.02/img", costDetail: "Ideas visuales para productos",
-    domain: "ideamaker.ai", color: "#7C3AED", placeholder: "im_...", apiUrl: "https://ideamaker.ai/settings/api",
+    key: "elevenlabs", label: "ElevenLabs", sublabel: "Voice AI",
+    specificModel: "Eleven Multilingual v2", costNote: "~$0.001/char", costDetail: "Voz para videos y anuncios",
+    domain: "elevenlabs.io", color: "#F59E0B", placeholder: "sk_...", apiUrl: "https://elevenlabs.io/app/settings/api-keys",
   },
   {
-    key: "gala", label: "Gala Art", sublabel: "Gala",
-    specificModel: "Gala Image Gen", costNote: "~$0.03/img", costDetail: "Alta calidad fotográfica",
-    domain: "gala.art", color: "#EC4899", placeholder: "gala_...", apiUrl: "https://app.gala.art/settings",
+    key: "runway", label: "Runway", sublabel: "Gen-3 Video",
+    specificModel: "Gen-3 Alpha", costNote: "~$0.05/seg", costDetail: "Generación de video profesional",
+    domain: "runwayml.com", color: "#8B5CF6", placeholder: "rw-...", apiUrl: "https://app.runwayml.com/settings",
   },
   {
-    key: "frames", label: "Frames", sublabel: "Frames.so",
-    specificModel: "Frames Video", costNote: "~$0.10/video", costDetail: "Videos y publicaciones de marca",
-    domain: "frames.so", color: "#06B6D4", placeholder: "fr_...", apiUrl: "https://frames.so/settings/api",
+    key: "apify", label: "Apify", sublabel: "Web Scraping",
+    specificModel: "Apify Actors", costNote: "Desde $5/mes", costDetail: "Scraping y research de productos",
+    domain: "apify.com", color: "#00B388", placeholder: "apify_api_...", apiUrl: "https://console.apify.com/settings/integrations",
+    tip: {
+      title: "Ideal para research de proveedores",
+      body: "Úsalo para extraer productos de AliExpress, Amazon y Alibaba automáticamente. Plan Free incluye $5 de crédito mensual.",
+    },
   },
   {
     key: "metahub", label: "Meta", sublabel: "Meta Hub AI",
@@ -274,6 +292,11 @@ export default function SettingsPage() {
         setBrandPrimary(m.brand_primary ?? "#FF6B35");
         setBrandSecondary(m.brand_secondary ?? "#8B5CF6");
         setBrandAccent(m.brand_accent ?? "#F0F0F5");
+        const loaded: Record<string, string> = {};
+        AI_MODELS.forEach((model) => {
+          if (m[`ai_key_${model.key}`]) loaded[model.key] = m[`ai_key_${model.key}`];
+        });
+        setModelKeys(loaded);
       }
     });
   }, []);
@@ -354,7 +377,14 @@ export default function SettingsPage() {
 
   async function handleSaveModel(key: string) {
     setModelSaveStates((prev) => ({ ...prev, [key]: "saving" }));
-    await new Promise((r) => setTimeout(r, 700));
+    const { error } = await supabase.auth.updateUser({
+      data: { [`ai_key_${key}`]: modelKeys[key] ?? "" },
+    });
+    if (error) {
+      setModelSaveStates((prev) => ({ ...prev, [key]: "idle" }));
+      showToast("Error al guardar la clave.", "error");
+      return;
+    }
     setModelSaveStates((prev) => ({ ...prev, [key]: "saved" }));
     setTimeout(() => setModelSaveStates((prev) => ({ ...prev, [key]: "idle" })), 2500);
   }
