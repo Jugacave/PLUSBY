@@ -573,11 +573,23 @@ export default function LandingPage() {
       .single();
 
     if (error) {
-      alert(
-        error.code === "23505"
-          ? "Ya existe una landing con ese nombre. Usa un nombre diferente."
-          : "Error al crear. Intenta de nuevo."
-      );
+      if (error.code === "23505") {
+        alert("Ya existe una landing con ese nombre. Usa un nombre diferente.");
+      } else if (error.code === "42P01" || error.message?.includes("does not exist")) {
+        alert("⚠️ Las tablas no están configuradas en Supabase.\nEjecuta el archivo supabase/migrations/001_landings.sql en el SQL Editor de tu dashboard de Supabase.");
+      } else if (error.code === "42703" && error.message?.includes("mode")) {
+        // mode column missing — retry without it
+        const { data: data2, error: error2 } = await supabase
+          .from("landings")
+          .insert({ user_id: user.id, name, product, slug, template, published: false, views: 0, conversions: 0 })
+          .select()
+          .single();
+        if (error2) { alert(`Error: ${error2.message}`); return; }
+        if (data2) { setLandings((prev) => [rowToLanding(data2), ...prev]); setShowCreate(false); }
+        return;
+      } else {
+        alert(`Error al crear: ${error.message}`);
+      }
       return;
     }
     if (data) {
