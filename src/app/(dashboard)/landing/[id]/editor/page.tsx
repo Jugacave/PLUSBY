@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import {
   ArrowLeft, Sparkles, Eye, Globe, GripVertical, Pencil, Trash2, Plus,
   Check, Loader2, ChevronDown, ChevronUp, Copy, X, Upload, Download,
-  ChevronRight, Palette, RefreshCw,
+  ChevronRight, RefreshCw, AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -85,37 +85,37 @@ const SECTION_TYPES_LIST: SectionType[] = [
 ];
 
 const BANNER_SECTIONS = [
-  { id: "hero",          label: "Hero / Portada",           icon: "🎯" },
-  { id: "oferta",        label: "Oferta / Precio",          icon: "💰" },
-  { id: "antes_despues", label: "Antes y Después",          icon: "🔄" },
-  { id: "beneficios",    label: "Beneficios",               icon: "✅" },
-  { id: "comparativa",   label: "Comparativa",              icon: "⚖️" },
-  { id: "autoridad",     label: "Autoridad / Confianza",    icon: "🏆" },
-  { id: "testimonios",   label: "Testimonios",              icon: "⭐" },
-  { id: "ingredientes",  label: "Ingredientes / Materiales",icon: "🧪" },
-  { id: "modo_uso",      label: "Modo de Uso",              icon: "📋" },
-  { id: "logistica",     label: "Logística / Envío",        icon: "🚚" },
-  { id: "faqs",          label: "Preguntas Frecuentes",     icon: "❓" },
+  { id: "hero",          label: "Hero / Portada",            icon: "🎯" },
+  { id: "oferta",        label: "Oferta / Precio",           icon: "💰" },
+  { id: "antes_despues", label: "Antes y Después",           icon: "🔄" },
+  { id: "beneficios",    label: "Beneficios",                icon: "✅" },
+  { id: "comparativa",   label: "Comparativa",               icon: "⚖️" },
+  { id: "autoridad",     label: "Autoridad / Confianza",     icon: "🏆" },
+  { id: "testimonios",   label: "Testimonios",               icon: "⭐" },
+  { id: "ingredientes",  label: "Ingredientes / Materiales", icon: "🧪" },
+  { id: "modo_uso",      label: "Modo de Uso",               icon: "📋" },
+  { id: "logistica",     label: "Logística / Envío",         icon: "🚚" },
+  { id: "faqs",          label: "Preguntas Frecuentes",      icon: "❓" },
 ];
 
 const COUNTRIES = [
-  { code: "CO", name: "Colombia",   flag: "🇨🇴", currency: "$" },
-  { code: "MX", name: "México",     flag: "🇲🇽", currency: "$" },
-  { code: "PA", name: "Panamá",     flag: "🇵🇦", currency: "$" },
-  { code: "EC", name: "Ecuador",    flag: "🇪🇨", currency: "$" },
-  { code: "PE", name: "Perú",       flag: "🇵🇪", currency: "S/" },
-  { code: "CL", name: "Chile",      flag: "🇨🇱", currency: "$" },
-  { code: "PY", name: "Paraguay",   flag: "🇵🇾", currency: "₲" },
-  { code: "AR", name: "Argentina",  flag: "🇦🇷", currency: "$" },
-  { code: "GT", name: "Guatemala",  flag: "🇬🇹", currency: "Q" },
-  { code: "ES", name: "España",     flag: "🇪🇸", currency: "€" },
+  { code: "CO", flag: "🇨🇴", currency: "$" },
+  { code: "MX", flag: "🇲🇽", currency: "$" },
+  { code: "PA", flag: "🇵🇦", currency: "$" },
+  { code: "EC", flag: "🇪🇨", currency: "$" },
+  { code: "PE", flag: "🇵🇪", currency: "S/" },
+  { code: "CL", flag: "🇨🇱", currency: "$" },
+  { code: "PY", flag: "🇵🇾", currency: "₲" },
+  { code: "AR", flag: "🇦🇷", currency: "$" },
+  { code: "GT", flag: "🇬🇹", currency: "Q" },
+  { code: "ES", flag: "🇪🇸", currency: "€" },
 ];
 
 const AI_MODELS = [
-  { id: "fal-flux-dev", label: "Flux Dev",           desc: "Rápido y económico — Ideal para volumen", price: "~$0.03", keyField: "fal" },
-  { id: "fal-flux-pro", label: "Flux Pro",           desc: "Alta calidad, texto perfecto, resolución 4K", price: "~$0.05", keyField: "fal" },
-  { id: "openai-dalle3",label: "DALL-E 3",           desc: "Máxima calidad OpenAI (requiere key OpenAI)", price: "~$0.04", keyField: "openai" },
-  { id: "fal-sd-xl",    label: "Stable Diffusion XL",desc: "Creativo y versátil", price: "~$0.02", keyField: "fal" },
+  { id: "fal-flux-dev",  label: "Flux Dev",            price: "~$0.03", desc: "Rápido · Ideal para volumen" },
+  { id: "fal-flux-pro",  label: "Flux Pro",            price: "~$0.05", desc: "Alta calidad · 4K" },
+  { id: "openai-dalle3", label: "DALL·E 3",            price: "~$0.04", desc: "OpenAI · Requiere key OpenAI" },
+  { id: "fal-sd-xl",     label: "Stable Diffusion XL", price: "~$0.02", desc: "Creativo · Versátil" },
 ];
 
 const FONTS = [
@@ -124,7 +124,7 @@ const FONTS = [
   "DM Sans", "Urbanist", "Bebas Neue", "Work Sans",
 ];
 
-// ─── Shared: EditPanel ───────────────────────────────────────────────────────
+// ─── Page Mode: EditPanel ─────────────────────────────────────────────────────
 
 function EditPanel({ section, onSave, onClose, product }: {
   section: Section; onSave: (s: Section) => void; onClose: () => void; product: string;
@@ -274,7 +274,7 @@ function EditorTopbar({ landingName, slug, published, saving, saved, mode, onTog
   );
 }
 
-// ─── Page Mode components (unchanged) ────────────────────────────────────────
+// ─── Page Mode ────────────────────────────────────────────────────────────────
 
 function SectionPreview({ section }: { section: Section }) {
   const meta = SECTION_META[section.type];
@@ -365,7 +365,7 @@ function PageEditorContent({ sections, setSections, product }: {
       {editingSection && <EditPanel section={editingSection} product={product} onSave={handleSaveSection} onClose={() => setEditingSection(null)} />}
       {showAddSection && <AddSectionModal onAdd={handleAddSection} onClose={() => setShowAddSection(false)} existing={sections.map((s) => s.type)} />}
       <div className="flex items-center justify-between mb-2">
-        <p className="text-[#8888A0] text-xs">{sections.length} sección{sections.length !== 1 ? "es" : ""} · Arrastra para reordenar</p>
+        <p className="text-[#8888A0] text-xs">{sections.length} sección{sections.length !== 1 ? "es" : ""}</p>
         <button onClick={() => setShowAddSection(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[#3A3A4A] hover:border-[#FF6B35] text-[#555568] hover:text-[#FF6B35] text-xs font-medium transition-colors">
           <Plus size={13} />Agregar sección
         </button>
@@ -405,54 +405,105 @@ function PageEditorContent({ sections, setSections, product }: {
   );
 }
 
-// ─── Banner Mode: Accordion Section ──────────────────────────────────────────
+// ─── Banner Mode: RefImageUpload (fixed) ──────────────────────────────────────
 
-function AccordionSection({ title, icon, defaultOpen = false, children }: {
-  title: string; icon: React.ReactNode; defaultOpen?: boolean; children: React.ReactNode;
+function RefImageUpload({ idx, url, landingId, onChange }: {
+  idx: number; url: string | null; landingId: string; onChange: (url: string) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const supabase = createClient();
+
+  const displayUrl = localPreview || url;
+
+  async function handleFile(file: File) {
+    setUploadError(null);
+    setUploading(true);
+
+    // Show local preview immediately
+    const objectUrl = URL.createObjectURL(file);
+    setLocalPreview(objectUrl);
+    onChange(objectUrl);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setUploading(false); return; }
+
+    const path = `landing-banners/${landingId}/ref-${idx}-${Date.now()}`;
+    const { error } = await supabase.storage.from("store-logos").upload(path, file, { upsert: true, contentType: file.type });
+
+    if (error) {
+      setUploadError("No se pudo guardar en servidor. La imagen solo dura esta sesión.");
+    } else {
+      const { data: { publicUrl } } = supabase.storage.from("store-logos").getPublicUrl(path);
+      setLocalPreview(null);
+      onChange(publicUrl);
+    }
+    setUploading(false);
+  }
+
   return (
-    <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl overflow-hidden">
-      <button onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-[#1C1C26] transition-colors">
-        <div className="flex items-center gap-2.5">
-          <span className="text-[#A78BFA]">{icon}</span>
-          <span className="text-[#F0F0F5] font-semibold text-sm">{title}</span>
-        </div>
-        <ChevronDown size={16} className={`text-[#555568] transition-transform ${open ? "rotate-180" : ""}`} />
+    <div className="flex flex-col gap-1">
+      <input ref={fileRef} type="file" accept="image/*" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+      <button onClick={() => fileRef.current?.click()}
+        className="w-full aspect-square rounded-xl border-2 border-dashed hover:border-[#7C3AED] flex flex-col items-center justify-center transition-colors overflow-hidden relative"
+        style={{ borderColor: displayUrl ? "#7C3AED" : "#2A2A3A", background: "#0A0A0F" }}>
+        {uploading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
+            <Loader2 size={18} className="animate-spin text-[#A78BFA]" />
+          </div>
+        )}
+        {displayUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={displayUrl} alt={`ref ${idx + 1}`} className="w-full h-full object-cover" />
+        ) : (
+          <>
+            <Upload size={18} className="text-[#555568] mb-1" />
+            <p className="text-[#555568] text-[10px]">Foto {idx + 1}</p>
+          </>
+        )}
       </button>
-      {open && <div className="px-4 pb-4 border-t border-[#1C1C26]"><div className="pt-4">{children}</div></div>}
+      {uploadError && (
+        <div className="flex items-start gap-1">
+          <AlertCircle size={10} className="text-yellow-500 mt-0.5 shrink-0" />
+          <p className="text-[9px] text-yellow-500 leading-tight">{uploadError}</p>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Banner Mode: DynamicList ─────────────────────────────────────────────────
+// ─── Banner Mode: CompactList ─────────────────────────────────────────────────
 
-function DynamicList({ label, items, onChange, placeholder }: {
+function CompactList({ label, items, onChange, placeholder }: {
   label: string; items: string[]; onChange: (items: string[]) => void; placeholder?: string;
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <label className="text-xs font-medium text-[#8888A0]">{label}</label>
-        <button onClick={() => onChange([...items, ""])} className="text-[10px] text-[#7C3AED] hover:text-[#A78BFA] flex items-center gap-1 transition-colors">
-          <Plus size={11} /> Añadir
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-[10px] font-medium text-[#555568]">{label}</label>
+        <button onClick={() => onChange([...items, ""])}
+          className="text-[9px] text-[#7C3AED] hover:text-[#A78BFA] flex items-center gap-0.5 transition-colors">
+          <Plus size={9} /> Añadir
         </button>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {items.map((item, i) => (
-          <div key={i} className="flex gap-2">
+          <div key={i} className="flex gap-1.5">
             <input value={item} onChange={(e) => { const n = [...items]; n[i] = e.target.value; onChange(n); }}
               placeholder={placeholder}
-              className="flex-1 px-3 py-2 rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#7C3AED] text-xs transition-colors" />
+              className="flex-1 px-2.5 py-1.5 rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#3A3A4A] focus:outline-none focus:border-[#7C3AED] text-[11px] transition-colors" />
             <button onClick={() => onChange(items.filter((_, j) => j !== i))}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-[#555568] hover:text-red-400 transition-colors">
-              <Trash2 size={13} />
+              className="w-6 h-6 flex items-center justify-center rounded text-[#3A3A4A] hover:text-red-400 transition-colors flex-shrink-0">
+              <X size={11} />
             </button>
           </div>
         ))}
         {items.length === 0 && (
-          <button onClick={() => onChange([""])} className="w-full py-2 rounded-lg border border-dashed border-[#2A2A3A] text-[#555568] text-xs hover:border-[#3A3A4A] transition-colors">
+          <button onClick={() => onChange([""])}
+            className="w-full py-1.5 rounded-lg border border-dashed border-[#2A2A3A] text-[#3A3A4A] text-[10px] hover:border-[#3A3A4A] transition-colors">
             + Agregar
           </button>
         )}
@@ -461,65 +512,21 @@ function DynamicList({ label, items, onChange, placeholder }: {
   );
 }
 
-// ─── Banner Mode: RefImageUpload ──────────────────────────────────────────────
-
-function RefImageUpload({ idx, url, landingId, onChange }: {
-  idx: number; url: string | null; landingId: string; onChange: (url: string) => void;
-}) {
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
-
-  async function handleFile(file: File) {
-    setUploading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setUploading(false); return; }
-    const path = `landing-banners/${landingId}/ref-${idx}-${Date.now()}`;
-    const { error } = await supabase.storage.from("store-logos").upload(path, file, { upsert: true });
-    if (!error) {
-      const { data: { publicUrl } } = supabase.storage.from("store-logos").getPublicUrl(path);
-      onChange(publicUrl);
-    }
-    setUploading(false);
-  }
-
-  return (
-    <div className="relative">
-      <input ref={fileRef} type="file" accept="image/*" className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-      <button onClick={() => fileRef.current?.click()}
-        className="w-full aspect-square rounded-xl border-2 border-dashed border-[#2A2A3A] hover:border-[#7C3AED] flex flex-col items-center justify-center transition-colors overflow-hidden bg-[#0A0A0F]">
-        {uploading ? (
-          <Loader2 size={20} className="animate-spin text-[#555568]" />
-        ) : url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={`ref ${idx + 1}`} className="w-full h-full object-cover" />
-        ) : (
-          <>
-            <Upload size={20} className="text-[#555568] mb-1.5" />
-            <p className="text-[#555568] text-xs">Imagen {idx + 1}</p>
-          </>
-        )}
-      </button>
-    </div>
-  );
-}
-
 // ─── Banner Mode: BannerImageCard ─────────────────────────────────────────────
 
-function BannerImageCard({ section, config, onImageGenerated }: {
+function BannerImageCard({ section, config, images, onImageGenerated }: {
   section: { id: string; label: string; icon: string };
   config: BannerConfig;
+  images: string[];
   onImageGenerated: (url: string) => void;
 }) {
-  const [images, setImages] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleGenerate() {
     setGenerating(true);
     setError(null);
-    const refImageUrl = config.refImages.find((r) => r !== null) ?? undefined;
+    const refImageUrl = config.refImages.find((r) => r !== null && r.startsWith("http")) ?? undefined;
     try {
       const res = await fetch("/api/landing/generate-banner-image", {
         method: "POST",
@@ -539,7 +546,6 @@ function BannerImageCard({ section, config, onImageGenerated }: {
       });
       const data = await res.json();
       if (data.ok && data.imageUrl) {
-        setImages((p) => [data.imageUrl, ...p]);
         onImageGenerated(data.imageUrl);
       } else {
         setError(data.error ?? "Error al generar");
@@ -552,50 +558,56 @@ function BannerImageCard({ section, config, onImageGenerated }: {
   }
 
   return (
-    <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="bg-[#13131A] border border-[#2A2A3A] rounded-xl p-3 hover:border-[#3A3A4A] transition-colors">
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-lg">{section.icon}</span>
-          <p className="text-[#F0F0F5] font-semibold text-sm">{section.label}</p>
+          <span className="text-sm">{section.icon}</span>
+          <p className="text-[#F0F0F5] font-semibold text-xs">{section.label}</p>
+          {images.length > 0 && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[rgba(74,222,128,0.1)] text-green-400 font-medium">
+              {images.length}
+            </span>
+          )}
         </div>
         <button onClick={handleGenerate} disabled={generating}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-colors disabled:opacity-60"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-white text-[10px] font-semibold transition-colors disabled:opacity-60"
           style={{ background: "#7C3AED" }}>
-          {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+          {generating ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
           {generating ? "Generando..." : images.length > 0 ? "Regenerar" : "Generar"}
         </button>
       </div>
 
       {error && (
-        <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
-          <p className="text-red-400 text-xs">{error}</p>
+        <div className="mb-2 px-2 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-1.5">
+          <AlertCircle size={11} className="text-red-400 shrink-0 mt-0.5" />
+          <p className="text-red-400 text-[10px] leading-tight">{error}</p>
         </div>
       )}
 
       {images.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {images.map((url, i) => (
+        <div className="grid grid-cols-3 gap-1.5">
+          {images.slice(0, 6).map((url, i) => (
             <div key={i} className="relative group aspect-square rounded-lg overflow-hidden bg-[#0A0A0F]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={url} alt={`${section.label} ${i + 1}`} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <a href={url} download={`${section.id}-${i + 1}.jpg`} target="_blank" rel="noreferrer"
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors">
-                  <Download size={14} />
+                  className="w-7 h-7 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors">
+                  <Download size={12} />
                 </a>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="aspect-[3/1] rounded-xl border border-dashed border-[#2A2A3A] flex items-center justify-center text-[#3A3A4A] text-xs">
+        <div className="h-10 rounded-lg border border-dashed border-[#2A2A3A] flex items-center justify-center">
           {generating ? (
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 size={20} className="animate-spin text-[#555568]" />
-              <span className="text-[#555568]">Generando con IA...</span>
+            <div className="flex items-center gap-2">
+              <Loader2 size={12} className="animate-spin text-[#555568]" />
+              <span className="text-[#555568] text-[10px]">Generando con IA...</span>
             </div>
           ) : (
-            "Haz clic en Generar para crear este banner"
+            <span className="text-[#3A3A4A] text-[10px]">Haz clic en Generar</span>
           )}
         </div>
       )}
@@ -603,7 +615,7 @@ function BannerImageCard({ section, config, onImageGenerated }: {
   );
 }
 
-// ─── Banner Mode: BannerEditorContent ────────────────────────────────────────
+// ─── Banner Mode: BannerEditorContent (two-column redesign) ───────────────────
 
 function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedImages, product: initialProduct, landingId }: {
   config: BannerConfig;
@@ -614,8 +626,37 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
   landingId: string;
 }) {
   const [generatingAngles, setGeneratingAngles] = useState(false);
+  const [generatingContext, setGeneratingContext] = useState(false);
 
   function upd(patch: Partial<BannerConfig>) { setConfig((p) => ({ ...p, ...patch })); }
+
+  async function handleGenerateContext() {
+    if (!initialProduct && !config.description) return;
+    setGeneratingContext(true);
+    try {
+      const refImageUrls = config.refImages.filter((r): r is string => r !== null);
+      const res = await fetch("/api/landing/generate-product-context", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productName: initialProduct || config.description,
+          description: config.description,
+          country: config.country,
+          refImageUrls,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        upd({
+          description: data.description || config.description,
+          benefits: data.benefits?.length ? data.benefits : config.benefits,
+          problems: data.problems?.length ? data.problems : config.problems,
+          ingredients: data.ingredients?.length ? data.ingredients : config.ingredients,
+          differentiator: data.differentiator || config.differentiator,
+        });
+      }
+    } catch { /* noop */ } finally { setGeneratingContext(false); }
+  }
 
   async function handleGenerateAngles() {
     if (!config.description && !initialProduct) return;
@@ -638,42 +679,153 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
     } catch { /* noop */ } finally { setGeneratingAngles(false); }
   }
 
-  const selectedModel = AI_MODELS.find((m) => m.id === config.aiModel);
+  const currency = COUNTRIES.find((c) => c.code === config.country)?.currency ?? "$";
 
   return (
-    <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
-      {/* ── Contexto del Producto ── */}
-      <AccordionSection title="Contexto del Producto" icon={<Sparkles size={16} />} defaultOpen>
-        <div className="space-y-4">
-          <p className="text-[#555568] text-xs">Entre más contexto proporciones, mejores serán los banners y ángulos generados.</p>
+    <div className="flex overflow-hidden" style={{ height: "calc(100vh - 57px)" }}>
+
+      {/* ── LEFT PANEL: Config ── */}
+      <aside className="w-[380px] xl:w-[420px] flex-shrink-0 overflow-y-auto border-r border-[#1C1C26] bg-[#0D0D14]">
+
+        {/* 1 · Imágenes de Referencia */}
+        <div className="p-4 border-b border-[#1C1C26]">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold text-[#F0F0F5]">📷 Imágenes de Referencia</p>
+            <button onClick={handleGenerateContext} disabled={generatingContext || (!initialProduct && !config.description)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold text-white transition-colors disabled:opacity-40"
+              style={{ background: "#7C3AED" }}>
+              {generatingContext ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+              {generatingContext ? "Analizando..." : "Analizar con IA"}
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[0, 1, 2].map((i) => (
+              <RefImageUpload key={i} idx={i} url={config.refImages[i] ?? null} landingId={landingId}
+                onChange={(url) => {
+                  const r = [...config.refImages] as (string | null)[];
+                  r[i] = url;
+                  upd({ refImages: r });
+                }} />
+            ))}
+          </div>
+          <p className="text-[9px] text-[#3A3A4A] mt-2">Sube fotos del producto · Luego haz clic en "Analizar con IA" para auto-rellenar el formulario</p>
+        </div>
+
+        {/* 2 · País Destino */}
+        <div className="p-4 border-b border-[#1C1C26]">
+          <p className="text-xs font-bold text-[#F0F0F5] mb-2.5">🌍 País Destino</p>
+          <div className="grid grid-cols-5 gap-1.5">
+            {COUNTRIES.map((c) => (
+              <button key={c.code} onClick={() => upd({ country: c.code })}
+                className="flex flex-col items-center gap-0.5 py-2 rounded-lg border transition-all"
+                style={config.country === c.code
+                  ? { border: "1px solid #7C3AED", background: "rgba(124,58,237,0.15)" }
+                  : { border: "1px solid #1C1C26", background: "#13131A" }}>
+                <span className="text-base leading-none">{c.flag}</span>
+                <span className="text-[8px] font-bold" style={{ color: config.country === c.code ? "#A78BFA" : "#555568" }}>{c.code}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 3 · Estilo Visual */}
+        <div className="p-4 border-b border-[#1C1C26] space-y-3">
+          <p className="text-xs font-bold text-[#F0F0F5]">🎨 Estilo Visual</p>
+
+          {/* AI Model */}
           <div>
-            <label className="block text-xs font-medium text-[#8888A0] mb-1.5">Descripción del Producto</label>
+            <p className="text-[10px] text-[#555568] mb-1.5">Modelo de IA para imágenes</p>
+            <div className="space-y-1">
+              {AI_MODELS.map((m) => (
+                <button key={m.id} onClick={() => upd({ aiModel: m.id })}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all"
+                  style={config.aiModel === m.id
+                    ? { border: "1px solid #7C3AED", background: "rgba(124,58,237,0.1)" }
+                    : { border: "1px solid #1C1C26", background: "#13131A" }}>
+                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    style={{ background: config.aiModel === m.id ? "#7C3AED" : "#3A3A4A" }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium" style={{ color: config.aiModel === m.id ? "#F0F0F5" : "#8888A0" }}>{m.label}</p>
+                    <p className="text-[9px] text-[#555568] truncate">{m.desc}</p>
+                  </div>
+                  <span className="text-[9px] font-mono text-[#555568] flex-shrink-0">{m.price}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Font */}
+          <div>
+            <p className="text-[10px] text-[#555568] mb-1">Tipografía</p>
+            <select value={config.font} onChange={(e) => upd({ font: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg border border-[#2A2A3A] bg-[#0A0A0F] text-[#F0F0F5] text-sm focus:outline-none focus:border-[#7C3AED] transition-colors">
+              {FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+            <p className="text-xs text-[#555568] mt-1.5 px-0.5" style={{ fontFamily: config.font }}>
+              La mejor calidad garantizada — {config.font}
+            </p>
+          </div>
+
+          {/* Colors */}
+          <div>
+            <p className="text-[10px] text-[#555568] mb-1.5">Paleta de colores</p>
+            <div className="flex items-center gap-3">
+              {config.colors.map((color, i) => (
+                <div key={i} className="flex flex-col items-center gap-1">
+                  <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-[#2A2A3A] cursor-pointer" style={{ background: color }}>
+                    <input type="color" value={color}
+                      onChange={(e) => { const nc = [...config.colors]; nc[i] = e.target.value; upd({ colors: nc }); }}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                  </div>
+                  <span className="text-[8px] font-mono text-[#555568]">{color}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 4 · Contexto del Producto */}
+        <div className="p-4 border-b border-[#1C1C26] space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-[#F0F0F5]">📋 Contexto del Producto</p>
+            <button onClick={handleGenerateContext} disabled={generatingContext || (!initialProduct && !config.description)}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold border border-[#3A3A4A] hover:border-[#7C3AED] text-[#A78BFA] disabled:opacity-40 transition-colors">
+              <Sparkles size={8} /> IA
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-[10px] text-[#555568] mb-1">Descripción del Producto</label>
             <textarea value={config.description} onChange={(e) => upd({ description: e.target.value })}
-              rows={4} placeholder="Describe el producto en detalle: qué es, cómo funciona, sus características principales..."
-              className="w-full px-3 py-2.5 rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#7C3AED] text-sm resize-none transition-colors" />
+              rows={3} placeholder="Describe el producto en detalle..."
+              className="w-full px-2.5 py-2 rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#3A3A4A] focus:outline-none focus:border-[#7C3AED] text-xs resize-none transition-colors" />
           </div>
-          <DynamicList label="Beneficios Principales" items={config.benefits} onChange={(v) => upd({ benefits: v })} placeholder="Ej: Reduce medidas desde el primer uso" />
-          <DynamicList label="Problemas que Resuelve" items={config.problems} onChange={(v) => upd({ problems: v })} placeholder="Ej: Dolor de espalda por mala postura" />
-          <DynamicList label="Ingredientes / Materiales / Componentes" items={config.ingredients} onChange={(v) => upd({ ingredients: v })} placeholder="Ej: Tejido térmico neopreno premium" />
+
+          <CompactList label="Beneficios Principales" items={config.benefits} onChange={(v) => upd({ benefits: v })} placeholder="Ej: Reduce medidas desde el primer uso" />
+          <CompactList label="Problemas que Resuelve" items={config.problems} onChange={(v) => upd({ problems: v })} placeholder="Ej: Dolor de espalda crónico" />
+          <CompactList label="Ingredientes / Materiales" items={config.ingredients} onChange={(v) => upd({ ingredients: v })} placeholder="Ej: Tejido térmico neopreno premium" />
+
           <div>
-            <label className="block text-xs font-medium text-[#8888A0] mb-1.5">Diferenciador</label>
-            <textarea value={config.differentiator} onChange={(e) => upd({ differentiator: e.target.value })}
-              rows={2} placeholder="¿Qué te hace único frente a la competencia?"
-              className="w-full px-3 py-2.5 rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#7C3AED] text-sm resize-none transition-colors" />
+            <label className="block text-[10px] text-[#555568] mb-1">Diferenciador</label>
+            <input value={config.differentiator} onChange={(e) => upd({ differentiator: e.target.value })}
+              placeholder="¿Qué te hace único vs la competencia?"
+              className="w-full px-2.5 py-2 rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#3A3A4A] focus:outline-none focus:border-[#7C3AED] text-xs transition-colors" />
           </div>
+
           <button onClick={handleGenerateAngles} disabled={generatingAngles}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm transition-colors disabled:opacity-60"
-            style={{ background: generatingAngles ? "#555568" : "#FF6B35" }}>
-            {generatingAngles ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-            {generatingAngles ? "Generando Ángulos de Venta..." : "💡 Generar Ángulos de Venta con IA"}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors disabled:opacity-60"
+            style={{ background: "#FF6B35" }}>
+            {generatingAngles ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+            {generatingAngles ? "Generando ángulos..." : "💡 Generar Ángulos de Venta"}
           </button>
+
           {config.angles.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-[#8888A0] mb-2">Selecciona el ángulo para tus banners:</p>
-              <div className="flex flex-wrap gap-2">
+              <p className="text-[9px] text-[#555568] mb-1.5">Selecciona el ángulo para los banners:</p>
+              <div className="flex flex-wrap gap-1.5">
                 {config.angles.map((angle, i) => (
                   <button key={i} onClick={() => upd({ selectedAngle: angle })}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                    className="px-2.5 py-1 rounded-full text-[10px] font-medium transition-all leading-tight"
                     style={config.selectedAngle === angle
                       ? { background: "#FF6B35", color: "#fff" }
                       : { background: "#1C1C26", color: "#8888A0", border: "1px solid #2A2A3A" }}>
@@ -684,156 +836,54 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
             </div>
           )}
         </div>
-      </AccordionSection>
 
-      {/* ── País destino ── */}
-      <AccordionSection title="País Destino del Anuncio" icon={<Globe size={16} />}>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {COUNTRIES.map((c) => (
-            <button key={c.code} onClick={() => upd({ country: c.code })}
-              className="flex flex-col items-center gap-1 p-3 rounded-xl border transition-all"
-              style={config.country === c.code
-                ? { border: "1px solid #7C3AED", background: "rgba(124,58,237,0.12)" }
-                : { border: "1px solid #2A2A3A", background: "#1C1C26" }}>
-              <span className="text-xl">{c.flag}</span>
-              <span className="text-[9px] font-bold text-[#8888A0]">{c.code}</span>
-              <span className="text-[9px] text-[#555568]">{c.currency}</span>
-            </button>
-          ))}
-        </div>
-      </AccordionSection>
-
-      {/* ── Estilo Visual ── */}
-      <AccordionSection title="Estilo Visual" icon={<Palette size={16} />}>
-        <div className="space-y-5">
-          {/* Colors */}
-          <div>
-            <label className="block text-xs font-medium text-[#8888A0] mb-2">Paleta de Colores (3 colores principales)</label>
-            <div className="flex gap-3">
-              {config.colors.map((color, i) => (
-                <div key={i} className="flex flex-col items-center gap-1.5">
-                  <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-[#2A2A3A] cursor-pointer">
-                    <div className="absolute inset-0" style={{ background: color }} />
-                    <input type="color" value={color}
-                      onChange={(e) => { const nc = [...config.colors]; nc[i] = e.target.value; upd({ colors: nc }); }}
-                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
-                  </div>
-                  <span className="text-[9px] font-mono text-[#555568]">{color}</span>
+        {/* 5 · Precios */}
+        <div className="p-4">
+          <p className="text-xs font-bold text-[#F0F0F5] mb-3">💰 Precios del Producto</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: "Precio Oferta",   field: "priceSale",     placeholder: "89.900" },
+              { label: "Precio Antes",    field: "priceOriginal", placeholder: "150.000" },
+              { label: "2 Unidades",      field: "priceBundle2",  placeholder: "160.000" },
+              { label: "3 Unidades",      field: "priceBundle3",  placeholder: "220.000" },
+            ].map(({ label, field, placeholder }) => (
+              <div key={field}>
+                <label className="block text-[9px] text-[#555568] mb-1">{label}</label>
+                <div className="relative">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[#555568] text-[10px]">{currency}</span>
+                  <input
+                    value={(config as unknown as Record<string, string>)[field] ?? ""}
+                    onChange={(e) => upd({ [field]: e.target.value } as Partial<BannerConfig>)}
+                    placeholder={placeholder}
+                    className="w-full pl-5 pr-2 py-2 rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#3A3A4A] focus:outline-none focus:border-[#7C3AED] text-xs transition-colors" />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Font */}
-          <div>
-            <label className="block text-xs font-medium text-[#8888A0] mb-2">Tipografía</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {FONTS.map((font) => (
-                <button key={font} onClick={() => upd({ font })}
-                  className="px-3 py-2 rounded-lg border text-sm text-left transition-all"
-                  style={config.font === font
-                    ? { border: "1px solid #7C3AED", background: "rgba(124,58,237,0.12)", color: "#A78BFA", fontFamily: font }
-                    : { border: "1px solid #2A2A3A", background: "#1C1C26", color: "#8888A0", fontFamily: font }}>
-                  {font}
-                </button>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
-      </AccordionSection>
+      </aside>
 
-      {/* ── Modelo de IA ── */}
-      <AccordionSection title="Modelo de IA para Imágenes" icon={<Sparkles size={16} />}>
-        <div className="space-y-2">
-          {selectedModel && (
-            <div className="mb-3 p-3 rounded-xl border border-[rgba(124,58,237,0.3)] bg-[rgba(124,58,237,0.08)] flex items-center justify-between">
-              <div>
-                <p className="text-[#A78BFA] font-semibold text-sm">{selectedModel.label}</p>
-                <p className="text-[#555568] text-xs">{selectedModel.desc}</p>
-              </div>
-              <span className="text-[#A78BFA] text-sm font-mono">{selectedModel.price}</span>
+      {/* ── RIGHT PANEL: Banner Sections ── */}
+      <main className="flex-1 overflow-y-auto p-4 lg:p-5 bg-[#0A0A0F]">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-[#F0F0F5] font-bold text-sm">Secciones de Banners</h2>
+            <p className="text-[#555568] text-[10px] mt-0.5">Genera cada banner individualmente con IA</p>
+          </div>
+          {config.selectedAngle && (
+            <div className="max-w-[200px] px-2.5 py-1.5 rounded-lg border border-[rgba(255,107,53,0.3)] bg-[rgba(255,107,53,0.08)]">
+              <p className="text-[9px] text-[#FF6B35] font-medium truncate">{config.selectedAngle}</p>
             </div>
           )}
-          {AI_MODELS.map((m) => (
-            <button key={m.id} onClick={() => upd({ aiModel: m.id })}
-              className="w-full flex items-center justify-between gap-3 p-3 rounded-xl border text-left transition-all"
-              style={config.aiModel === m.id
-                ? { border: "1px solid #7C3AED", background: "rgba(124,58,237,0.1)" }
-                : { border: "1px solid #2A2A3A", background: "#1C1C26" }}>
-              <div>
-                <p className="text-[#F0F0F5] font-medium text-sm">{m.label}</p>
-                <p className="text-[#555568] text-xs">{m.desc}</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[#8888A0] text-xs font-mono">{m.price}</span>
-                {config.aiModel === m.id && <div className="w-2 h-2 rounded-full bg-[#7C3AED]" />}
-              </div>
-            </button>
-          ))}
         </div>
-      </AccordionSection>
 
-      {/* ── Precios ── */}
-      <AccordionSection title="Precios del Producto" icon={<span className="text-base">💰</span>}>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: "Precio Oferta", field: "priceSale", placeholder: "89.900" },
-            { label: "Precio Antes", field: "priceOriginal", placeholder: "150.000" },
-            { label: "Precio x 2 Unidades", field: "priceBundle2", placeholder: "160.000" },
-            { label: "Precio x 3 Unidades", field: "priceBundle3", placeholder: "220.000" },
-          ].map(({ label, field, placeholder }) => (
-            <div key={field}>
-              <label className="block text-xs font-medium text-[#8888A0] mb-1.5">{label}</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#555568] text-xs">
-                  {COUNTRIES.find((c) => c.code === config.country)?.currency ?? "$"}
-                </span>
-                <input
-                  value={(config as unknown as Record<string, string>)[field] ?? ""}
-                  onChange={(e) => upd({ [field]: e.target.value } as Partial<BannerConfig>)}
-                  placeholder={placeholder}
-                  className="w-full pl-7 pr-3 py-2.5 rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#7C3AED] text-sm transition-colors" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </AccordionSection>
-
-      {/* ── Imágenes de Referencia ── */}
-      <AccordionSection title="Imágenes de Referencia del Producto" icon={<Upload size={16} />}>
-        <p className="text-[#555568] text-xs mb-3">Sube 3 imágenes del producto para que la IA las use como referencia visual.</p>
-        <div className="grid grid-cols-3 gap-3">
-          {[0, 1, 2].map((i) => (
-            <RefImageUpload key={i} idx={i} url={config.refImages[i] ?? null} landingId={landingId}
-              onChange={(url) => {
-                const newRefs = [...config.refImages] as (string | null)[];
-                newRefs[i] = url;
-                upd({ refImages: newRefs });
-              }} />
-          ))}
-        </div>
-      </AccordionSection>
-
-      {/* ── Generar Banners ── */}
-      {config.selectedAngle && (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-[rgba(255,107,53,0.12)] to-[rgba(230,90,43,0.06)] border border-[rgba(255,107,53,0.25)]">
-          <p className="text-[#F0F0F5] font-semibold text-sm mb-1">Ángulo seleccionado</p>
-          <p className="text-[#FF6B35] text-sm font-medium">{config.selectedAngle}</p>
-        </div>
-      )}
-
-      {/* ── Banners Generados ── */}
-      <div>
-        <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-[#F0F0F5] font-bold text-base flex-1">Secciones de Banners</h2>
-          <span className="text-[#555568] text-xs">Genera cada sección individualmente con IA</span>
-        </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {BANNER_SECTIONS.map((section) => (
             <BannerImageCard
               key={section.id}
               section={section}
               config={config}
+              images={generatedImages[section.id] ?? []}
               onImageGenerated={(url) => {
                 setGeneratedImages((p) => ({
                   ...p,
@@ -843,15 +893,14 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
             />
           ))}
         </div>
-      </div>
 
-      {/* Save reminder */}
-      <div className="flex items-center justify-center gap-2 py-3">
-        <RefreshCw size={13} className="text-[#555568]" />
-        <p className="text-[#555568] text-xs">
-          Haz clic en <strong className="text-[#8888A0]">Guardar</strong> en la barra superior para guardar toda la configuración.
-        </p>
-      </div>
+        <div className="flex items-center justify-center gap-2 py-6 mt-2">
+          <RefreshCw size={11} className="text-[#3A3A4A]" />
+          <p className="text-[#3A3A4A] text-[10px]">
+            Haz clic en <strong className="text-[#555568]">Guardar</strong> en la barra superior para conservar la configuración
+          </p>
+        </div>
+      </main>
     </div>
   );
 }
@@ -871,10 +920,7 @@ export default function LandingEditorPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Page mode state
   const [sections, setSections] = useState<Section[]>([]);
-
-  // Banner mode state
   const [bannerConfig, setBannerConfig] = useState<BannerConfig>(DEFAULT_BANNER_CONFIG);
   const [generatedImages, setGeneratedImages] = useState<Record<string, string[]>>({});
 
@@ -902,12 +948,9 @@ export default function LandingEditorPage() {
         if (landingData.banner_config && Object.keys(landingData.banner_config).length > 0) {
           setBannerConfig({ ...DEFAULT_BANNER_CONFIG, ...landingData.banner_config });
         } else {
-          // Pre-fill description from product field
           setBannerConfig((p) => ({ ...p, description: landingData.product ?? "" }));
         }
-        if (landingData.banner_images) {
-          setGeneratedImages(landingData.banner_images);
-        }
+        if (landingData.banner_images) setGeneratedImages(landingData.banner_images);
       } else {
         const { data: sectionsData } = await supabase
           .from("landing_sections").select("*").eq("landing_id", id).order("position");
@@ -928,7 +971,6 @@ export default function LandingEditorPage() {
   async function handleSaveLanding() {
     if (!id) return;
     setSaving(true);
-
     if (mode === "banners") {
       await supabase.from("landings").update({
         banner_config: bannerConfig,
@@ -948,7 +990,6 @@ export default function LandingEditorPage() {
       }
       await supabase.from("landings").update({ updated_at: new Date().toISOString() }).eq("id", id);
     }
-
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
