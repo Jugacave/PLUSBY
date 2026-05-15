@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -15,7 +15,9 @@ import {
   Zap,
   X,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface Landing {
   id: string;
@@ -28,31 +30,6 @@ interface Landing {
   createdAt: string;
   template: string;
 }
-
-const DEMO_LANDINGS: Landing[] = [
-  {
-    id: "1",
-    name: "Faja Reductora Premium",
-    product: "Faja reductora modela silueta",
-    slug: "faja-reductora-premium",
-    published: true,
-    views: 1248,
-    conversions: 87,
-    createdAt: "2026-04-15",
-    template: "impact",
-  },
-  {
-    id: "2",
-    name: "Masajeador Anticelulitis",
-    product: "Masajeador eléctrico 3 en 1",
-    slug: "masajeador-anticelulitis",
-    published: false,
-    views: 0,
-    conversions: 0,
-    createdAt: "2026-04-28",
-    template: "minimal",
-  },
-];
 
 const TEMPLATES = [
   {
@@ -96,27 +73,19 @@ function CreateModal({
   onCreate,
 }: {
   onClose: () => void;
-  onCreate: (l: Landing) => void;
+  onCreate: (name: string, product: string, template: string) => Promise<void>;
 }) {
   const [step, setStep] = useState<"template" | "details">("template");
   const [selectedTemplate, setSelectedTemplate] = useState("impact");
   const [name, setName] = useState("");
   const [product, setProduct] = useState("");
+  const [creating, setCreating] = useState(false);
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!name.trim() || !product.trim()) return;
-    onCreate({
-      id: Date.now().toString(),
-      name: name.trim(),
-      product: product.trim(),
-      slug: slugify(name.trim()),
-      published: false,
-      views: 0,
-      conversions: 0,
-      createdAt: new Date().toISOString().split("T")[0],
-      template: selectedTemplate,
-    });
-    onClose();
+    setCreating(true);
+    await onCreate(name.trim(), product.trim(), selectedTemplate);
+    setCreating(false);
   }
 
   return (
@@ -238,16 +207,18 @@ function CreateModal({
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={() => setStep("template")}
-                  className="flex-1 py-3 rounded-xl border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] font-semibold text-sm transition-colors"
+                  disabled={creating}
+                  className="flex-1 py-3 rounded-xl border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] font-semibold text-sm transition-colors disabled:opacity-50"
                 >
                   Atrás
                 </button>
                 <button
                   onClick={handleCreate}
-                  disabled={!name.trim() || !product.trim()}
-                  className="flex-1 py-3 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!name.trim() || !product.trim() || creating}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Crear Landing
+                  {creating && <Loader2 size={15} className="animate-spin" />}
+                  {creating ? "Creando..." : "Crear Landing"}
                 </button>
               </div>
             </div>
@@ -374,21 +345,87 @@ function LandingCard({
   );
 }
 
+function rowToLanding(row: Record<string, unknown>): Landing {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    product: row.product as string,
+    slug: row.slug as string,
+    published: row.published as boolean,
+    views: (row.views as number) ?? 0,
+    conversions: (row.conversions as number) ?? 0,
+    createdAt: ((row.created_at as string) ?? "").split("T")[0],
+    template: (row.template as string) ?? "impact",
+  };
+}
+
 export default function LandingPage() {
-  const [landings, setLandings] = useState<Landing[]>(DEMO_LANDINGS);
+  const [landings, setLandings] = useState<Landing[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
 
-  function handleCreate(l: Landing) {
-    setLandings((prev) => [l, ...prev]);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchLandings() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("landings")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (data) setLandings(data.map(rowToLanding));
+      setLoading(false);
+    }
+    fetchLandings();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleCreate(name: string, product: string, template: string) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const slug = slugify(name);
+    const { data, error } = await supabase
+      .from("landings")
+      .insert({ user_id: user.id, name, product, slug, template, published: false, views: 0, conversions: 0 })
+      .select()
+      .single();
+
+    if (error) {
+      alert(
+        error.code === "23505"
+          ? "Ya existe una landing con ese nombre. Usa un nombre diferente."
+          : "Error al crear la landing. Intenta de nuevo."
+      );
+      return;
+    }
+    if (data) {
+      setLandings((prev) => [rowToLanding(data), ...prev]);
+      setShowCreate(false);
+    }
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
+    await supabase.from("landings").delete().eq("id", id);
     setLandings((prev) => prev.filter((l) => l.id !== id));
   }
 
-  function handleTogglePublish(id: string) {
+  async function handleTogglePublish(id: string) {
+    const landing = landings.find((l) => l.id === id);
+    if (!landing) return;
+    const newPublished = !landing.published;
+    await supabase.from("landings").update({ published: newPublished }).eq("id", id);
     setLandings((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, published: !l.published } : l))
+      prev.map((l) => (l.id === id ? { ...l, published: newPublished } : l))
     );
   }
 
@@ -431,14 +468,18 @@ export default function LandingPage() {
         {[
           {
             label: "Total Landings",
-            value: landings.length,
-            sub: `${landings.filter((l) => l.published).length} publicadas`,
+            value: loading ? "—" : landings.length,
+            sub: loading ? "" : `${landings.filter((l) => l.published).length} publicadas`,
           },
-          { label: "Visitas totales", value: totalViews.toLocaleString(), sub: "últimos 30 días" },
+          {
+            label: "Visitas totales",
+            value: loading ? "—" : totalViews.toLocaleString(),
+            sub: "últimos 30 días",
+          },
           {
             label: "Tasa conversión",
-            value: `${avgConvRate}%`,
-            sub: `${totalConversions} conversiones`,
+            value: loading ? "—" : `${avgConvRate}%`,
+            sub: loading ? "" : `${totalConversions} conversiones`,
           },
         ].map((s) => (
           <div key={s.label} className="bg-[#13131A] border border-[#2A2A3A] rounded-xl p-3 md:p-4">
@@ -449,7 +490,11 @@ export default function LandingPage() {
         ))}
       </div>
 
-      {landings.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 size={28} className="animate-spin text-[#555568]" />
+        </div>
+      ) : landings.length === 0 ? (
         <div className="bg-[#13131A] border-2 border-dashed border-[#2A2A3A] rounded-2xl flex flex-col items-center justify-center py-20 px-8 text-center">
           <div className="w-16 h-16 rounded-2xl bg-[rgba(255,107,53,0.1)] flex items-center justify-center mb-4">
             <Globe size={28} className="text-[#FF6B35]" />

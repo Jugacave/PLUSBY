@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Star, Shield, Truck, Clock, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { Check, Star, Shield, Truck, Clock, ChevronDown, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 type SectionType =
   | "hero"
@@ -23,79 +25,7 @@ interface Section {
   items?: string[];
 }
 
-// In production this would be fetched from the DB by slug.
-// For now we render the same demo landing used in the editor.
-const DEMO_LANDING = {
-  name: "Faja Reductora Premium",
-  product: "Faja reductora modela silueta",
-  slug: "faja-reductora-premium",
-  accentColor: "#FF6B35",
-  sections: [
-    {
-      id: "s1",
-      type: "hero" as SectionType,
-      headline: "La faja que transforma tu figura en 30 días o te devolvemos tu dinero",
-      subtext:
-        "Moldea tu cintura, reduce medidas y luce la silueta que siempre quisiste. Sin dietas extremas. Sin ejercicios imposibles.",
-      ctaText: "Quiero mi faja ahora →",
-    },
-    {
-      id: "s2",
-      type: "problem" as SectionType,
-      headline: "¿Cansada de no ver resultados después de tanto esfuerzo?",
-      subtext:
-        "Millones de mujeres hacen dietas, pagan gimnasios y siguen sin ver cambios en su silueta. El problema no eres tú — es que no tienes la herramienta correcta.",
-    },
-    {
-      id: "s3",
-      type: "solution" as SectionType,
-      headline: "La solución que estabas buscando ya existe",
-      subtext:
-        "Nuestra faja reductora combina compresión inteligente y tejido térmico para moldear tu cuerpo desde el primer uso, acelerando resultados visibles.",
-    },
-    {
-      id: "s4",
-      type: "benefits" as SectionType,
-      headline: "¿Por qué miles de mujeres eligen nuestra faja?",
-      subtext: "No es solo compresión — es transformación real.",
-      items: [
-        "Reduce hasta 3 tallas en apariencia desde el primer uso",
-        "Tejido térmico que activa la circulación y quema grasa",
-        "Cómoda para usar todo el día — incluso en el trabajo",
-        "Tallas de S a 4XL — funciona para todos los cuerpos",
-      ],
-    },
-    {
-      id: "s5",
-      type: "testimonials" as SectionType,
-      headline: "Más de 12.000 mujeres ya lo comprobaron",
-      subtext: "Resultados reales de clientas reales en Colombia, México y Chile.",
-      items: [
-        "Valentina R., Bogotá: La usé 2 semanas y mis jeans talla 14 ya me quedan holgados. No lo puedo creer.",
-        "Mariana T., Ciudad de México: Pensé que era otro producto milagro, pero de verdad se nota desde el primer día.",
-        "Camila S., Santiago: La enviaron rapidísimo y la calidad es increíble. Ya pedí una para mi mamá también.",
-      ],
-    },
-    {
-      id: "s6",
-      type: "urgency" as SectionType,
-      headline: "Oferta especial: solo 47 unidades disponibles",
-      subtext:
-        "Esta semana enviamos con descuento del 40% y envío gratis. Una vez se agote el stock, vuelve al precio original.",
-      ctaText: "Aprovechar descuento",
-    },
-    {
-      id: "s7",
-      type: "cta" as SectionType,
-      headline: "¿Lista para transformar tu figura?",
-      subtext:
-        "Compra hoy con garantía de 30 días. Si no ves resultados, te devolvemos el 100% de tu dinero.",
-      ctaText: "Pedir con descuento ahora",
-    },
-  ] as Section[],
-};
-
-const ACCENT = DEMO_LANDING.accentColor;
+const ACCENT = "#FF6B35";
 
 function HeroSection({ section }: { section: Section }) {
   return (
@@ -418,38 +348,109 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-const FAQS = [
+const GENERIC_FAQS = [
   {
     q: "¿Cuánto tiempo tarda en llegar mi pedido?",
     a: "Enviamos en 24-48 horas hábiles. Recibirás un número de seguimiento por WhatsApp o correo.",
   },
   {
-    q: "¿Cómo sé qué talla elegir?",
-    a: "Mide tu cintura en el punto más estrecho. En la página de compra encontrarás la tabla de tallas detallada.",
+    q: "¿Cómo puedo hacer seguimiento a mi pedido?",
+    a: "Una vez despachado tu pedido, recibirás un número de rastreo por correo o WhatsApp.",
   },
   {
-    q: "¿Qué pasa si no me queda bien?",
-    a: "Tienes 30 días para devolverlo sin preguntas. Te reembolsamos el 100% del precio.",
+    q: "¿Tienen garantía de devolución?",
+    a: "Sí, tienes 30 días para devolverlo sin preguntas. Te reembolsamos el 100% del precio.",
   },
   {
-    q: "¿Se puede usar todos los días?",
-    a: "Sí, el tejido transpirable permite un uso diario cómodo. Recomendamos no dormir con la faja puesta.",
+    q: "¿Cómo puedo contactarlos?",
+    a: "Puedes escribirnos por WhatsApp o correo electrónico. Respondemos en menos de 24 horas.",
   },
 ];
 
 export default function PublicLandingPage() {
-  const landing = DEMO_LANDING;
+  const params = useParams();
+  const slug = params?.slug as string;
+
+  const [sections, setSections] = useState<Section[]>([]);
+  const [landingName, setLandingName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (!slug) return;
+    async function fetchLanding() {
+      const { data: landingData } = await supabase
+        .from("landings")
+        .select("*")
+        .eq("slug", slug)
+        .eq("published", true)
+        .single();
+
+      if (!landingData) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
+      setLandingName(landingData.name);
+
+      const { data: sectionsData } = await supabase
+        .from("landing_sections")
+        .select("*")
+        .eq("landing_id", landingData.id)
+        .order("position");
+
+      if (sectionsData) {
+        setSections(
+          sectionsData.map((s) => ({
+            id: s.id,
+            type: s.type as SectionType,
+            headline: s.headline ?? "",
+            subtext: s.subtext ?? "",
+            ctaText: s.cta_text ?? undefined,
+            items: s.items ?? undefined,
+          }))
+        );
+      }
+
+      setLoading(false);
+    }
+    fetchLanding();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
+        <Loader2 size={32} className="animate-spin text-[#555568]" />
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0F] flex flex-col items-center justify-center px-4 text-center">
+        <div className="text-4xl mb-4">🔍</div>
+        <h1 className="text-[#F0F0F5] text-2xl font-bold mb-2">Página no encontrada</h1>
+        <p className="text-[#8888A0] text-sm">
+          Esta landing page no existe o no está publicada.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
-      {landing.sections.map((section) => renderSection(section))}
+      {sections.map((section) => renderSection(section))}
 
       <section className="bg-[#13131A] py-16 px-4">
         <div className="max-w-xl mx-auto">
           <h2 className="text-xl font-bold text-[#F0F0F5] mb-6 text-center">
             Preguntas frecuentes
           </h2>
-          {FAQS.map((faq, i) => (
+          {GENERIC_FAQS.map((faq, i) => (
             <FaqItem key={i} q={faq.q} a={faq.a} />
           ))}
         </div>
@@ -457,6 +458,9 @@ export default function PublicLandingPage() {
 
       <footer className="bg-[#0A0A0F] border-t border-[#2A2A3A] py-8 px-4 text-center">
         <p className="text-[#555568] text-xs">
+          {landingName && (
+            <span className="text-[#8888A0] font-medium mr-1">{landingName} · </span>
+          )}
           Creado con{" "}
           <span className="font-semibold" style={{ color: ACCENT }}>
             Plusby

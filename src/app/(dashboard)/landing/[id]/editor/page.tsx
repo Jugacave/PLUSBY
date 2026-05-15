@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   Sparkles,
@@ -18,6 +19,7 @@ import {
   Copy,
   X,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 type SectionType =
   | "hero"
@@ -61,44 +63,6 @@ const SECTION_TYPES_LIST: SectionType[] = [
   "pricing",
   "urgency",
   "cta",
-];
-
-const DEMO_SECTIONS: Section[] = [
-  {
-    id: "s1",
-    type: "hero",
-    headline: "La faja que transforma tu figura en 30 días o te devolvemos tu dinero",
-    subtext:
-      "Moldea tu cintura, reduce medidas y luce la silueta que siempre quisiste. Sin dietas extremas. Sin ejercicios imposibles.",
-    ctaText: "Quiero mi faja ahora →",
-  },
-  {
-    id: "s2",
-    type: "benefits",
-    headline: "¿Por qué miles de mujeres eligen nuestra faja?",
-    subtext: "No es solo compresión — es transformación real.",
-    items: [
-      "Reduce hasta 3 tallas en apariencia desde el primer uso",
-      "Tejido térmico que activa la circulación y quema grasa",
-      "Cómoda para usar todo el día — incluso en el trabajo",
-      "Tallas de S a 4XL — funciona para todos los cuerpos",
-    ],
-  },
-  {
-    id: "s3",
-    type: "urgency",
-    headline: "Oferta especial: solo 47 unidades disponibles",
-    subtext:
-      "Esta semana enviamos con descuento del 40% y envío gratis. Una vez se agote el stock, vuelve al precio original.",
-    ctaText: "Aprovechar descuento",
-  },
-  {
-    id: "s4",
-    type: "cta",
-    headline: "¿Lista para transformar tu figura?",
-    subtext: "Más de 12.000 clientas satisfechas en Colombia, México y Chile.",
-    ctaText: "Pedir con descuento ahora",
-  },
 ];
 
 interface EditPanelProps {
@@ -418,22 +382,83 @@ function AddSectionModal({
 }
 
 export default function LandingEditorPage() {
-  const [sections, setSections] = useState<Section[]>(DEMO_SECTIONS);
+  const params = useParams();
+  const id = params?.id as string;
+
+  const [sections, setSections] = useState<Section[]>([]);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [showAddSection, setShowAddSection] = useState(false);
   const [published, setPublished] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [product] = useState("Faja reductora modela silueta");
+  const [loading, setLoading] = useState(true);
+  const [landingName, setLandingName] = useState("");
+  const [product, setProduct] = useState("");
+  const [slug, setSlug] = useState("");
   const [dragOver, setDragOver] = useState<string | null>(null);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (!id) return;
+    async function loadLanding() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data: landingData } = await supabase
+        .from("landings")
+        .select("*")
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (!landingData) {
+        setLoading(false);
+        return;
+      }
+
+      setLandingName(landingData.name);
+      setProduct(landingData.product);
+      setSlug(landingData.slug);
+      setPublished(landingData.published);
+
+      const { data: sectionsData } = await supabase
+        .from("landing_sections")
+        .select("*")
+        .eq("landing_id", id)
+        .order("position");
+
+      if (sectionsData && sectionsData.length > 0) {
+        setSections(
+          sectionsData.map((s) => ({
+            id: s.id,
+            type: s.type as SectionType,
+            headline: s.headline ?? "",
+            subtext: s.subtext ?? "",
+            ctaText: s.cta_text ?? undefined,
+            items: s.items ?? undefined,
+          }))
+        );
+      }
+
+      setLoading(false);
+    }
+    loadLanding();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   function handleSaveSection(updated: Section) {
     setSections((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
     setEditingSection(null);
   }
 
-  function handleDelete(id: string) {
-    setSections((prev) => prev.filter((s) => s.id !== id));
+  function handleDelete(sectionId: string) {
+    setSections((prev) => prev.filter((s) => s.id !== sectionId));
   }
 
   function handleMoveUp(idx: number) {
@@ -464,20 +489,58 @@ export default function LandingEditorPage() {
         headline: `${meta.icon} ${meta.label} de tu producto`,
         subtext: "Escribe aquí el contenido de esta sección o usa el botón de IA para generarlo.",
         ctaText:
-          type === "cta" || type === "hero" || type === "urgency"
-            ? "Comprar ahora"
+          type === "cta" || type === "hero" || type === "urgency" ? "Comprar ahora" : undefined,
+        items:
+          type === "benefits" || type === "features"
+            ? ["Beneficio 1", "Beneficio 2", "Beneficio 3"]
             : undefined,
-        items: type === "benefits" || type === "features" ? ["Beneficio 1", "Beneficio 2", "Beneficio 3"] : undefined,
       },
     ]);
   }
 
   async function handleSaveLanding() {
+    if (!id) return;
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 800));
+
+    await supabase.from("landing_sections").delete().eq("landing_id", id);
+
+    const toInsert = sections.map((s, idx) => ({
+      landing_id: id,
+      type: s.type,
+      position: idx,
+      headline: s.headline,
+      subtext: s.subtext,
+      cta_text: s.ctaText ?? null,
+      items: s.items ?? null,
+    }));
+
+    if (toInsert.length > 0) {
+      await supabase.from("landing_sections").insert(toInsert);
+    }
+
+    await supabase
+      .from("landings")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", id);
+
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  }
+
+  async function handleTogglePublish() {
+    if (!id) return;
+    const newPublished = !published;
+    setPublished(newPublished);
+    await supabase.from("landings").update({ published: newPublished }).eq("id", id);
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
+        <Loader2 size={32} className="animate-spin text-[#555568]" />
+      </div>
+    );
   }
 
   return (
@@ -509,22 +572,28 @@ export default function LandingEditorPage() {
         </Link>
         <div className="h-4 w-px bg-[#2A2A3A]" />
         <div className="flex-1 min-w-0">
-          <p className="text-[#F0F0F5] font-semibold text-sm truncate">Faja Reductora Premium</p>
-          <p className="text-[#555568] text-xs font-mono hidden sm:block">
-            app.plusby.co/l/faja-reductora-premium
+          <p className="text-[#F0F0F5] font-semibold text-sm truncate">
+            {landingName || "Landing sin nombre"}
           </p>
+          {slug && (
+            <p className="text-[#555568] text-xs font-mono hidden sm:block">
+              app.plusby.co/l/{slug}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/l/faja-reductora-premium"
-            target="_blank"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] text-xs font-medium transition-colors"
-          >
-            <Eye size={13} />
-            <span className="hidden sm:inline">Vista previa</span>
-          </Link>
+          {slug && (
+            <Link
+              href={`/l/${slug}`}
+              target="_blank"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] text-xs font-medium transition-colors"
+            >
+              <Eye size={13} />
+              <span className="hidden sm:inline">Vista previa</span>
+            </Link>
+          )}
           <button
-            onClick={() => setPublished(!published)}
+            onClick={handleTogglePublish}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               published
                 ? "bg-green-400/20 text-green-400 border border-green-400/30"
@@ -552,7 +621,7 @@ export default function LandingEditorPage() {
       <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-3">
         <div className="flex items-center justify-between mb-2">
           <p className="text-[#8888A0] text-xs">
-            {sections.length} sección{sections.length !== 1 ? "es" : ""} • Arrastra para reordenar
+            {sections.length} sección{sections.length !== 1 ? "es" : ""} · Arrastra para reordenar
           </p>
           <button
             onClick={() => setShowAddSection(true)}
@@ -562,6 +631,21 @@ export default function LandingEditorPage() {
             Agregar sección
           </button>
         </div>
+
+        {sections.length === 0 && (
+          <div className="bg-[#13131A] border-2 border-dashed border-[#2A2A3A] rounded-2xl flex flex-col items-center justify-center py-16 px-8 text-center">
+            <p className="text-[#8888A0] text-sm mb-4">
+              Esta landing no tiene secciones aún.
+            </p>
+            <button
+              onClick={() => setShowAddSection(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white font-semibold text-sm transition-colors"
+            >
+              <Plus size={14} />
+              Agregar primera sección
+            </button>
+          </div>
+        )}
 
         {sections.map((section, idx) => {
           const meta = SECTION_META[section.type];
@@ -573,7 +657,10 @@ export default function LandingEditorPage() {
                   ? "border-[#FF6B35]"
                   : "border-[#2A2A3A] hover:border-[#3A3A4A]"
               }`}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(section.id); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(section.id);
+              }}
               onDragLeave={() => setDragOver(null)}
               onDrop={() => setDragOver(null)}
             >
