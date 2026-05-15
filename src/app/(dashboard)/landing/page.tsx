@@ -16,8 +16,12 @@ import {
   X,
   ChevronRight,
   Loader2,
+  Image,
+  FileText,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+
+type LandingMode = "page" | "banners";
 
 interface Landing {
   id: string;
@@ -29,6 +33,7 @@ interface Landing {
   conversions: number;
   createdAt: string;
   template: string;
+  mode: LandingMode;
 }
 
 const TEMPLATES = [
@@ -73,9 +78,10 @@ function CreateModal({
   onCreate,
 }: {
   onClose: () => void;
-  onCreate: (name: string, product: string, template: string) => Promise<void>;
+  onCreate: (name: string, product: string, template: string, mode: LandingMode) => Promise<void>;
 }) {
-  const [step, setStep] = useState<"template" | "details">("template");
+  const [step, setStep] = useState<"mode" | "template" | "details">("mode");
+  const [selectedMode, setSelectedMode] = useState<LandingMode>("page");
   const [selectedTemplate, setSelectedTemplate] = useState("impact");
   const [name, setName] = useState("");
   const [product, setProduct] = useState("");
@@ -84,8 +90,13 @@ function CreateModal({
   async function handleCreate() {
     if (!name.trim() || !product.trim()) return;
     setCreating(true);
-    await onCreate(name.trim(), product.trim(), selectedTemplate);
+    await onCreate(name.trim(), product.trim(), selectedTemplate, selectedMode);
     setCreating(false);
+  }
+
+  function handleModeNext() {
+    if (selectedMode === "page") setStep("template");
+    else setStep("details");
   }
 
   return (
@@ -95,7 +106,11 @@ function CreateModal({
           <div>
             <h2 className="text-[#F0F0F5] font-bold text-lg">Nueva Landing Page</h2>
             <p className="text-[#8888A0] text-xs mt-0.5">
-              {step === "template" ? "Elige una plantilla base" : "Datos del producto"}
+              {step === "mode"
+                ? "¿Qué quieres crear?"
+                : step === "template"
+                ? "Elige una plantilla base"
+                : "Datos del producto"}
             </p>
           </div>
           <button
@@ -107,7 +122,112 @@ function CreateModal({
         </div>
 
         <div className="p-5">
-          {step === "template" ? (
+          {/* ── Step 1: Mode ── */}
+          {step === "mode" && (
+            <div className="space-y-3">
+              <button
+                onClick={() => setSelectedMode("banners")}
+                className={`w-full text-left p-4 rounded-xl border transition-all ${
+                  selectedMode === "banners"
+                    ? "border-[#7C3AED] bg-[rgba(124,58,237,0.08)]"
+                    : "border-[#2A2A3A] bg-[#1C1C26] hover:border-[#3A3A4A]"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(124,58,237,0.2)" }}
+                  >
+                    <Image size={18} className="text-[#A78BFA]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[#F0F0F5] font-semibold text-sm">Banners Publicitarios</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(124,58,237,0.2)] text-[#A78BFA]">
+                        IA
+                      </span>
+                    </div>
+                    <p className="text-[#8888A0] text-xs mb-2">
+                      5 banners de alto impacto generados con IA. Listos para Instagram, Facebook y TikTok.
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["Instagram", "Facebook", "TikTok", "Stories"].map((s) => (
+                        <span key={s} className="text-[10px] px-2 py-0.5 rounded-md bg-[#2A2A3A] text-[#8888A0]">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                      selectedMode === "banners" ? "border-[#7C3AED]" : "border-[#3A3A4A]"
+                    }`}
+                  >
+                    {selectedMode === "banners" && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#7C3AED]" />
+                    )}
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setSelectedMode("page")}
+                className={`w-full text-left p-4 rounded-xl border transition-all ${
+                  selectedMode === "page"
+                    ? "border-[#FF6B35] bg-[rgba(255,107,53,0.08)]"
+                    : "border-[#2A2A3A] bg-[#1C1C26] hover:border-[#3A3A4A]"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(255,107,53,0.15)" }}
+                  >
+                    <FileText size={18} className="text-[#FF6B35]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[#F0F0F5] font-semibold text-sm">Página de Producto</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(255,107,53,0.15)] text-[#FF6B35]">
+                        Más usado
+                      </span>
+                    </div>
+                    <p className="text-[#8888A0] text-xs mb-2">
+                      Landing page completa tipo Shopify con secciones optimizadas para conversión.
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["Multi-sección", "Hero", "Testimonios", "CTA"].map((s) => (
+                        <span key={s} className="text-[10px] px-2 py-0.5 rounded-md bg-[#2A2A3A] text-[#8888A0]">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                      selectedMode === "page" ? "border-[#FF6B35]" : "border-[#3A3A4A]"
+                    }`}
+                  >
+                    {selectedMode === "page" && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#FF6B35]" />
+                    )}
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={handleModeNext}
+                className="mt-2 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white font-semibold text-sm transition-colors"
+                style={selectedMode === "banners" ? { background: "#7C3AED" } : {}}
+              >
+                Continuar
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+
+          {/* ── Step 2: Template (page mode only) ── */}
+          {step === "template" && (
             <div className="space-y-3">
               {TEMPLATES.map((t) => (
                 <button
@@ -126,10 +246,7 @@ function CreateModal({
                         {t.badge && (
                           <span
                             className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                            style={{
-                              background: `${t.badgeColor}22`,
-                              color: t.badgeColor!,
-                            }}
+                            style={{ background: `${t.badgeColor}22`, color: t.badgeColor! }}
                           >
                             {t.badge}
                           </span>
@@ -138,10 +255,7 @@ function CreateModal({
                       <p className="text-[#8888A0] text-xs mb-2">{t.description}</p>
                       <div className="flex flex-wrap gap-1.5">
                         {t.sections.map((s) => (
-                          <span
-                            key={s}
-                            className="text-[10px] px-2 py-0.5 rounded-md bg-[#2A2A3A] text-[#8888A0]"
-                          >
+                          <span key={s} className="text-[10px] px-2 py-0.5 rounded-md bg-[#2A2A3A] text-[#8888A0]">
                             {s}
                           </span>
                         ))}
@@ -160,16 +274,35 @@ function CreateModal({
                 </button>
               ))}
 
-              <button
-                onClick={() => setStep("details")}
-                className="mt-2 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white font-semibold text-sm transition-colors"
-              >
-                Continuar
-                <ChevronRight size={16} />
-              </button>
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setStep("mode")}
+                  className="flex-1 py-3 rounded-xl border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] font-semibold text-sm transition-colors"
+                >
+                  Atrás
+                </button>
+                <button
+                  onClick={() => setStep("details")}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white font-semibold text-sm transition-colors"
+                >
+                  Continuar
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
-          ) : (
+          )}
+
+          {/* ── Step 3: Details ── */}
+          {step === "details" && (
             <div className="space-y-4">
+              {selectedMode === "banners" && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.2)]">
+                  <Image size={14} className="text-[#A78BFA] shrink-0" />
+                  <p className="text-[#A78BFA] text-xs font-medium">
+                    La IA generará 5 banners listos para publicar en redes sociales.
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-[#F0F0F5] mb-1.5">
                   Nombre de la landing *
@@ -185,17 +318,20 @@ function CreateModal({
               </div>
               <div>
                 <label className="block text-xs font-medium text-[#F0F0F5] mb-1.5">
-                  Producto *
+                  Descripción del producto *
                 </label>
                 <input
                   type="text"
                   value={product}
                   onChange={(e) => setProduct(e.target.value)}
-                  placeholder="Ej: Faja modeladora con control abdominal"
+                  placeholder="Ej: Faja modeladora con control abdominal y tejido térmico"
                   className="w-full px-3 py-2.5 rounded-lg bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] transition-colors text-sm"
                 />
+                <p className="text-[#555568] text-[10px] mt-1">
+                  Mientras más detallado, mejor generará la IA.
+                </p>
               </div>
-              {name && (
+              {name && selectedMode === "page" && (
                 <div className="p-3 rounded-lg bg-[#1C1C26] border border-[#2A2A3A]">
                   <p className="text-[#8888A0] text-xs">URL de tu landing:</p>
                   <p className="text-[#F0F0F5] text-xs font-mono mt-0.5">
@@ -206,7 +342,7 @@ function CreateModal({
               )}
               <div className="flex gap-3 pt-1">
                 <button
-                  onClick={() => setStep("template")}
+                  onClick={() => setStep(selectedMode === "page" ? "template" : "mode")}
                   disabled={creating}
                   className="flex-1 py-3 rounded-xl border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] font-semibold text-sm transition-colors disabled:opacity-50"
                 >
@@ -215,10 +351,11 @@ function CreateModal({
                 <button
                   onClick={handleCreate}
                   disabled={!name.trim() || !product.trim() || creating}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ background: selectedMode === "banners" ? "#7C3AED" : "#FF6B35" }}
                 >
                   {creating && <Loader2 size={15} className="animate-spin" />}
-                  {creating ? "Creando..." : "Crear Landing"}
+                  {creating ? "Creando..." : "Crear"}
                 </button>
               </div>
             </div>
@@ -242,6 +379,8 @@ function LandingCard({
   const convRate =
     landing.views > 0 ? ((landing.conversions / landing.views) * 100).toFixed(1) : "0.0";
 
+  const isBanners = landing.mode === "banners";
+
   return (
     <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl p-5 hover:border-[#3A3A4A] transition-all">
       <div className="flex items-start justify-between gap-3 mb-4">
@@ -253,9 +392,21 @@ function LandingCard({
               }`}
             />
             <h3 className="text-[#F0F0F5] font-semibold text-sm truncate">{landing.name}</h3>
+            <span
+              className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-md"
+              style={
+                isBanners
+                  ? { background: "rgba(124,58,237,0.2)", color: "#A78BFA" }
+                  : { background: "rgba(255,107,53,0.15)", color: "#FF6B35" }
+              }
+            >
+              {isBanners ? "🖼️ Banners" : "📄 Página"}
+            </span>
           </div>
           <p className="text-[#8888A0] text-xs truncate pl-4">{landing.product}</p>
-          <p className="text-[#555568] text-xs font-mono pl-4 mt-0.5">/{landing.slug}</p>
+          {!isBanners && (
+            <p className="text-[#555568] text-xs font-mono pl-4 mt-0.5">/{landing.slug}</p>
+          )}
         </div>
         <div className="relative">
           <button
@@ -268,26 +419,30 @@ function LandingCard({
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
               <div className="absolute right-0 top-8 z-20 bg-[#1C1C26] border border-[#2A2A3A] rounded-xl shadow-xl w-44 py-1">
-                <button
-                  onClick={() => {
-                    onTogglePublish(landing.id);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#8888A0] hover:text-[#F0F0F5] hover:bg-[#2A2A3A] transition-colors"
-                >
-                  {landing.published ? <EyeOff size={13} /> : <Eye size={13} />}
-                  {landing.published ? "Despublicar" : "Publicar"}
-                </button>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`app.plusby.co/l/${landing.slug}`);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#8888A0] hover:text-[#F0F0F5] hover:bg-[#2A2A3A] transition-colors"
-                >
-                  <Copy size={13} />
-                  Copiar enlace
-                </button>
+                {!isBanners && (
+                  <button
+                    onClick={() => {
+                      onTogglePublish(landing.id);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#8888A0] hover:text-[#F0F0F5] hover:bg-[#2A2A3A] transition-colors"
+                  >
+                    {landing.published ? <EyeOff size={13} /> : <Eye size={13} />}
+                    {landing.published ? "Despublicar" : "Publicar"}
+                  </button>
+                )}
+                {!isBanners && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`app.plusby.co/l/${landing.slug}`);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#8888A0] hover:text-[#F0F0F5] hover:bg-[#2A2A3A] transition-colors"
+                  >
+                    <Copy size={13} />
+                    Copiar enlace
+                  </button>
+                )}
                 <div className="h-px bg-[#2A2A3A] my-1" />
                 <button
                   onClick={() => {
@@ -305,41 +460,57 @@ function LandingCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <div className="bg-[#1C1C26] rounded-lg p-2.5 text-center">
-          <p className="text-[#F0F0F5] font-bold text-base">{landing.views.toLocaleString()}</p>
-          <p className="text-[#555568] text-[10px] mt-0.5">Visitas</p>
+      {!isBanners && (
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="bg-[#1C1C26] rounded-lg p-2.5 text-center">
+            <p className="text-[#F0F0F5] font-bold text-base">{landing.views.toLocaleString()}</p>
+            <p className="text-[#555568] text-[10px] mt-0.5">Visitas</p>
+          </div>
+          <div className="bg-[#1C1C26] rounded-lg p-2.5 text-center">
+            <p className="text-[#F0F0F5] font-bold text-base">{landing.conversions}</p>
+            <p className="text-[#555568] text-[10px] mt-0.5">Convs.</p>
+          </div>
+          <div className="bg-[#1C1C26] rounded-lg p-2.5 text-center">
+            <p
+              className="font-bold text-base"
+              style={{ color: parseFloat(convRate) >= 5 ? "#4ADE80" : "#F0F0F5" }}
+            >
+              {convRate}%
+            </p>
+            <p className="text-[#555568] text-[10px] mt-0.5">Tasa</p>
+          </div>
         </div>
-        <div className="bg-[#1C1C26] rounded-lg p-2.5 text-center">
-          <p className="text-[#F0F0F5] font-bold text-base">{landing.conversions}</p>
-          <p className="text-[#555568] text-[10px] mt-0.5">Convs.</p>
+      )}
+
+      {isBanners && (
+        <div className="bg-[#1C1C26] rounded-xl p-3 mb-4 flex items-center gap-2">
+          <div className="flex gap-1">
+            {["🎯", "✅", "⭐", "⏰", "🚀"].map((icon, i) => (
+              <span key={i} className="text-sm">{icon}</span>
+            ))}
+          </div>
+          <p className="text-[#555568] text-xs">5 banners · Hero, Beneficios, Social proof, Oferta, CTA</p>
         </div>
-        <div className="bg-[#1C1C26] rounded-lg p-2.5 text-center">
-          <p
-            className="font-bold text-base"
-            style={{ color: parseFloat(convRate) >= 5 ? "#4ADE80" : "#F0F0F5" }}
-          >
-            {convRate}%
-          </p>
-          <p className="text-[#555568] text-[10px] mt-0.5">Tasa</p>
-        </div>
-      </div>
+      )}
 
       <div className="flex gap-2">
         <Link
           href={`/landing/${landing.id}/editor`}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-[#2A2A3A] hover:border-[#FF6B35] hover:text-[#FF6B35] text-[#8888A0] text-xs font-medium transition-all"
+          style={isBanners ? {} : {}}
         >
-          Editar
+          {isBanners ? "Ver banners" : "Editar"}
         </Link>
-        <Link
-          href={`/l/${landing.slug}`}
-          target="_blank"
-          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-[#2A2A3A] hover:border-[#3A3A4A] text-[#8888A0] hover:text-[#F0F0F5] text-xs font-medium transition-all"
-          title="Ver landing pública"
-        >
-          <ExternalLink size={12} />
-        </Link>
+        {!isBanners && (
+          <Link
+            href={`/l/${landing.slug}`}
+            target="_blank"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-[#2A2A3A] hover:border-[#3A3A4A] text-[#8888A0] hover:text-[#F0F0F5] text-xs font-medium transition-all"
+            title="Ver landing pública"
+          >
+            <ExternalLink size={12} />
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -356,6 +527,7 @@ function rowToLanding(row: Record<string, unknown>): Landing {
     conversions: (row.conversions as number) ?? 0,
     createdAt: ((row.created_at as string) ?? "").split("T")[0],
     template: (row.template as string) ?? "impact",
+    mode: ((row.mode as string) ?? "page") as LandingMode,
   };
 }
 
@@ -387,7 +559,7 @@ export default function LandingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleCreate(name: string, product: string, template: string) {
+  async function handleCreate(name: string, product: string, template: string, mode: LandingMode) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -396,7 +568,7 @@ export default function LandingPage() {
     const slug = slugify(name);
     const { data, error } = await supabase
       .from("landings")
-      .insert({ user_id: user.id, name, product, slug, template, published: false, views: 0, conversions: 0 })
+      .insert({ user_id: user.id, name, product, slug, template, mode, published: false, views: 0, conversions: 0 })
       .select()
       .single();
 
@@ -404,7 +576,7 @@ export default function LandingPage() {
       alert(
         error.code === "23505"
           ? "Ya existe una landing con ese nombre. Usa un nombre diferente."
-          : "Error al crear la landing. Intenta de nuevo."
+          : "Error al crear. Intenta de nuevo."
       );
       return;
     }
@@ -429,8 +601,10 @@ export default function LandingPage() {
     );
   }
 
-  const totalViews = landings.reduce((s, l) => s + l.views, 0);
-  const totalConversions = landings.reduce((s, l) => s + l.conversions, 0);
+  const pageCount = landings.filter((l) => l.mode === "page").length;
+  const bannerCount = landings.filter((l) => l.mode === "banners").length;
+  const totalViews = landings.filter((l) => l.mode === "page").reduce((s, l) => s + l.views, 0);
+  const totalConversions = landings.filter((l) => l.mode === "page").reduce((s, l) => s + l.conversions, 0);
   const avgConvRate =
     totalViews > 0 ? ((totalConversions / totalViews) * 100).toFixed(1) : "0.0";
 
@@ -451,7 +625,7 @@ export default function LandingPage() {
           <div className="min-w-0">
             <h1 className="text-xl md:text-2xl font-bold text-[#F0F0F5]">Crea tu Landing</h1>
             <p className="text-[#8888A0] text-xs md:text-sm truncate">
-              Constructor de landing pages optimizadas para conversión
+              Páginas de producto y banners publicitarios con IA
             </p>
           </div>
         </div>
@@ -467,9 +641,9 @@ export default function LandingPage() {
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
           {
-            label: "Total Landings",
-            value: loading ? "—" : landings.length,
-            sub: loading ? "" : `${landings.filter((l) => l.published).length} publicadas`,
+            label: "Páginas creadas",
+            value: loading ? "—" : pageCount,
+            sub: loading ? "" : `${bannerCount} sets de banners`,
           },
           {
             label: "Visitas totales",
@@ -501,7 +675,7 @@ export default function LandingPage() {
           </div>
           <h3 className="text-[#F0F0F5] font-semibold mb-2">Ninguna landing todavía</h3>
           <p className="text-[#8888A0] text-sm mb-5 max-w-sm">
-            Crea tu primera landing page optimizada para vender tu producto ganador.
+            Crea páginas de producto o banners publicitarios con IA para vender más.
           </p>
           <button
             onClick={() => setShowCreate(true)}
@@ -527,10 +701,7 @@ export default function LandingPage() {
               className="bg-[#13131A] border-2 border-dashed border-[#2A2A3A] hover:border-[#FF6B35] rounded-2xl flex flex-col items-center justify-center min-h-[240px] p-6 transition-colors group"
             >
               <div className="w-12 h-12 rounded-xl bg-[#1C1C26] group-hover:bg-[rgba(255,107,53,0.1)] flex items-center justify-center mb-3 transition-colors">
-                <Plus
-                  size={22}
-                  className="text-[#555568] group-hover:text-[#FF6B35] transition-colors"
-                />
+                <Plus size={22} className="text-[#555568] group-hover:text-[#FF6B35] transition-colors" />
               </div>
               <p className="text-[#555568] group-hover:text-[#FF6B35] text-sm font-medium transition-colors">
                 Nueva Landing
