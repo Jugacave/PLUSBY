@@ -649,9 +649,119 @@ const HERO_STYLES: BannerStyle[] = [
   },
 ];
 
-const GENERIC_STYLES: BannerStyle[] = HERO_STYLES;
+const OFERTA_STYLES: BannerStyle[] = [
+  {
+    id: "neon-gym-dark",
+    name: "Neon Gym Dark",
+    desc: "Negro · Neón rojo+azul · Atleta",
+    gradient: "radial-gradient(ellipse at 50% 80%, #1a0a0a 0%, #0a0a14 50%, #000005 100%)",
+    accentColor: "#EF4444",
+    textColor: "#fff",
+    promptKeywords: "dark black gym background with neon red and blue LED light trails and hexagon grid lines, muscular athlete holding product, three pricing bundle columns with red header badges Basic Duo Pro, bold white red blue typography large headline, product visible in each column, bottom payment logos strip, high energy sports supplement offer advertisement",
+  },
+  {
+    id: "sports-blue-grid",
+    name: "Sports Blue Grid",
+    desc: "Azul gym · Profesional · 3 columnas",
+    gradient: "linear-gradient(180deg, #0f1f3a 0%, #1e3a5f 40%, #0a0a14 100%)",
+    accentColor: "#3B82F6",
+    textColor: "#fff",
+    promptKeywords: "dark blue gym mirror background with overhead lighting, two athletes man and woman with product, three pricing columns with blue-purple gradient header badges Pack Basico Pack Duo Pack Pro, bold white blue typography, product images in each column, strikethrough original price and sale price red, free shipping icon, payment logos footer mercadopago mastercard visa, professional sports bundle offer",
+  },
+  {
+    id: "navy-fire-dynamic",
+    name: "Navy Fire Dynamic",
+    desc: "Azul marino · Atleta corriendo · Energía",
+    gradient: "radial-gradient(ellipse at 50% 0%, #1e3a8a 0%, #1e1b4b 50%, #050510 100%)",
+    accentColor: "#DC2626",
+    textColor: "#fff",
+    promptKeywords: "dark navy blue gradient background with dynamic running female athlete on fire energy aura, three pricing cards red and blue rounded, product quantity per card 1x 2x 3x with bold price, red CTA button Llevalo Ahora on each card, five star rating strip and customer count testimonial below, bottom icons strip delivery guarantee electrolytes, high energy sports nutrition bundle offer advertisement",
+  },
+  {
+    id: "blue-white-vivid",
+    name: "Blue White Vivid",
+    desc: "Azul brillante · Blanco · Fruta flotante",
+    gradient: "linear-gradient(160deg, #1d4ed8 0%, #2563eb 40%, #dbeafe 80%, #f0f9ff 100%)",
+    accentColor: "#1D4ED8",
+    textColor: "#1e3a8a",
+    promptKeywords: "bright vivid blue-to-white gradient background, female athlete running with product, floating fruit kiwi strawberry splash elements, three dark navy blue pricing cards rounded corners with white price text, product images clearly visible in each card, CTA button Llevalo Ahora on each card, five star review section below, bottom icons delivery guarantee formula alto rendimiento, fresh vivid sports bundle offer",
+  },
+  {
+    id: "clean-white-minimal",
+    name: "Clean White Minimal",
+    desc: "Blanco limpio · Navy · Minimalista",
+    gradient: "linear-gradient(180deg, #f8fafc 0%, #e0f2fe 50%, #bfdbfe 100%)",
+    accentColor: "#1D4ED8",
+    textColor: "#0f172a",
+    promptKeywords: "clean white light background with subtle blue gradient at bottom, female athlete in running pose lifestyle photography, product prominently displayed with hexagonal ingredient spec badges cluster dextrin electrolyte matrix flavor, product specifications callouts, two pricing CTA buttons horizontal layout Comprar 1 Bote and Comprar 2 Botes, clean price with was strikethrough, minimal navy blue typography, trust badge header strip, professional clean minimal offer advertisement",
+  },
+  {
+    id: "outdoor-red-bold",
+    name: "Outdoor Red Bold",
+    desc: "Aventura exterior · Rojo bold · Pago footer",
+    gradient: "linear-gradient(180deg, #7c2d12 0%, #9a3412 30%, #1c0a00 100%)",
+    accentColor: "#EF4444",
+    textColor: "#fff",
+    promptKeywords: "outdoor mountain adventure earthy terrain background with cycling product, three bundle pricing columns with red header badges bold white text, red CTA button on each column, delivery truck free shipping icon in each column, bottom payment methods logos strip pagos contraentrega mercadopago mastercard visa, bold white red typography large headline product name, adventure outdoor bundle deal advertisement",
+  },
+  {
+    id: "warm-amber-urgency",
+    name: "Warm Amber Urgency",
+    desc: "Ámbar dorado · Hogar · Urgencia stock",
+    gradient: "radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #f59e0b 50%, #78350f 100%)",
+    accentColor: "#F59E0B",
+    textColor: "#1a1a1a",
+    promptKeywords: "warm golden amber home office lifestyle background soft lighting, product displayed on desk with lifestyle context, three pricing columns warm orange buttons, stock availability progress bar urgency element, bold dark typography with orange accent price, feature list alongside bundles, warm cozy home ambiance bundle offer advertisement",
+  },
+  {
+    id: "dark-gold-premium",
+    name: "Dark Gold Premium",
+    desc: "Azul marino + partículas doradas · Lujo",
+    gradient: "radial-gradient(ellipse at 50% 30%, #1e3a5f 0%, #0f1f3a 50%, #030712 100%)",
+    accentColor: "#D97706",
+    textColor: "#fff",
+    promptKeywords: "deep dark navy blue background with golden shimmering particle effects streaming, premium product with gold particle aura, stacked vertical bundle tiers with gold border cards dark background, gold header badge on best value tier, bold white and gold typography premium large headline, price strikethrough original in gold, delivery truck guarantee icons, premium luxury bundle offer advertisement high end",
+  },
+  {
+    id: "neon-green-winner",
+    name: "Neon Green Winner",
+    desc: "Negro · Verde neón · Columna ganadora",
+    gradient: "radial-gradient(ellipse at 50% 50%, #052e16 0%, #0a0a0a 60%, #000000 100%)",
+    accentColor: "#22C55E",
+    textColor: "#fff",
+    promptKeywords: "black dark background with neon green glow energy aura, sports nutrition supplement product center, three pricing columns with middle winner column highlighted in neon green border glow Mejor Valor label, white basic and winner columns, bold white and neon green typography, product image in each column, pricing strikethrough deal, high contrast neon fitness supplement bundle offer advertisement",
+  },
+  {
+    id: "blush-feminine-soft",
+    name: "Blush Feminine Soft",
+    desc: "Rosa blush · Pétalos · Oferta femenina",
+    gradient: "radial-gradient(ellipse at 50% 30%, #fff1f2 0%, #fecdd3 50%, #fb7185 100%)",
+    accentColor: "#F43F5E",
+    textColor: "#881337",
+    promptKeywords: "soft blush pink background with rose petals bokeh scattered romantic, feminine lifestyle product photography, two pricing offer cards side by side rounded corners pink gradient, elegant pink rose accent typography, product image in each card, price badge with discount, feminine gift or beauty wellness product bundle offer advertisement",
+  },
+  {
+    id: "space-galaxy-offer",
+    name: "Space Galaxy Offer",
+    desc: "Galaxia profunda · Dorado · Premium stacked",
+    gradient: "radial-gradient(ellipse at 50% 50%, #1e1b4b 0%, #0f0a2a 50%, #020108 100%)",
+    accentColor: "#818CF8",
+    textColor: "#fff",
+    promptKeywords: "deep space galaxy nebula background blue purple teal cosmic atmosphere, premium product floating in space with glowing light halo, stacked vertical pricing tiers with gold border and indigo border alternating, gold badge Best Value Mejor Valor on premium tier, bold white and gold indigo typography, cosmic premium luxury bundle offer advertisement",
+  },
+  {
+    id: "red-split-athlete",
+    name: "Red Split Athlete",
+    desc: "Rojo + blanco split · Atleta · Beneficios",
+    gradient: "linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #f8fafc 50%, #ffffff 100%)",
+    accentColor: "#DC2626",
+    textColor: "#fff",
+    promptKeywords: "bold red and white diagonal split background, muscular athlete model with product on red side, three pricing columns named with benefit headings Equilibrio Energia Bienestar, red header with white text on each column, circular dose amount badge, product image per column, black price text on white card background, trust icons strip bottom certification badges, strong contrast red white bold bundle offer advertisement",
+  },
+];
 
 function getStylesForSection(sectionId: string): BannerStyle[] {
+  if (sectionId === "oferta") return OFERTA_STYLES;
   return HERO_STYLES;
 }
 
