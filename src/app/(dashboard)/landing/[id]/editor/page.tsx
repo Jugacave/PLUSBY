@@ -871,9 +871,121 @@ const ANTES_DESPUES_STYLES: BannerStyle[] = [
   },
 ];
 
+const BENEFICIOS_STYLES: BannerStyle[] = [
+  {
+    id: "blue-circular-orbit",
+    name: "Blue Circular Orbit",
+    desc: "Azul deportivo · Badges orbitan producto · Clásico",
+    gradient: "radial-gradient(ellipse at 50% 60%, #1d4ed8 0%, #1e3a8a 50%, #0f1f3a 100%)",
+    accentColor: "#3B82F6",
+    textColor: "#fff",
+    promptKeywords: "vibrant blue sports stadium background, athlete sprinting dynamically, product jar or item centered with 6 white circular icon badges arranged symmetrically 3 left 3 right with dotted connecting lines to product, each badge has icon and benefit title text below, fruit or ingredient elements scattered, bold blue-red-white headline top, tagline bottom, professional sports supplement benefits advertisement",
+  },
+  {
+    id: "dark-arrow-callouts",
+    name: "Dark Arrow Callouts",
+    desc: "Oscuro · Atleta full-bleed · Flechas con specs",
+    gradient: "radial-gradient(ellipse at 50% 40%, #1e3a8a 0%, #0a0a14 60%, #000000 100%)",
+    accentColor: "#22D3EE",
+    textColor: "#fff",
+    promptKeywords: "dark navy blue gradient background with green and blue electric energy aura effects, muscular athlete holding product center composition, 6 text labels with curved arrows pointing outward from product to different specs callouts (2 top left, 2 top right, 2 bottom sides), bold large white headline top, blue CTA strip bottom tagline, high energy sports product specifications callout advertisement",
+  },
+  {
+    id: "dark-gold-4panel",
+    name: "Dark Gold 4 Panel",
+    desc: "Negro dorado · Atleta centro · 4 circles 2x2",
+    gradient: "radial-gradient(ellipse at 50% 60%, #3d2a00 0%, #1a1200 50%, #050400 100%)",
+    accentColor: "#D97706",
+    textColor: "#fff",
+    promptKeywords: "dark warm brown gold background with subtle gym equipment and chocolate or cocoa elements, triumphant muscular athlete arms raised flexing center, 4 large circular white badges with gold outline arranged in 2x2 grid around athlete (top left, top right, bottom left, bottom right), each badge has gold line icon and bold benefit title with short description, gold and white bold headline top, premium dark sports nutrition benefits advertisement",
+  },
+  {
+    id: "blue-stacked-pills",
+    name: "Blue Stacked Pills",
+    desc: "Gym azul · Feature bars izquierda · Producto derecha",
+    gradient: "linear-gradient(160deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%)",
+    accentColor: "#60A5FA",
+    textColor: "#fff",
+    promptKeywords: "dark blue gradient gym background with blue energy swirl light trails, product jar and shaker bottle right side with fruit splash, 4-5 horizontal dark navy pill-shaped feature bars stacked on left side each with small icon and bold benefit text uppercase, triumphant athlete at bottom center, blue-white bold headline top, blue swirl energy motion blur effects, sports supplement feature list benefits advertisement",
+  },
+  {
+    id: "vivid-color-columns",
+    name: "Vivid Color Columns",
+    desc: "Colores vivos · Columnas izq/der · Producto centro",
+    gradient: "linear-gradient(90deg, #1d4ed8 0%, #059669 33%, #dc2626 66%, #1d4ed8 100%)",
+    accentColor: "#F59E0B",
+    textColor: "#fff",
+    promptKeywords: "vivid electric background with blue green red zones and lightning bolts, athlete sprinting top right corner, product centered with fruit and liquid splash elements, 3 blue rounded benefit bars stacked left side (bold white caps text), 3 red rounded benefit bars stacked right side (bold white caps text), brand name and product name top in large bold text, high energy vibrant sports nutrition benefits advertisement",
+  },
+  {
+    id: "white-3cards-lifestyle",
+    name: "White 3 Cards",
+    desc: "Blanco limpio · Lifestyle · 3 tarjetas descripción",
+    gradient: "linear-gradient(180deg, #1d4ed8 0%, #2563eb 30%, #f8fafc 60%, #ffffff 100%)",
+    accentColor: "#DC2626",
+    textColor: "#1e3a8a",
+    promptKeywords: "white and blue background, happy athlete sitting or posing in bright gym, product with fruit bottom right, bold blue headline top with red accent word, 3 dark navy benefit cards at bottom each with circular icon top and benefit title bold and short description text, blue red white color scheme, clean professional gym lifestyle sports supplement benefits advertisement",
+  },
+  {
+    id: "warm-gym-floating-gold",
+    name: "Warm Gym Floating Gold",
+    desc: "Gym dorado cálido · 3-4 badges flotantes · Running",
+    gradient: "radial-gradient(ellipse at 50% 50%, #7c5a00 0%, #3d2d00 50%, #1a1300 100%)",
+    accentColor: "#D97706",
+    textColor: "#fff",
+    promptKeywords: "warm golden brown luxury gym interior background soft light bokeh, man or woman running or jogging front view smiling, 3-4 gold circular icon badges floating alongside the person arranged left and right with benefit title and description text, product visible on wrist or in hand, white and gold bold headline top, warm premium smartwatch or health product lifestyle benefits advertisement",
+  },
+  {
+    id: "dreamy-4badges-grid",
+    name: "Dreamy 4 Badges Grid",
+    desc: "Fondo soñador · Personaje · 4 badges en cuadrícula",
+    gradient: "radial-gradient(ellipse at 50% 40%, #fef9c3 0%, #fde68a 30%, #fbbf24 60%, #92400e 100%)",
+    accentColor: "#F59E0B",
+    textColor: "#78350f",
+    promptKeywords: "dreamy soft warm pastel background with bokeh lights stars or dream catchers hanging, cute child or sleeping person in cozy pink fluffy cloud setting, 4 dark rounded square or circular icon badges arranged in 2x2 grid at bottom (top left, top right, bottom left, bottom right), each badge has white icon and bold benefit title with short description, warm pink and gold headline title, cozy soft children product or comfort lifestyle benefits advertisement",
+  },
+  {
+    id: "dark-sport-3gold",
+    name: "Dark Sport 3 Gold",
+    desc: "Gym oscuro · Deporte intenso · 3 badges dorados",
+    gradient: "radial-gradient(ellipse at 50% 40%, #1a1a2e 0%, #0a0a14 60%, #000000 100%)",
+    accentColor: "#D97706",
+    textColor: "#fff",
+    promptKeywords: "dark industrial gym or outdoor dramatic background, athlete in intense sport pose boxing punching or sprinting with gold and blue energy aura effects, 3 gold circular icon badges arranged (bottom left, bottom right, bottom center) each with icon and bold benefit title with description text, bold white and gold headline top, tagline or CTA strip bottom, high energy intense sport product benefits advertisement",
+  },
+  {
+    id: "pink-feminine-icons",
+    name: "Pink Feminine Icons",
+    desc: "Rosa intenso · Femenino · Badges circulares rojos",
+    gradient: "radial-gradient(ellipse at 50% 30%, #fce7f3 0%, #f9a8d4 40%, #ec4899 80%, #be185d 100%)",
+    accentColor: "#DC2626",
+    textColor: "#fff",
+    promptKeywords: "vibrant pink gradient background with rose petals or bokeh flowers floating, female lifestyle product (intimate care, supplement, beauty) displayed prominently, 3-4 red circular icon badges arranged diagonally or around product each with white icon and bold benefit text with short description, bold white headline top with red accent word, bottom CTA strip or trust message, feminine health beauty lifestyle product benefits advertisement",
+  },
+  {
+    id: "soft-beauty-face",
+    name: "Soft Beauty Face",
+    desc: "Rosa suave · Modelo · 4 badges line-art alrededor",
+    gradient: "radial-gradient(ellipse at 50% 30%, #fff1f2 0%, #fecdd3 50%, #fda4af 100%)",
+    accentColor: "#E11D48",
+    textColor: "#881337",
+    promptKeywords: "very soft pink cherry blossom background with lens flare rainbow light, beautiful woman face profile portrait center glowing healthy skin, 4 minimal line-art style icon badges floating around the face (2 left: benefit icon + title + description, 2 right: benefit icon + title + description), elegant pink serif typography headline top, bottom result claim text, ultra feminine luxury beauty skincare benefits advertisement",
+  },
+  {
+    id: "light-tech-specs",
+    name: "Light Tech Specs",
+    desc: "Blanco/azul · Producto técnico · Callouts dimensiones",
+    gradient: "radial-gradient(ellipse at 50% 30%, #f0fdf4 0%, #dcfce7 40%, #bbf7d0 100%)",
+    accentColor: "#16A34A",
+    textColor: "#14532d",
+    promptKeywords: "clean white or light blue-gray background with green leaf accents and water drops, technical product (faucet, gadget, tool) displayed large with measurement dimension lines and callout labels showing specifications (160mm, 60mm etc), 4 green circular icon badges arranged around product (2 top, 2 bottom) with bold benefit text and description, factual problem-statement headline top in green, bottom compatibility or accessory product shots, technical product quality specifications advertisement",
+  },
+];
+
 function getStylesForSection(sectionId: string): BannerStyle[] {
   if (sectionId === "oferta") return OFERTA_STYLES;
   if (sectionId === "antes_despues") return ANTES_DESPUES_STYLES;
+  if (sectionId === "beneficios") return BENEFICIOS_STYLES;
   return HERO_STYLES;
 }
 
