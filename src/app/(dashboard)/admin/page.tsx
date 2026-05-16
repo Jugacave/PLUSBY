@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ShieldCheck,
   Users,
@@ -29,9 +29,21 @@ import {
   DollarSign,
   UserCheck,
   Activity,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Loader2,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+
+interface PendingProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  created_at: string;
+}
 
 type AdminTab = "overview" | "academia" | "proveedores" | "suscripciones" | "usuarios";
 
@@ -567,6 +579,45 @@ function UsuariosTab({ users, setUsers }: { users: AdminUser[]; setUsers: React.
   const ROLES = ["user", "mentor", "superadmin"];
   const ROLE_COLORS: Record<string, string> = { user: "#555568", mentor: "#8B5CF6", superadmin: "#FF6B35" };
 
+  const [pending, setPending] = useState<PendingProfile[]>([]);
+  const [loadingPending, setLoadingPending] = useState(true);
+  const [actioning, setActioning] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("profiles")
+      .select("id, email, full_name, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setPending(data ?? []);
+        setLoadingPending(false);
+      });
+  }, []);
+
+  async function approve(profileId: string) {
+    setActioning(profileId);
+    const supabase = createClient();
+    await supabase
+      .from("profiles")
+      .update({ status: "approved", approved_at: new Date().toISOString() })
+      .eq("id", profileId);
+    setPending(prev => prev.filter(p => p.id !== profileId));
+    setActioning(null);
+  }
+
+  async function reject(profileId: string) {
+    setActioning(profileId);
+    const supabase = createClient();
+    await supabase
+      .from("profiles")
+      .update({ status: "rejected", rejected_at: new Date().toISOString() })
+      .eq("id", profileId);
+    setPending(prev => prev.filter(p => p.id !== profileId));
+    setActioning(null);
+  }
+
   function changeRole(userId: string, role: string) {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
   }
@@ -574,61 +625,155 @@ function UsuariosTab({ users, setUsers }: { users: AdminUser[]; setUsers: React.
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, active: !u.active } : u));
   }
 
+  function initials(name: string | null, email: string) {
+    if (name) return name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+    return email.slice(0, 2).toUpperCase();
+  }
+
+  function formatDate(iso: string) {
+    return new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
+  }
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 p-3 rounded-xl border border-[#F59E0B]/30 bg-[rgba(245,158,11,0.05)]">
-        <AlertCircle size={15} className="text-[#F59E0B] shrink-0" />
-        <p className="text-[#F59E0B] text-xs">Para asignar el rol <strong>superadmin</strong> a un nuevo usuario, corre este SQL en Supabase: <code className="bg-[#1C1C26] px-1 rounded">UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || &#123;&apos;&quot;role&quot;: &quot;superadmin&quot;&apos;&#125; WHERE email = &apos;tu@email.com&apos;;</code></p>
+    <div className="space-y-6">
+      {/* ── Pending approvals ── */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Clock size={15} className="text-[#F59E0B]" />
+          <h3 className="text-[#F0F0F5] font-semibold text-sm">Solicitudes pendientes de aprobación</h3>
+          {!loadingPending && pending.length > 0 && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(245,158,11,0.15)] text-[#F59E0B]">
+              {pending.length}
+            </span>
+          )}
+        </div>
+
+        {loadingPending ? (
+          <div className="flex items-center justify-center py-8 text-[#555568]">
+            <Loader2 size={18} className="animate-spin mr-2" />
+            <span className="text-sm">Cargando...</span>
+          </div>
+        ) : pending.length === 0 ? (
+          <div className="flex items-center gap-3 p-4 rounded-xl border border-[#2A2A3A] bg-[#13131A]">
+            <CheckCircle2 size={16} className="text-[#10B981] shrink-0" />
+            <p className="text-[#8888A0] text-sm">No hay solicitudes pendientes.</p>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-[rgba(245,158,11,0.3)] bg-[#13131A] overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#2A2A3A]">
+                  <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Usuario</th>
+                  <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Fecha registro</th>
+                  <th className="px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pending.map(p => (
+                  <tr key={p.id} className="border-b border-[#2A2A3A] last:border-0">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[rgba(245,158,11,0.2)] flex items-center justify-center text-[#F59E0B] text-xs font-bold flex-shrink-0">
+                          {initials(p.full_name, p.email)}
+                        </div>
+                        <div>
+                          <p className="text-[#F0F0F5] text-sm font-medium">{p.full_name || "—"}</p>
+                          <p className="text-[#555568] text-xs">{p.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-[#8888A0] text-xs">{formatDate(p.created_at)}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2 justify-end">
+                        <button
+                          onClick={() => approve(p.id)}
+                          disabled={actioning === p.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.3)] text-[#10B981] text-xs font-medium hover:bg-[rgba(16,185,129,0.2)] transition-colors disabled:opacity-50"
+                        >
+                          {actioning === p.id ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />}
+                          Aprobar
+                        </button>
+                        <button
+                          onClick={() => reject(p.id)}
+                          disabled={actioning === p.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[#EF4444] text-xs font-medium hover:bg-[rgba(239,68,68,0.2)] transition-colors disabled:opacity-50"
+                        >
+                          {actioning === p.id ? <Loader2 size={11} className="animate-spin" /> : <XCircle size={11} />}
+                          Rechazar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      <div className="rounded-xl border border-[#2A2A3A] bg-[#13131A] overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-[#2A2A3A]">
-              <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Usuario</th>
-              <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Rol</th>
-              <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Plan</th>
-              <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Estado</th>
-              <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Cambiar Rol</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(u => (
-              <tr key={u.id} className="border-b border-[#2A2A3A] last:border-0">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <div className="w-8 h-8 rounded-full bg-[#FF6B35] flex items-center justify-center text-white text-xs font-bold">{u.avatar}</div>
-                      <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#13131A] ${u.active ? "bg-[#10B981]" : "bg-[#555568]"}`} />
-                    </div>
-                    <div>
-                      <p className="text-[#F0F0F5] text-sm font-medium">{u.name}</p>
-                      <p className="text-[#555568] text-xs">{u.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ color: ROLE_COLORS[u.role] ?? "#555568", background: `${ROLE_COLORS[u.role] ?? "#555568"}18` }}>
-                    {u.role}
-                  </span>
-                </td>
-                <td className="px-4 py-3"><PlanBadge plan={u.plan} /></td>
-                <td className="px-4 py-3">
-                  <button onClick={() => toggleActive(u.id)} className="flex items-center gap-1.5 text-xs">
-                    {u.active ? <><UserCheck size={13} className="text-[#10B981]" /><span className="text-[#10B981]">Activo</span></> : <><X size={13} className="text-[#555568]" /><span className="text-[#555568]">Inactivo</span></>}
-                  </button>
-                </td>
-                <td className="px-4 py-3">
-                  {u.role !== "superadmin" && (
-                    <select value={u.role} onChange={e => changeRole(u.id, e.target.value)} className="bg-[#0A0A0F] border border-[#2A2A3A] rounded-lg px-2 py-1 text-[#F0F0F5] text-xs focus:outline-none focus:border-[#FF6B35]">
-                      {ROLES.filter(r => r !== "superadmin").map(r => <option key={r}>{r}</option>)}
-                    </select>
-                  )}
-                </td>
+      {/* ── SQL hint ── */}
+      <div className="flex items-center gap-2 p-3 rounded-xl border border-[#F59E0B]/30 bg-[rgba(245,158,11,0.05)]">
+        <AlertCircle size={15} className="text-[#F59E0B] shrink-0" />
+        <p className="text-[#F59E0B] text-xs">Para asignar rol <strong>superadmin</strong>: <code className="bg-[#1C1C26] px-1 rounded">UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || &#123;&apos;&quot;role&quot;: &quot;superadmin&quot;&apos;&#125; WHERE email = &apos;tu@email.com&apos;;</code></p>
+      </div>
+
+      {/* ── Active users table (mock) ── */}
+      <div>
+        <h3 className="text-[#F0F0F5] font-semibold text-sm mb-3 flex items-center gap-2">
+          <Users size={15} className="text-[#8888A0]" />
+          Usuarios activos
+        </h3>
+        <div className="rounded-xl border border-[#2A2A3A] bg-[#13131A] overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[#2A2A3A]">
+                <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Usuario</th>
+                <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Rol</th>
+                <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Plan</th>
+                <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Estado</th>
+                <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Cambiar Rol</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u.id} className="border-b border-[#2A2A3A] last:border-0">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="w-8 h-8 rounded-full bg-[#FF6B35] flex items-center justify-center text-white text-xs font-bold">{u.avatar}</div>
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#13131A] ${u.active ? "bg-[#10B981]" : "bg-[#555568]"}`} />
+                      </div>
+                      <div>
+                        <p className="text-[#F0F0F5] text-sm font-medium">{u.name}</p>
+                        <p className="text-[#555568] text-xs">{u.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ color: ROLE_COLORS[u.role] ?? "#555568", background: `${ROLE_COLORS[u.role] ?? "#555568"}18` }}>
+                      {u.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3"><PlanBadge plan={u.plan} /></td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => toggleActive(u.id)} className="flex items-center gap-1.5 text-xs">
+                      {u.active ? <><UserCheck size={13} className="text-[#10B981]" /><span className="text-[#10B981]">Activo</span></> : <><X size={13} className="text-[#555568]" /><span className="text-[#555568]">Inactivo</span></>}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    {u.role !== "superadmin" && (
+                      <select value={u.role} onChange={e => changeRole(u.id, e.target.value)} className="bg-[#0A0A0F] border border-[#2A2A3A] rounded-lg px-2 py-1 text-[#F0F0F5] text-xs focus:outline-none focus:border-[#FF6B35]">
+                        {ROLES.filter(r => r !== "superadmin").map(r => <option key={r}>{r}</option>)}
+                      </select>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

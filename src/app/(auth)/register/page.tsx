@@ -47,7 +47,6 @@ export default function RegisterPage() {
 
     setSuccess(true);
     setLoading(false);
-    setTimeout(() => router.push("/dashboard"), 2000);
   }
 
   if (success) {
@@ -57,8 +56,8 @@ export default function RegisterPage() {
           <div className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={32} className="text-green-400" />
           </div>
-          <h2 className="text-[#F0F0F5] text-xl font-bold mb-2">¡Cuenta creada!</h2>
-          <p className="text-[#8888A0] text-sm">Redirigiendo al dashboard...</p>
+          <h2 className="text-[#F0F0F5] text-xl font-bold mb-2">¡Solicitud enviada!</h2>
+          <p className="text-[#8888A0] text-sm">Tu cuenta fue creada. El equipo de Plusby revisará tu solicitud y te dará acceso pronto.</p>
         </div>
       </div>
     );
