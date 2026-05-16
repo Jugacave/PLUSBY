@@ -533,11 +533,11 @@ const HERO_STYLES: BannerStyle[] = [
   {
     id: "purple-glow",
     name: "Purple Glow",
-    desc: "Degradado púrpura · Magia y lujo",
+    desc: "Púrpura oscuro · Magia y lujo",
     gradient: "radial-gradient(ellipse at 50% 70%, #4c1d95 0%, #2d0a6b 40%, #0f0118 100%)",
     accentColor: "#A78BFA",
     textColor: "#fff",
-    promptKeywords: "deep purple violet atmospheric gradient background, glowing magical light effects bokeh particles floating, product centered on illuminated stage platform, three circular icon badges with purple gradient, bold white and purple extra-large typography, decorative mint leaves floating, premium luxury advertisement, dramatic spotlight chromatic lighting, vibrant glowing accents",
+    promptKeywords: "deep purple violet atmospheric gradient background, glowing magical bokeh light particles floating, product on illuminated stage platform, circular icon badges with purple gradient glow, bold white and purple typography, decorative nature leaves floating, premium luxury advertisement, dramatic spotlight chromatic lighting, vibrant glowing accents, product hero shot",
   },
   {
     id: "pink-romance",
@@ -546,25 +546,70 @@ const HERO_STYLES: BannerStyle[] = [
     gradient: "radial-gradient(ellipse at 50% 40%, #fdf2f8 0%, #fce7f3 50%, #f9a8d4 100%)",
     accentColor: "#EC4899",
     textColor: "#831843",
-    promptKeywords: "soft blush pink rose gradient background, romantic dreamy bokeh flower petals scattered, subtle heart shape background element, product on golden hexagonal platform, three pink circular badge icons with illustrations, elegant cursive script mixed with bold typography, sparkle light lens flare effects, warm feminine pastel atmosphere, luxury gift presentation aesthetic",
+    promptKeywords: "soft blush pink rose gradient background, romantic dreamy bokeh flower petals scattered, subtle heart shape element, product on golden hexagonal platform with sparkle glow, pink circular badge icons with illustrations, elegant cursive mixed with bold typography, lens flare sparkle effects, warm feminine pastel atmosphere, luxury beauty gift advertisement",
   },
   {
-    id: "clean-minimal",
-    name: "Clean Minimal",
-    desc: "Blanco limpio · Técnico · Profesional",
-    gradient: "linear-gradient(160deg, #fafaf7 0%, #f0ece0 60%, #e8e2d0 100%)",
+    id: "sky-kids",
+    name: "Sky & Kids",
+    desc: "Azul cielo · Infantil · Familiar",
+    gradient: "linear-gradient(180deg, #bfdbfe 0%, #93c5fd 30%, #dbeafe 70%, #eff6ff 100%)",
+    accentColor: "#F97316",
+    textColor: "#1e3a5f",
+    promptKeywords: "bright sky blue gradient background with fluffy white clouds, rainbow arc element, cheerful children family lifestyle photography, product on wooden platform stage, circular icon badges with orange accents, bold orange and dark blue typography with price badge strikethrough, floating hearts or balloons decorative elements, warm sunny cheerful family advertisement",
+  },
+  {
+    id: "green-nature",
+    name: "Green Nature",
+    desc: "Verde natural · Salud · Orgánico",
+    gradient: "radial-gradient(ellipse at 50% 30%, #d1fae5 0%, #6ee7b7 30%, #065f46 100%)",
+    accentColor: "#10B981",
+    textColor: "#fff",
+    promptKeywords: "rich green gradient background with tropical leaves and natural foliage, health wellness product photography, golden circular trust badge 100% natural seal, circular icon badges with green gradient, bold white and green typography with golden price badge, before and after transformation split composition, fresh clean natural organic health advertisement",
+  },
+  {
+    id: "teal-aqua",
+    name: "Teal Aqua",
+    desc: "Turquesa · Fresco · Limpieza",
+    gradient: "radial-gradient(ellipse at 40% 30%, #ccfbf1 0%, #5eead4 40%, #0f766e 100%)",
+    accentColor: "#14B8A6",
+    textColor: "#fff",
+    promptKeywords: "bright teal cyan aqua gradient background, fresh clean health product photography, before and after split layout with arrow transformation, circular teal icon badges with white icons, bold white typography with teal dark price badge, floating capsules or liquid drops, clean fresh deodorant supplement health advertisement, light airy atmosphere",
+  },
+  {
+    id: "sports-blue",
+    name: "Sports Blue",
+    desc: "Azul eléctrico · Deporte · Alto rendimiento",
+    gradient: "linear-gradient(160deg, #1d4ed8 0%, #1e40af 40%, #1e3a8a 100%)",
+    accentColor: "#60A5FA",
+    textColor: "#fff",
+    promptKeywords: "vibrant electric blue gradient background with lightning bolt energy effects, athlete model holding product dynamic pose, fruit splash and liquid splash effects, circular spec badges with blue gradient, bold white blue red typography large headline, price offer badge, bottom trust icons strip pago seguro garantia envio gratis, high energy sports nutrition supplement advertisement",
+  },
+  {
+    id: "sports-blue-white",
+    name: "Blue & White Sport",
+    desc: "Azul + blanco · Geométrico · Fresco",
+    gradient: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #f0f9ff 100%)",
+    accentColor: "#2563EB",
+    textColor: "#1e3a8a",
+    promptKeywords: "bright blue and white geometric diagonal split background, athlete model with product studio clean photography, circular icon feature badges with blue outline, bold blue white typography, clean infographic feature list layout, product label clearly visible, professional sports supplement health advertisement, fresh modern design",
+  },
+  {
+    id: "dark-navy-gold",
+    name: "Dark Navy Gold",
+    desc: "Azul marino oscuro · Dorado · Premium tech",
+    gradient: "radial-gradient(ellipse at 50% 30%, #1e3a5f 0%, #0f1f3a 50%, #060d1a 100%)",
     accentColor: "#D97706",
-    textColor: "#1a1a1a",
-    promptKeywords: "clean white off-white neutral background, natural studio lighting, technical product photography multiple angles, dimensional callout annotation lines with measurements, gold amber accent headlines, clean professional minimalist layout, hand holding product detail shot, high-end product showcase with specification overlays, infographic style",
+    textColor: "#fff",
+    promptKeywords: "deep dark navy blue gradient background, golden particle ion effects streaming from product, hand holding product dramatic product reveal, star rating and social proof top header, bold white and gold typography extra large headline, price badge with strikethrough gold accent, circular spec icons with gold borders left sidebar, premium technology product advertisement",
   },
   {
     id: "dark-power",
     name: "Dark Power",
     desc: "Gris oscuro · Oro · Alto impacto",
-    gradient: "radial-gradient(ellipse at 50% 60%, #404040 0%, #1a1a1a 50%, #080808 100%)",
+    gradient: "radial-gradient(ellipse at 50% 50%, #3a3a3a 0%, #1a1a1a 50%, #080808 100%)",
     accentColor: "#F59E0B",
     textColor: "#fff",
-    promptKeywords: "dark charcoal gray background, radial sunburst light rays from center, bold white and orange gold typography, price badge with strikethrough urgency element, four circular spec icons floating around product, dynamic hero product shot center stage, high energy action composition, bottom brand strip contrasting colors, dramatic commercial advertisement, industrial power aesthetic",
+    promptKeywords: "dark charcoal gray background with radial sunburst light rays from center, bold white and orange gold typography massive headline, price badge strikethrough urgency, four circular spec icons floating around product, dynamic hero product shot center stage, bottom brand bar strip yellow red contrasting, high energy industrial commercial advertisement power aesthetic",
   },
   {
     id: "bold-aggressive",
@@ -573,60 +618,41 @@ const HERO_STYLES: BannerStyle[] = [
     gradient: "radial-gradient(ellipse at 50% 100%, #450a0a 0%, #1a0000 40%, #0a0a0a 100%)",
     accentColor: "#DC2626",
     textColor: "#fff",
-    promptKeywords: "deep black background with red volcanic lava texture accents, chrome metallic product photography dramatic lighting, heavy bold white and red headline typography, five star rating social proof customer count, price strikethrough urgency badge element, feature icons left sidebar list, circular badge sticker accent, masculine aggressive powerful aesthetic, high contrast dramatic advertisement",
+    promptKeywords: "deep black background with red volcanic lava rock texture accents, chrome metallic product photography dramatic lighting, heavy bold white and red headline typography, five star rating social proof customer count badge, price strikethrough urgency deal badge, feature icons left sidebar list layout, circular sticker badge accent, masculine aggressive powerful aesthetic, high contrast dramatic advertisement",
+  },
+  {
+    id: "warm-lifestyle",
+    name: "Warm Lifestyle",
+    desc: "Beige cálido · Mascotas · Familia",
+    gradient: "radial-gradient(ellipse at 50% 40%, #fef3c7 0%, #fde68a 30%, #d97706 100%)",
+    accentColor: "#DC2626",
+    textColor: "#1a1a1a",
+    promptKeywords: "warm golden beige neutral background, lifestyle photography with pet or family model, product displayed prominently with pet or person, red price urgency badge with bold price, circular feature icon badges with red green accents, bold dark typography, warm cozy atmosphere, feature list left sidebar, lifestyle product advertisement homey comfortable feel",
+  },
+  {
+    id: "space-galaxy",
+    name: "Space Galaxy",
+    desc: "Galaxia · Cosmos · Wow factor",
+    gradient: "radial-gradient(ellipse at 50% 50%, #312e81 0%, #1e1b4b 40%, #030712 100%)",
+    accentColor: "#818CF8",
+    textColor: "#fff",
+    promptKeywords: "deep space galaxy background with nebula colors teal blue pink purple, floating planets and stars, product or character centered floating in space, cosmic glowing light effects, star rating badge top, bold white and cyan glowing typography with price, magical universe atmosphere, wow factor premium product advertisement cosmic futuristic",
+  },
+  {
+    id: "outdoor-adventure",
+    name: "Outdoor Adventure",
+    desc: "Montaña · Atardecer · Acción",
+    gradient: "linear-gradient(180deg, #92400e 0%, #b45309 30%, #1c1917 100%)",
+    accentColor: "#EF4444",
+    textColor: "#fff",
+    promptKeywords: "mountain outdoor landscape background golden sunset dusty terrain, action product photography dramatic natural light, red and dark price badge with arrow, three feature badges rounded rectangle red background, bold white and red metallic chrome typography, product hero shot outdoor adventure setting, athletic outdoor adventure sport advertisement dramatic composition",
   },
 ];
 
-const GENERIC_STYLES: BannerStyle[] = [
-  {
-    id: "purple-glow",
-    name: "Purple Glow",
-    desc: "Degradado púrpura · Magia y lujo",
-    gradient: "radial-gradient(ellipse at 50% 70%, #4c1d95 0%, #2d0a6b 40%, #0f0118 100%)",
-    accentColor: "#A78BFA",
-    textColor: "#fff",
-    promptKeywords: "deep purple violet atmospheric gradient background, glowing magical light effects bokeh particles, dramatic spotlight lighting, vibrant chromatic accents, premium luxury advertisement",
-  },
-  {
-    id: "pink-romance",
-    name: "Pink Romance",
-    desc: "Rosa suave · Romántico · Femenino",
-    gradient: "radial-gradient(ellipse at 50% 40%, #fdf2f8 0%, #fce7f3 50%, #f9a8d4 100%)",
-    accentColor: "#EC4899",
-    textColor: "#831843",
-    promptKeywords: "soft blush pink rose gradient background, romantic dreamy bokeh petals, sparkle light effects, warm feminine pastel atmosphere, luxury aesthetic",
-  },
-  {
-    id: "clean-minimal",
-    name: "Clean Minimal",
-    desc: "Blanco limpio · Técnico · Profesional",
-    gradient: "linear-gradient(160deg, #fafaf7 0%, #f0ece0 60%, #e8e2d0 100%)",
-    accentColor: "#D97706",
-    textColor: "#1a1a1a",
-    promptKeywords: "clean white off-white background, natural studio lighting, professional minimalist layout, gold amber accent, high-end product showcase",
-  },
-  {
-    id: "dark-power",
-    name: "Dark Power",
-    desc: "Gris oscuro · Oro · Alto impacto",
-    gradient: "radial-gradient(ellipse at 50% 60%, #404040 0%, #1a1a1a 50%, #080808 100%)",
-    accentColor: "#F59E0B",
-    textColor: "#fff",
-    promptKeywords: "dark charcoal gray background, radial light rays, bold orange gold typography, high energy dramatic commercial advertisement, industrial power aesthetic",
-  },
-  {
-    id: "bold-aggressive",
-    name: "Bold Aggressive",
-    desc: "Negro intenso · Rojo · Dramático",
-    gradient: "radial-gradient(ellipse at 50% 100%, #450a0a 0%, #1a0000 40%, #0a0a0a 100%)",
-    accentColor: "#DC2626",
-    textColor: "#fff",
-    promptKeywords: "deep black background with red texture accents, chrome metallic photography, heavy bold white and red typography, high contrast dramatic advertisement",
-  },
-];
+const GENERIC_STYLES: BannerStyle[] = HERO_STYLES;
 
 function getStylesForSection(sectionId: string): BannerStyle[] {
-  return sectionId === "hero" ? HERO_STYLES : GENERIC_STYLES;
+  return HERO_STYLES;
 }
 
 // ─── Banner Mode: StylePickerModal ────────────────────────────────────────────
@@ -641,8 +667,8 @@ function StylePickerModal({ sectionId, sectionLabel, currentStyleId, onSelect, o
   const styles = getStylesForSection(sectionId);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl w-full max-w-lg shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b border-[#2A2A3A]">
+      <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl w-full max-w-lg shadow-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-[#2A2A3A] flex-shrink-0">
           <div>
             <p className="text-[#F0F0F5] font-bold text-sm">Elige un estilo visual</p>
             <p className="text-[#555568] text-[10px] mt-0.5">{sectionLabel} · El estilo guía la IA al generar</p>
@@ -651,7 +677,7 @@ function StylePickerModal({ sectionId, sectionLabel, currentStyleId, onSelect, o
             <X size={14} />
           </button>
         </div>
-        <div className="p-4 grid grid-cols-1 gap-2">
+        <div className="p-4 grid grid-cols-1 gap-2 overflow-y-auto flex-1">
           {styles.map((style) => {
             const active = currentStyleId === style.id;
             return (
