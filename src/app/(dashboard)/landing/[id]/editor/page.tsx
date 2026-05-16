@@ -760,8 +760,120 @@ const OFERTA_STYLES: BannerStyle[] = [
   },
 ];
 
+const ANTES_DESPUES_STYLES: BannerStyle[] = [
+  {
+    id: "romantic-split",
+    name: "Romantic Split",
+    desc: "Gris frío → Dorado cálido · Romance · Lifestyle",
+    gradient: "linear-gradient(135deg, #b0bec5 0%, #78909c 50%, #d4a017 50%, #8B6914 100%)",
+    accentColor: "#D4A017",
+    textColor: "#fff",
+    promptKeywords: "cold desaturated gray blue BEFORE side vs warm romantic golden light AFTER side, diagonal split composition with thin gold dividing line, lifestyle couple photography romantic dinner candles roses, product gift box or beauty item displayed, dark bottom section with gold serif headline and testimonial quote, percentage stat social proof, emotional transformation advertisement",
+  },
+  {
+    id: "outdoor-mountain-bridge",
+    name: "Outdoor Mountain",
+    desc: "Paisaje naturaleza · Producto al centro · Oro",
+    gradient: "linear-gradient(180deg, #4a6741 0%, #2d4a2a 40%, #1a2d18 100%)",
+    accentColor: "#D97706",
+    textColor: "#fff",
+    promptKeywords: "dramatic outdoor mountain landscape background split left vs right, ANTES tired person hunched on mountain left side vs DESPUÉS triumphant confident person standing tall right side, product supplement jar centered bridging between both scenes on stone platform glowing particles, gold text strip banner bottom with bold headline, testimonial quote and percentage stat, outdoor adventure transformation advertisement",
+  },
+  {
+    id: "dark-problem-solution",
+    name: "Problem / Solution",
+    desc: "Negro · Columna problema vs producto · Oro",
+    gradient: "linear-gradient(90deg, #0d1117 0%, #0d1117 50%, #1a1a2e 100%)",
+    accentColor: "#F59E0B",
+    textColor: "#fff",
+    promptKeywords: "dark black background diagonal split blue and red accent corners, left column PROBLEMA with stacked circular photo badges showing problems lifestyle issues with dark red pill labels, right side SOLUCIÓN with large product jar center and fruit or ingredient splash, bottom text block with product name bullet point benefits specs, bold headline top asking question urgency, red and blue contrast sports supplement transformation layout",
+  },
+  {
+    id: "peach-multishot-skin",
+    name: "Peach Multishot",
+    desc: "Melocotón · Múltiples pares piel · Femenino",
+    gradient: "radial-gradient(ellipse at 50% 30%, #fde8d8 0%, #f5c6a8 50%, #e8956a 100%)",
+    accentColor: "#C2410C",
+    textColor: "#7c2d12",
+    promptKeywords: "soft warm peach salmon background with floral corner elements, multiple stacked pairs of real before and after skin closeup photos in rounded frames, Antes Después label pills below each pair, bold dark headline questioning doubts about product, three feature icon badges in warm tones top section, real transformation skin beauty product advertisement feminine warm style",
+  },
+  {
+    id: "cream-arrow-lifestyle",
+    name: "Cream Arrow",
+    desc: "Crema claro · Flecha naranja · Lifestyle limpio",
+    gradient: "linear-gradient(180deg, #fdf6ec 0%, #faebd7 60%, #c0392b 100%)",
+    accentColor: "#EA580C",
+    textColor: "#1a1a1a",
+    promptKeywords: "clean cream beige light background top section, side by side ANTES outdoor or old method photo vs DESPUÉS clean modern product result photo, bold orange arrow pointing right between the two photos, result time badge orange circle bottom right, dark rust red or warm brown bottom strip with customer testimonial face photo and large percentage satisfaction stat, simple clean lifestyle transformation advertisement",
+  },
+  {
+    id: "dark-tech-lightning",
+    name: "Dark Tech Lightning",
+    desc: "Negro · Rayo dorado/cian · Tech · Producto HUD",
+    gradient: "radial-gradient(ellipse at 50% 50%, #0a0a0a 0%, #050505 100%)",
+    accentColor: "#F59E0B",
+    textColor: "#fff",
+    promptKeywords: "dark black background full screen, bold large white and red headline top, diagonal or vertical lightning bolt divider gold and electric blue neon between ANTES dull dark left side and DESPUÉS glowing tech product right side, before dull analog or old method vs after digital smart glowing product with neon rings or HUD display, bottom rounded gold border testimonial card with customer quote and percentage stat improvement, high contrast dramatic tech product transformation",
+  },
+  {
+    id: "pink-floral-product",
+    name: "Pink Floral",
+    desc: "Rosa suave · Flores · Producto hero · Piel",
+    gradient: "radial-gradient(ellipse at 50% 40%, #fce7f3 0%, #fbcfe8 50%, #f9a8d4 100%)",
+    accentColor: "#DB2777",
+    textColor: "#831843",
+    promptKeywords: "soft blush pink full background with cherry blossom flowers scattered, circular or oval face closeup photos before and after with pink splash liquid effect, feature icon badges pink rounded squares at top, product jar or cream prominently displayed center with soft shadow, script elegant typography for testimonial section, secondary small before after photo comparison at bottom, feminine luxury beauty skin transformation advertisement",
+  },
+  {
+    id: "dark-gold-pedestal",
+    name: "Dark Gold Pedestal",
+    desc: "Negro cálido · Atletas flanqueando · Pedestal dorado",
+    gradient: "radial-gradient(ellipse at 50% 40%, #2d1b00 0%, #1a0f00 50%, #0a0500 100%)",
+    accentColor: "#D97706",
+    textColor: "#fff",
+    promptKeywords: "dark warm black background with gym environment subtle, ANTES dejected tired athlete left side vs DESPUÉS triumphant flexing muscular athlete right side, product supplement jar centered on golden glowing pedestal between both figures, floating ingredient elements chocolate cocoa or flavor accents, gold white bottom strip banner with bold product name headline, customer testimonial face avatar and percentage stat, premium dark gold sports nutrition transformation advertisement",
+  },
+  {
+    id: "neon-vertical-stacked",
+    name: "Neon Vertical Stack",
+    desc: "Oscuro gris ANTES arriba · Neón DESPUÉS abajo",
+    gradient: "linear-gradient(180deg, #1a1a1a 0%, #111111 40%, #052e16 60%, #000000 100%)",
+    accentColor: "#22C55E",
+    textColor: "#fff",
+    promptKeywords: "vertical stacked split composition, top half dark desaturated gray gym environment ANTES with tired dejected athlete moody lighting, middle divider with neon brand logo icon and electric lightning bolt flash, bottom half dark green neon glow gym DESPUÉS with triumphant screaming athlete holding product arms raised victorious, product jar centered at divider between sections, bold white headline bottom tagline, high energy sports supplement dramatic vertical transformation",
+  },
+  {
+    id: "dreamy-kids",
+    name: "Dreamy Kids",
+    desc: "Azul frío vs rosa soñador · Niños · Estrellas",
+    gradient: "linear-gradient(90deg, #1e3a5f 0%, #2563eb 50%, #db2777 50%, #be185d 100%)",
+    accentColor: "#FDE68A",
+    textColor: "#fff",
+    promptKeywords: "vertical split background left cool blue dark bedroom ANTES vs right warm pink dreamy cozy room DESPUÉS, floating golden stars fairy lights bokeh atmosphere right side, sad or lonely child on left side vs happy smiling child hugging plush toy product right side, rounded pill badge buttons ANTES and DESPUÉS labels, bottom testimonial pill card with parent customer quote, bold percentage stat, dreamlike magical children product transformation advertisement",
+  },
+  {
+    id: "purple-pink-energy",
+    name: "Purple Pink Energy",
+    desc: "Púrpura-rosa gym · Aura eléctrica · Mujer atleta",
+    gradient: "radial-gradient(ellipse at 50% 30%, #6b21a8 0%, #9d174d 50%, #1a1a1a 100%)",
+    accentColor: "#EC4899",
+    textColor: "#fff",
+    promptKeywords: "purple pink magenta gym environment background with electric lightning aura, female athlete transformation split or side by side ANTES calm neutral pose vs DESPUÉS flexing with electric energy glow aura and lightning bolts around transformed figure, product overlaid on DESPUÉS side floating, three circular or pill feature icon badges flanking composition MAYOR DEFINICION MUSCULAR FUERZA RESISTENCIA CUERPO TONIFICADO, bottom navy strip testimonial quote and percentage stat, feminine fitness transformation advertisement high energy",
+  },
+  {
+    id: "blue-double-proof",
+    name: "Blue Double Proof",
+    desc: "Gym azul · Múltiples pares retrato · Testimonios",
+    gradient: "linear-gradient(180deg, #1e3a8a 0%, #1d4ed8 30%, #0f172a 100%)",
+    accentColor: "#3B82F6",
+    textColor: "#fff",
+    promptKeywords: "dark blue neon gym background with red and blue LED accent lights geometric shapes, two separate stacked pairs of portrait before and after photos in rounded rectangle frames each with red ANTES badge and blue DESPUÉS badge, after each pair a red or dark testimonial card with customer name 5 stars and quote text, product jar displayed at bottom with fruit elements, three feature icon badges strip, bold headline top, multiple social proof customer transformation fitness supplement advertisement",
+  },
+];
+
 function getStylesForSection(sectionId: string): BannerStyle[] {
   if (sectionId === "oferta") return OFERTA_STYLES;
+  if (sectionId === "antes_despues") return ANTES_DESPUES_STYLES;
   return HERO_STYLES;
 }
 
