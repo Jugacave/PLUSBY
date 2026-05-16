@@ -112,10 +112,12 @@ const COUNTRIES = [
 ];
 
 const AI_MODELS = [
-  { id: "fal-flux-dev",  label: "Flux Dev",            price: "~$0.03", desc: "Rápido · Ideal para volumen" },
-  { id: "fal-flux-pro",  label: "Flux Pro",            price: "~$0.05", desc: "Alta calidad · 4K" },
-  { id: "openai-dalle3", label: "DALL·E 3",            price: "~$0.04", desc: "OpenAI · Requiere key OpenAI" },
-  { id: "fal-sd-xl",     label: "Stable Diffusion XL", price: "~$0.02", desc: "Creativo · Versátil" },
+  { id: "fal-flux-ultra",  label: "Flux Pro Ultra",       price: "~$0.06", desc: "⭐ Más realista · Mejor para producto" },
+  { id: "fal-flux-pro",    label: "Flux Pro 1.1",         price: "~$0.05", desc: "Alta calidad · 4K" },
+  { id: "fal-ideogram2",   label: "Ideogram v2",          price: "~$0.08", desc: "Texto en imagen · Banners con copy" },
+  { id: "fal-flux-dev",    label: "Flux Dev",             price: "~$0.03", desc: "Rápido · Ideal para volumen" },
+  { id: "openai-dalle3",   label: "DALL·E 3",             price: "~$0.04", desc: "OpenAI · Requiere key OpenAI" },
+  { id: "fal-sd-xl",       label: "Stable Diffusion XL",  price: "~$0.02", desc: "Creativo · Versátil" },
 ];
 
 const FONTS = [
@@ -434,7 +436,7 @@ function RefImageUpload({ idx, url, landingId, onChange }: {
     const { error } = await supabase.storage.from("store-logos").upload(path, file, { upsert: true, contentType: file.type });
 
     if (error) {
-      setUploadError("No se pudo guardar en servidor. La imagen solo dura esta sesión.");
+      setUploadError("Storage no configurado. Ve a Supabase → Storage → crea bucket 'store-logos' público.");
     } else {
       const { data: { publicUrl } } = supabase.storage.from("store-logos").getPublicUrl(path);
       setLocalPreview(null);
@@ -627,14 +629,17 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
 }) {
   const [generatingAngles, setGeneratingAngles] = useState(false);
   const [generatingContext, setGeneratingContext] = useState(false);
+  const [contextError, setContextError] = useState<string | null>(null);
+  const [anglesError, setAnglesError] = useState<string | null>(null);
 
   function upd(patch: Partial<BannerConfig>) { setConfig((p) => ({ ...p, ...patch })); }
 
   async function handleGenerateContext() {
     if (!initialProduct && !config.description) return;
     setGeneratingContext(true);
+    setContextError(null);
     try {
-      const refImageUrls = config.refImages.filter((r): r is string => r !== null);
+      const refImageUrls = config.refImages.filter((r): r is string => r !== null && r.startsWith("http"));
       const res = await fetch("/api/landing/generate-product-context", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -654,13 +659,20 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
           ingredients: data.ingredients?.length ? data.ingredients : config.ingredients,
           differentiator: data.differentiator || config.differentiator,
         });
+      } else {
+        setContextError(data.error ?? "Error al analizar. Verifica que ANTHROPIC_API_KEY esté configurada en Vercel.");
       }
-    } catch { /* noop */ } finally { setGeneratingContext(false); }
+    } catch (e) {
+      setContextError(e instanceof Error ? e.message : "Error de conexión");
+    } finally {
+      setGeneratingContext(false);
+    }
   }
 
   async function handleGenerateAngles() {
     if (!config.description && !initialProduct) return;
     setGeneratingAngles(true);
+    setAnglesError(null);
     try {
       const res = await fetch("/api/landing/generate-angles", {
         method: "POST",
@@ -675,8 +687,16 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
         }),
       });
       const data = await res.json();
-      if (data.ok && data.angles) upd({ angles: data.angles, selectedAngle: data.angles[0] ?? "" });
-    } catch { /* noop */ } finally { setGeneratingAngles(false); }
+      if (data.ok && data.angles) {
+        upd({ angles: data.angles, selectedAngle: data.angles[0] ?? "" });
+      } else {
+        setAnglesError(data.error ?? "Error al generar ángulos. Verifica que ANTHROPIC_API_KEY esté configurada en Vercel.");
+      }
+    } catch (e) {
+      setAnglesError(e instanceof Error ? e.message : "Error de conexión");
+    } finally {
+      setGeneratingAngles(false);
+    }
   }
 
   const currency = COUNTRIES.find((c) => c.code === config.country)?.currency ?? "$";
@@ -709,6 +729,12 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
             ))}
           </div>
           <p className="text-[9px] text-[#3A3A4A] mt-2">Sube fotos del producto · Luego haz clic en "Analizar con IA" para auto-rellenar el formulario</p>
+          {contextError && (
+            <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-1.5">
+              <AlertCircle size={10} className="text-red-400 shrink-0 mt-0.5" />
+              <p className="text-red-400 text-[9px] leading-snug">{contextError}</p>
+            </div>
+          )}
         </div>
 
         {/* 2 · País Destino */}
@@ -818,6 +844,13 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
             {generatingAngles ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
             {generatingAngles ? "Generando ángulos..." : "💡 Generar Ángulos de Venta"}
           </button>
+
+          {anglesError && (
+            <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-1.5">
+              <AlertCircle size={10} className="text-red-400 shrink-0 mt-0.5" />
+              <p className="text-red-400 text-[9px] leading-snug">{anglesError}</p>
+            </div>
+          )}
 
           {config.angles.length > 0 && (
             <div>

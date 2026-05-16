@@ -72,9 +72,11 @@ export async function POST(req: NextRequest) {
 
   // Determine which Fal.ai model to use
   const falModelMap: Record<string, string> = {
-    "fal-flux-dev": "fal-ai/flux/dev",
-    "fal-flux-pro": "fal-ai/flux-pro",
-    "fal-sd-xl": "fal-ai/stable-diffusion-xl",
+    "fal-flux-dev":   "fal-ai/flux/dev",
+    "fal-flux-pro":   "fal-ai/flux-pro/v1.1",
+    "fal-flux-ultra": "fal-ai/flux-pro/v1.1-ultra",
+    "fal-ideogram2":  "fal-ai/ideogram/v2",
+    "fal-sd-xl":      "fal-ai/stable-diffusion-xl",
   };
 
   const isOpenAI = aiModel === "openai-dalle3";
@@ -108,7 +110,9 @@ export async function POST(req: NextRequest) {
   }
 
   const modelPath = falModelMap[aiModel] ?? "fal-ai/flux/dev";
-  const useImg2Img = !!refImageUrl;
+  // ideogram and flux-ultra don't support img2img via the same endpoint
+  const supportsImg2Img = !["fal-ai/ideogram/v2", "fal-ai/flux-pro/v1.1-ultra"].includes(modelPath);
+  const useImg2Img = !!refImageUrl && supportsImg2Img;
 
   const falEndpoint = useImg2Img
     ? `https://fal.run/${modelPath}/image-to-image`
