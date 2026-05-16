@@ -1775,6 +1775,22 @@ function getStylesForSection(sectionId: string): BannerStyle[] {
 
 // ─── Banner Mode: StylePickerModal ────────────────────────────────────────────
 
+function StyleThumbnail({ sectionId, styleId, gradient }: { sectionId: string; styleId: string; gradient: string }) {
+  const [error, setError] = useState(false);
+  const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/banner-templates/${sectionId}/${styleId}.jpg`;
+  if (error) {
+    return <div className="w-full h-full" style={{ background: gradient }} />;
+  }
+  return (
+    <img
+      src={url}
+      alt=""
+      className="w-full h-full object-cover"
+      onError={() => setError(true)}
+    />
+  );
+}
+
 function StylePickerModal({ sectionId, sectionLabel, currentStyleId, onSelect, onClose }: {
   sectionId: string;
   sectionLabel: string;
@@ -1785,7 +1801,7 @@ function StylePickerModal({ sectionId, sectionLabel, currentStyleId, onSelect, o
   const styles = getStylesForSection(sectionId);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl w-full max-w-lg shadow-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl w-full max-w-xl shadow-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-[#2A2A3A] flex-shrink-0">
           <div>
             <p className="text-[#F0F0F5] font-bold text-sm">Elige un estilo visual</p>
@@ -1795,41 +1811,39 @@ function StylePickerModal({ sectionId, sectionLabel, currentStyleId, onSelect, o
             <X size={14} />
           </button>
         </div>
-        <div className="p-4 grid grid-cols-1 gap-2 overflow-y-auto flex-1">
+        <div className="p-3 grid grid-cols-2 gap-2.5 overflow-y-auto flex-1">
           {styles.map((style) => {
             const active = currentStyleId === style.id;
             return (
               <button key={style.id} onClick={() => { onSelect(style.id); onClose(); }}
-                className="flex items-center gap-3 p-3 rounded-xl border transition-all text-left"
+                className="rounded-xl border overflow-hidden transition-all text-left flex flex-col"
                 style={active
-                  ? { border: `1px solid ${style.accentColor}`, background: `${style.accentColor}15` }
+                  ? { border: `2px solid ${style.accentColor}`, background: `${style.accentColor}10` }
                   : { border: "1px solid #2A2A3A", background: "#0D0D14" }}>
-                {/* Gradient preview */}
-                <div className="w-14 h-14 rounded-lg flex-shrink-0 relative overflow-hidden border border-white/10"
-                  style={{ background: style.gradient }}>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-6 h-6 rounded-full border-2 border-white/30" style={{ background: `${style.accentColor}60` }} />
-                  </div>
+                <div className="w-full aspect-video overflow-hidden relative">
+                  <StyleThumbnail sectionId={sectionId} styleId={style.id} gradient={style.gradient} />
+                  {active && (
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{ background: style.accentColor }}>
+                      <Check size={10} color="#fff" />
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[#F0F0F5] font-semibold text-xs">{style.name}</p>
-                    {active && <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: `${style.accentColor}20`, color: style.accentColor }}>ACTIVO</span>}
-                  </div>
-                  <p className="text-[#555568] text-[10px] mt-0.5">{style.desc}</p>
+                <div className="px-2.5 py-2">
+                  <p className="text-[#F0F0F5] font-semibold text-[11px] leading-tight">{style.name}</p>
+                  <p className="text-[#555568] text-[9px] mt-0.5 leading-tight">{style.desc}</p>
                 </div>
-                {active && <Check size={14} style={{ color: style.accentColor, flexShrink: 0 }} />}
               </button>
             );
           })}
           <button onClick={() => { onSelect(""); onClose(); }}
-            className="flex items-center gap-3 p-3 rounded-xl border border-[#1C1C26] bg-[#0A0A0F] text-left transition-all hover:border-[#3A3A4A]">
-            <div className="w-14 h-14 rounded-lg flex-shrink-0 border border-dashed border-[#2A2A3A] flex items-center justify-center">
-              <span className="text-[#3A3A4A] text-lg">✨</span>
+            className="rounded-xl border border-dashed border-[#2A2A3A] bg-[#0A0A0F] text-left flex flex-col overflow-hidden transition-all hover:border-[#3A3A4A]">
+            <div className="w-full aspect-video flex items-center justify-center bg-[#0D0D14]">
+              <span className="text-2xl">✨</span>
             </div>
-            <div>
-              <p className="text-[#8888A0] font-semibold text-xs">Sin estilo (IA libre)</p>
-              <p className="text-[#3A3A4A] text-[10px] mt-0.5">La IA genera sin restricción de estilo</p>
+            <div className="px-2.5 py-2">
+              <p className="text-[#8888A0] font-semibold text-[11px] leading-tight">Sin estilo (IA libre)</p>
+              <p className="text-[#3A3A4A] text-[9px] mt-0.5 leading-tight">La IA genera sin restricción</p>
             </div>
           </button>
         </div>
