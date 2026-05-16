@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
     "fal-flux-pro":   "fal-ai/flux-pro/v1.1",
     "fal-flux-ultra": "fal-ai/flux-pro/v1.1-ultra",
     "fal-ideogram2":  "fal-ai/ideogram/v2",
+    "fal-imagen3":    "fal-ai/imagen3",
     "fal-sd-xl":      "fal-ai/stable-diffusion-xl",
   };
 

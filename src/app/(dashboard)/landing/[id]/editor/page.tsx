@@ -44,6 +44,7 @@ interface BannerConfig {
   refImages: (string | null)[];
   angles: string[];
   selectedAngle: string;
+  templateRefs: Record<string, string>; // sectionId → template image URL
 }
 
 const DEFAULT_BANNER_CONFIG: BannerConfig = {
@@ -55,7 +56,7 @@ const DEFAULT_BANNER_CONFIG: BannerConfig = {
   colors: ["#FF6B35", "#1C1C26", "#F0F0F5"],
   font: "Poppins",
   country: "CO",
-  aiModel: "fal-flux-dev",
+  aiModel: "fal-flux-ultra",
   priceSale: "",
   priceOriginal: "",
   priceBundle2: "",
@@ -63,6 +64,7 @@ const DEFAULT_BANNER_CONFIG: BannerConfig = {
   refImages: [null, null, null],
   angles: [],
   selectedAngle: "",
+  templateRefs: {},
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -112,12 +114,13 @@ const COUNTRIES = [
 ];
 
 const AI_MODELS = [
-  { id: "fal-flux-ultra",  label: "Flux Pro Ultra",       price: "~$0.06", desc: "⭐ Más realista · Mejor para producto" },
-  { id: "fal-flux-pro",    label: "Flux Pro 1.1",         price: "~$0.05", desc: "Alta calidad · 4K" },
-  { id: "fal-ideogram2",   label: "Ideogram v2",          price: "~$0.08", desc: "Texto en imagen · Banners con copy" },
-  { id: "fal-flux-dev",    label: "Flux Dev",             price: "~$0.03", desc: "Rápido · Ideal para volumen" },
-  { id: "openai-dalle3",   label: "DALL·E 3",             price: "~$0.04", desc: "OpenAI · Requiere key OpenAI" },
-  { id: "fal-sd-xl",       label: "Stable Diffusion XL",  price: "~$0.02", desc: "Creativo · Versátil" },
+  { id: "fal-flux-ultra",  label: "Flux Pro Ultra",       price: "~$0.06", desc: "⭐ Más realista · Recomendado" },
+  { id: "fal-imagen3",     label: "Google Imagen 3",       price: "~$0.04", desc: "Google · Fotorrealismo extremo" },
+  { id: "fal-ideogram2",   label: "Ideogram v2",           price: "~$0.08", desc: "Texto en imagen · Banners con copy" },
+  { id: "fal-flux-pro",    label: "Flux Pro 1.1",          price: "~$0.05", desc: "Alta calidad · 4K" },
+  { id: "fal-flux-dev",    label: "Flux Dev",              price: "~$0.03", desc: "Rápido · Ideal para volumen" },
+  { id: "openai-dalle3",   label: "DALL·E 3",              price: "~$0.04", desc: "OpenAI · Requiere key OpenAI" },
+  { id: "fal-sd-xl",       label: "Stable Diffusion XL",   price: "~$0.02", desc: "Creativo · Versátil" },
 ];
 
 const FONTS = [
@@ -516,19 +519,24 @@ function CompactList({ label, items, onChange, placeholder }: {
 
 // ─── Banner Mode: BannerImageCard ─────────────────────────────────────────────
 
-function BannerImageCard({ section, config, images, onImageGenerated }: {
+function BannerImageCard({ section, config, images, onImageGenerated, onTemplateRef }: {
   section: { id: string; label: string; icon: string };
   config: BannerConfig;
   images: string[];
   onImageGenerated: (url: string) => void;
+  onTemplateRef: (url: string | null) => void;
 }) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const templateRef = useRef<HTMLInputElement>(null);
+  const templateUrl = config.templateRefs[section.id] ?? null;
 
   async function handleGenerate() {
     setGenerating(true);
     setError(null);
-    const refImageUrl = config.refImages.find((r) => r !== null && r.startsWith("http")) ?? undefined;
+    const refImageUrl = config.refImages.find((r) => r !== null && r.startsWith("http"))
+      ?? templateUrl
+      ?? undefined;
     try {
       const res = await fetch("/api/landing/generate-banner-image", {
         method: "POST",
@@ -542,6 +550,7 @@ function BannerImageCard({ section, config, images, onImageGenerated }: {
           country: config.country,
           aiModel: config.aiModel,
           refImageUrl,
+          templateRefUrl: templateUrl,
           priceSale: config.priceSale,
           priceOriginal: config.priceOriginal,
         }),
@@ -577,6 +586,35 @@ function BannerImageCard({ section, config, images, onImageGenerated }: {
           {generating ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
           {generating ? "Generando..." : images.length > 0 ? "Regenerar" : "Generar"}
         </button>
+      </div>
+
+      {/* Template de referencia */}
+      <input ref={templateRef} type="file" accept="image/*" className="hidden"
+        onChange={async (e) => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          const objectUrl = URL.createObjectURL(f);
+          onTemplateRef(objectUrl);
+        }} />
+      <div className="mb-2 flex items-center gap-1.5">
+        {templateUrl ? (
+          <div className="flex items-center gap-1.5 flex-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={templateUrl} alt="template" className="w-8 h-8 rounded object-cover border border-[#7C3AED]/40" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[9px] text-[#A78BFA] font-medium">Plantilla activa</p>
+              <p className="text-[8px] text-[#555568]">Se usa como referencia de estilo</p>
+            </div>
+            <button onClick={() => onTemplateRef(null)} className="text-[#3A3A4A] hover:text-red-400 transition-colors">
+              <X size={11} />
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => templateRef.current?.click()}
+            className="flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-[#2A2A3A] hover:border-[#7C3AED] text-[#555568] hover:text-[#A78BFA] text-[9px] transition-colors">
+            <Upload size={9} /> Subir plantilla de referencia
+          </button>
+        )}
       </div>
 
       {error && (
@@ -634,12 +672,36 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
 
   function upd(patch: Partial<BannerConfig>) { setConfig((p) => ({ ...p, ...patch })); }
 
+  async function blobToBase64(url: string): Promise<{ kind: "base64"; data: string; mediaType: string } | null> {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const b64 = (reader.result as string).split(",")[1];
+          resolve({ kind: "base64", data: b64, mediaType: blob.type || "image/jpeg" });
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch { return null; }
+  }
+
   async function handleGenerateContext() {
     if (!initialProduct && !config.description) return;
     setGeneratingContext(true);
     setContextError(null);
     try {
-      const refImageUrls = config.refImages.filter((r): r is string => r !== null && r.startsWith("http"));
+      const rawRefs = config.refImages.filter((r): r is string => r !== null);
+      const refImages = (await Promise.all(
+        rawRefs.map(async (url) => {
+          if (url.startsWith("http")) return { kind: "url" as const, url };
+          if (url.startsWith("blob:")) return blobToBase64(url);
+          return null;
+        })
+      )).filter((r): r is NonNullable<typeof r> => r !== null);
+
       const res = await fetch("/api/landing/generate-product-context", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -647,7 +709,7 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
           productName: initialProduct || config.description,
           description: config.description,
           country: config.country,
-          refImageUrls,
+          refImages,
         }),
       });
       const data = await res.json();
@@ -922,6 +984,14 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
                   ...p,
                   [section.id]: [url, ...(p[section.id] ?? [])],
                 }));
+              }}
+              onTemplateRef={(url) => {
+                upd({
+                  templateRefs: {
+                    ...config.templateRefs,
+                    [section.id]: url ?? undefined,
+                  } as Record<string, string>,
+                });
               }}
             />
           ))}
