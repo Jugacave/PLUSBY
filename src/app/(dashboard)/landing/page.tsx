@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -532,6 +533,7 @@ function rowToLanding(row: Record<string, unknown>): Landing {
 }
 
 export default function LandingPage() {
+  const router = useRouter();
   const [landings, setLandings] = useState<Landing[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -585,7 +587,11 @@ export default function LandingPage() {
           .select()
           .single();
         if (error2) { alert(`Error: ${error2.message}`); return; }
-        if (data2) { setLandings((prev) => [rowToLanding(data2), ...prev]); setShowCreate(false); }
+        if (data2) {
+          setLandings((prev) => [rowToLanding(data2), ...prev]);
+          setShowCreate(false);
+          router.push(`/landing/${data2.id}/editor`);
+        }
         return;
       } else {
         alert(`Error al crear: ${error.message}`);
@@ -595,6 +601,7 @@ export default function LandingPage() {
     if (data) {
       setLandings((prev) => [rowToLanding(data), ...prev]);
       setShowCreate(false);
+      router.push(`/landing/${data.id}/editor`);
     }
   }
 
