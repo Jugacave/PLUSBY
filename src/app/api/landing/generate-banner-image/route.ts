@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     font: string;
     country: string;
     aiModel: string;
-    refImageUrl?: string;
+    styleKeywords?: string;
     priceSale?: string;
     priceOriginal?: string;
   };
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
-  const { sectionType, productDescription, angle, colors, font, country, aiModel, refImageUrl, priceSale, priceOriginal } = body;
+  const { sectionType, productDescription, angle, colors, font, country, aiModel, styleKeywords, priceSale, priceOriginal } = body;
 
   const sectionDesc = SECTION_PROMPTS[sectionType] ?? "Product advertisement banner";
 
@@ -59,18 +59,18 @@ export async function POST(req: NextRequest) {
 
   const prompt = [
     sectionDesc,
+    styleKeywords ? `Visual style: ${styleKeywords}.` : "",
     `Product: ${productDescription || "dropshipping product"}.`,
     angle ? `Marketing angle: ${angle}.` : "",
     colorsText ? `Color palette: ${colorsText}.` : "",
     `Typography style: ${font || "modern sans-serif"}.`,
     `Target market: ${country || "Latin America"}.`,
     pricingText,
-    "Professional commercial photography. High quality. Clean, modern design. Perfect for social media advertising. No text overlays.",
+    "Professional commercial photography. High quality. Perfect for social media advertising.",
   ]
     .filter(Boolean)
     .join(" ");
 
-  // Determine which Fal.ai model to use
   const falModelMap: Record<string, string> = {
     "fal-flux-dev":   "fal-ai/flux/dev",
     "fal-flux-pro":   "fal-ai/flux-pro/v1.1",
@@ -102,7 +102,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Fal.ai
   const falKey = user.user_metadata?.ai_key_fal;
   if (!falKey) {
     return NextResponse.json({
@@ -111,17 +110,8 @@ export async function POST(req: NextRequest) {
   }
 
   const modelPath = falModelMap[aiModel] ?? "fal-ai/flux/dev";
-  // ideogram and flux-ultra don't support img2img via the same endpoint
-  const supportsImg2Img = !["fal-ai/ideogram/v2", "fal-ai/flux-pro/v1.1-ultra"].includes(modelPath);
-  const useImg2Img = !!refImageUrl && supportsImg2Img;
-
-  const falEndpoint = useImg2Img
-    ? `https://fal.run/${modelPath}/image-to-image`
-    : `https://fal.run/${modelPath}`;
-
-  const falBody = useImg2Img
-    ? { prompt, image_url: refImageUrl, strength: 0.75, image_size: "square_hd", num_images: 1, enable_safety_checker: true }
-    : { prompt, image_size: "square_hd", num_inference_steps: 28, guidance_scale: 3.5, num_images: 1, enable_safety_checker: true };
+  const falEndpoint = `https://fal.run/${modelPath}`;
+  const falBody = { prompt, image_size: "square_hd", num_inference_steps: 28, guidance_scale: 3.5, num_images: 1, enable_safety_checker: true };
 
   try {
     const res = await fetch(falEndpoint, {

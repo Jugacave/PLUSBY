@@ -44,7 +44,17 @@ interface BannerConfig {
   refImages: (string | null)[];
   angles: string[];
   selectedAngle: string;
-  templateRefs: Record<string, string>; // sectionId → template image URL
+  sectionStyles: Record<string, string>; // sectionId → styleId
+}
+
+interface BannerStyle {
+  id: string;
+  name: string;
+  desc: string;
+  gradient: string;
+  accentColor: string;
+  textColor: string;
+  promptKeywords: string;
 }
 
 const DEFAULT_BANNER_CONFIG: BannerConfig = {
@@ -64,7 +74,7 @@ const DEFAULT_BANNER_CONFIG: BannerConfig = {
   refImages: [null, null, null],
   angles: [],
   selectedAngle: "",
-  templateRefs: {},
+  sectionStyles: {},
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -517,26 +527,193 @@ function CompactList({ label, items, onChange, placeholder }: {
   );
 }
 
+// ─── Banner Mode: Estilos Visuales ────────────────────────────────────────────
+
+const HERO_STYLES: BannerStyle[] = [
+  {
+    id: "purple-glow",
+    name: "Purple Glow",
+    desc: "Degradado púrpura · Magia y lujo",
+    gradient: "radial-gradient(ellipse at 50% 70%, #4c1d95 0%, #2d0a6b 40%, #0f0118 100%)",
+    accentColor: "#A78BFA",
+    textColor: "#fff",
+    promptKeywords: "deep purple violet atmospheric gradient background, glowing magical light effects bokeh particles floating, product centered on illuminated stage platform, three circular icon badges with purple gradient, bold white and purple extra-large typography, decorative mint leaves floating, premium luxury advertisement, dramatic spotlight chromatic lighting, vibrant glowing accents",
+  },
+  {
+    id: "pink-romance",
+    name: "Pink Romance",
+    desc: "Rosa suave · Romántico · Femenino",
+    gradient: "radial-gradient(ellipse at 50% 40%, #fdf2f8 0%, #fce7f3 50%, #f9a8d4 100%)",
+    accentColor: "#EC4899",
+    textColor: "#831843",
+    promptKeywords: "soft blush pink rose gradient background, romantic dreamy bokeh flower petals scattered, subtle heart shape background element, product on golden hexagonal platform, three pink circular badge icons with illustrations, elegant cursive script mixed with bold typography, sparkle light lens flare effects, warm feminine pastel atmosphere, luxury gift presentation aesthetic",
+  },
+  {
+    id: "clean-minimal",
+    name: "Clean Minimal",
+    desc: "Blanco limpio · Técnico · Profesional",
+    gradient: "linear-gradient(160deg, #fafaf7 0%, #f0ece0 60%, #e8e2d0 100%)",
+    accentColor: "#D97706",
+    textColor: "#1a1a1a",
+    promptKeywords: "clean white off-white neutral background, natural studio lighting, technical product photography multiple angles, dimensional callout annotation lines with measurements, gold amber accent headlines, clean professional minimalist layout, hand holding product detail shot, high-end product showcase with specification overlays, infographic style",
+  },
+  {
+    id: "dark-power",
+    name: "Dark Power",
+    desc: "Gris oscuro · Oro · Alto impacto",
+    gradient: "radial-gradient(ellipse at 50% 60%, #404040 0%, #1a1a1a 50%, #080808 100%)",
+    accentColor: "#F59E0B",
+    textColor: "#fff",
+    promptKeywords: "dark charcoal gray background, radial sunburst light rays from center, bold white and orange gold typography, price badge with strikethrough urgency element, four circular spec icons floating around product, dynamic hero product shot center stage, high energy action composition, bottom brand strip contrasting colors, dramatic commercial advertisement, industrial power aesthetic",
+  },
+  {
+    id: "bold-aggressive",
+    name: "Bold Aggressive",
+    desc: "Negro intenso · Rojo · Dramático",
+    gradient: "radial-gradient(ellipse at 50% 100%, #450a0a 0%, #1a0000 40%, #0a0a0a 100%)",
+    accentColor: "#DC2626",
+    textColor: "#fff",
+    promptKeywords: "deep black background with red volcanic lava texture accents, chrome metallic product photography dramatic lighting, heavy bold white and red headline typography, five star rating social proof customer count, price strikethrough urgency badge element, feature icons left sidebar list, circular badge sticker accent, masculine aggressive powerful aesthetic, high contrast dramatic advertisement",
+  },
+];
+
+const GENERIC_STYLES: BannerStyle[] = [
+  {
+    id: "purple-glow",
+    name: "Purple Glow",
+    desc: "Degradado púrpura · Magia y lujo",
+    gradient: "radial-gradient(ellipse at 50% 70%, #4c1d95 0%, #2d0a6b 40%, #0f0118 100%)",
+    accentColor: "#A78BFA",
+    textColor: "#fff",
+    promptKeywords: "deep purple violet atmospheric gradient background, glowing magical light effects bokeh particles, dramatic spotlight lighting, vibrant chromatic accents, premium luxury advertisement",
+  },
+  {
+    id: "pink-romance",
+    name: "Pink Romance",
+    desc: "Rosa suave · Romántico · Femenino",
+    gradient: "radial-gradient(ellipse at 50% 40%, #fdf2f8 0%, #fce7f3 50%, #f9a8d4 100%)",
+    accentColor: "#EC4899",
+    textColor: "#831843",
+    promptKeywords: "soft blush pink rose gradient background, romantic dreamy bokeh petals, sparkle light effects, warm feminine pastel atmosphere, luxury aesthetic",
+  },
+  {
+    id: "clean-minimal",
+    name: "Clean Minimal",
+    desc: "Blanco limpio · Técnico · Profesional",
+    gradient: "linear-gradient(160deg, #fafaf7 0%, #f0ece0 60%, #e8e2d0 100%)",
+    accentColor: "#D97706",
+    textColor: "#1a1a1a",
+    promptKeywords: "clean white off-white background, natural studio lighting, professional minimalist layout, gold amber accent, high-end product showcase",
+  },
+  {
+    id: "dark-power",
+    name: "Dark Power",
+    desc: "Gris oscuro · Oro · Alto impacto",
+    gradient: "radial-gradient(ellipse at 50% 60%, #404040 0%, #1a1a1a 50%, #080808 100%)",
+    accentColor: "#F59E0B",
+    textColor: "#fff",
+    promptKeywords: "dark charcoal gray background, radial light rays, bold orange gold typography, high energy dramatic commercial advertisement, industrial power aesthetic",
+  },
+  {
+    id: "bold-aggressive",
+    name: "Bold Aggressive",
+    desc: "Negro intenso · Rojo · Dramático",
+    gradient: "radial-gradient(ellipse at 50% 100%, #450a0a 0%, #1a0000 40%, #0a0a0a 100%)",
+    accentColor: "#DC2626",
+    textColor: "#fff",
+    promptKeywords: "deep black background with red texture accents, chrome metallic photography, heavy bold white and red typography, high contrast dramatic advertisement",
+  },
+];
+
+function getStylesForSection(sectionId: string): BannerStyle[] {
+  return sectionId === "hero" ? HERO_STYLES : GENERIC_STYLES;
+}
+
+// ─── Banner Mode: StylePickerModal ────────────────────────────────────────────
+
+function StylePickerModal({ sectionId, sectionLabel, currentStyleId, onSelect, onClose }: {
+  sectionId: string;
+  sectionLabel: string;
+  currentStyleId: string | null;
+  onSelect: (styleId: string) => void;
+  onClose: () => void;
+}) {
+  const styles = getStylesForSection(sectionId);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl w-full max-w-lg shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-[#2A2A3A]">
+          <div>
+            <p className="text-[#F0F0F5] font-bold text-sm">Elige un estilo visual</p>
+            <p className="text-[#555568] text-[10px] mt-0.5">{sectionLabel} · El estilo guía la IA al generar</p>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#555568] hover:text-[#F0F0F5] hover:bg-[#2A2A3A] transition-colors">
+            <X size={14} />
+          </button>
+        </div>
+        <div className="p-4 grid grid-cols-1 gap-2">
+          {styles.map((style) => {
+            const active = currentStyleId === style.id;
+            return (
+              <button key={style.id} onClick={() => { onSelect(style.id); onClose(); }}
+                className="flex items-center gap-3 p-3 rounded-xl border transition-all text-left"
+                style={active
+                  ? { border: `1px solid ${style.accentColor}`, background: `${style.accentColor}15` }
+                  : { border: "1px solid #2A2A3A", background: "#0D0D14" }}>
+                {/* Gradient preview */}
+                <div className="w-14 h-14 rounded-lg flex-shrink-0 relative overflow-hidden border border-white/10"
+                  style={{ background: style.gradient }}>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-6 h-6 rounded-full border-2 border-white/30" style={{ background: `${style.accentColor}60` }} />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[#F0F0F5] font-semibold text-xs">{style.name}</p>
+                    {active && <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: `${style.accentColor}20`, color: style.accentColor }}>ACTIVO</span>}
+                  </div>
+                  <p className="text-[#555568] text-[10px] mt-0.5">{style.desc}</p>
+                </div>
+                {active && <Check size={14} style={{ color: style.accentColor, flexShrink: 0 }} />}
+              </button>
+            );
+          })}
+          <button onClick={() => { onSelect(""); onClose(); }}
+            className="flex items-center gap-3 p-3 rounded-xl border border-[#1C1C26] bg-[#0A0A0F] text-left transition-all hover:border-[#3A3A4A]">
+            <div className="w-14 h-14 rounded-lg flex-shrink-0 border border-dashed border-[#2A2A3A] flex items-center justify-center">
+              <span className="text-[#3A3A4A] text-lg">✨</span>
+            </div>
+            <div>
+              <p className="text-[#8888A0] font-semibold text-xs">Sin estilo (IA libre)</p>
+              <p className="text-[#3A3A4A] text-[10px] mt-0.5">La IA genera sin restricción de estilo</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Banner Mode: BannerImageCard ─────────────────────────────────────────────
 
-function BannerImageCard({ section, config, images, onImageGenerated, onTemplateRef }: {
+function BannerImageCard({ section, config, images, onImageGenerated, onStyleChange }: {
   section: { id: string; label: string; icon: string };
   config: BannerConfig;
   images: string[];
   onImageGenerated: (url: string) => void;
-  onTemplateRef: (url: string | null) => void;
+  onStyleChange: (styleId: string) => void;
 }) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const templateRef = useRef<HTMLInputElement>(null);
-  const templateUrl = config.templateRefs[section.id] ?? null;
+  const [showStylePicker, setShowStylePicker] = useState(false);
+  const [previewIdx, setPreviewIdx] = useState(0);
+  const selectedStyleId = config.sectionStyles[section.id] ?? null;
+  const allStyles = getStylesForSection(section.id);
+  const selectedStyle = allStyles.find((s) => s.id === selectedStyleId) ?? null;
 
   async function handleGenerate() {
     setGenerating(true);
     setError(null);
-    const refImageUrl = config.refImages.find((r) => r !== null && r.startsWith("http"))
-      ?? templateUrl
-      ?? undefined;
     try {
       const res = await fetch("/api/landing/generate-banner-image", {
         method: "POST",
@@ -549,8 +726,7 @@ function BannerImageCard({ section, config, images, onImageGenerated, onTemplate
           font: config.font,
           country: config.country,
           aiModel: config.aiModel,
-          refImageUrl,
-          templateRefUrl: templateUrl,
+          styleKeywords: selectedStyle?.promptKeywords ?? "",
           priceSale: config.priceSale,
           priceOriginal: config.priceOriginal,
         }),
@@ -558,6 +734,7 @@ function BannerImageCard({ section, config, images, onImageGenerated, onTemplate
       const data = await res.json();
       if (data.ok && data.imageUrl) {
         onImageGenerated(data.imageUrl);
+        setPreviewIdx(0);
       } else {
         setError(data.error ?? "Error al generar");
       }
@@ -568,90 +745,119 @@ function BannerImageCard({ section, config, images, onImageGenerated, onTemplate
     }
   }
 
-  return (
-    <div className="bg-[#13131A] border border-[#2A2A3A] rounded-xl p-3 hover:border-[#3A3A4A] transition-colors">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm">{section.icon}</span>
-          <p className="text-[#F0F0F5] font-semibold text-xs">{section.label}</p>
-          {images.length > 0 && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[rgba(74,222,128,0.1)] text-green-400 font-medium">
-              {images.length}
-            </span>
-          )}
-        </div>
-        <button onClick={handleGenerate} disabled={generating}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-white text-[10px] font-semibold transition-colors disabled:opacity-60"
-          style={{ background: "#7C3AED" }}>
-          {generating ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
-          {generating ? "Generando..." : images.length > 0 ? "Regenerar" : "Generar"}
-        </button>
-      </div>
+  const currentImage = images[previewIdx] ?? null;
 
-      {/* Template de referencia */}
-      <input ref={templateRef} type="file" accept="image/*" className="hidden"
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          const objectUrl = URL.createObjectURL(f);
-          onTemplateRef(objectUrl);
-        }} />
-      <div className="mb-2 flex items-center gap-1.5">
-        {templateUrl ? (
-          <div className="flex items-center gap-1.5 flex-1">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={templateUrl} alt="template" className="w-8 h-8 rounded object-cover border border-[#7C3AED]/40" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] text-[#A78BFA] font-medium">Plantilla activa</p>
-              <p className="text-[8px] text-[#555568]">Se usa como referencia de estilo</p>
-            </div>
-            <button onClick={() => onTemplateRef(null)} className="text-[#3A3A4A] hover:text-red-400 transition-colors">
-              <X size={11} />
+  return (
+    <>
+      {showStylePicker && (
+        <StylePickerModal
+          sectionId={section.id}
+          sectionLabel={section.label}
+          currentStyleId={selectedStyleId}
+          onSelect={onStyleChange}
+          onClose={() => setShowStylePicker(false)}
+        />
+      )}
+
+      <div className="bg-[#13131A] border border-[#2A2A3A] rounded-xl overflow-hidden hover:border-[#3A3A4A] transition-colors">
+        {/* Header */}
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#1C1C26]">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">{section.icon}</span>
+            <p className="text-[#F0F0F5] font-semibold text-xs">{section.label}</p>
+            {images.length > 0 && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[rgba(74,222,128,0.1)] text-green-400 font-medium">
+                {images.length}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setShowStylePicker(true)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-medium transition-all"
+              style={selectedStyle
+                ? { border: `1px solid ${selectedStyle.accentColor}40`, background: `${selectedStyle.accentColor}15`, color: selectedStyle.accentColor }
+                : { border: "1px solid #2A2A3A", background: "#1C1C26", color: "#555568" }}>
+              <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                style={{ background: selectedStyle?.gradient ?? "#3A3A4A" }} />
+              {selectedStyle ? selectedStyle.name : "Sin estilo"}
+            </button>
+            <button onClick={handleGenerate} disabled={generating}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-white text-[10px] font-semibold transition-colors disabled:opacity-60"
+              style={{ background: "#7C3AED" }}>
+              {generating ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+              {generating ? "Generando..." : images.length > 0 ? "Regenerar" : "Generar"}
             </button>
           </div>
-        ) : (
-          <button onClick={() => templateRef.current?.click()}
-            className="flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-[#2A2A3A] hover:border-[#7C3AED] text-[#555568] hover:text-[#A78BFA] text-[9px] transition-colors">
-            <Upload size={9} /> Subir plantilla de referencia
-          </button>
-        )}
-      </div>
-
-      {error && (
-        <div className="mb-2 px-2 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-1.5">
-          <AlertCircle size={11} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-red-400 text-[10px] leading-tight">{error}</p>
         </div>
-      )}
 
-      {images.length > 0 ? (
-        <div className="grid grid-cols-3 gap-1.5">
-          {images.slice(0, 6).map((url, i) => (
-            <div key={i} className="relative group aspect-square rounded-lg overflow-hidden bg-[#0A0A0F]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt={`${section.label} ${i + 1}`} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <a href={url} download={`${section.id}-${i + 1}.jpg`} target="_blank" rel="noreferrer"
-                  className="w-7 h-7 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors">
-                  <Download size={12} />
-                </a>
-              </div>
+        {/* Body */}
+        <div className="p-3">
+          {error && (
+            <div className="mb-2 px-2 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-1.5">
+              <AlertCircle size={11} className="text-red-400 shrink-0 mt-0.5" />
+              <p className="text-red-400 text-[10px] leading-tight">{error}</p>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="h-10 rounded-lg border border-dashed border-[#2A2A3A] flex items-center justify-center">
-          {generating ? (
-            <div className="flex items-center gap-2">
-              <Loader2 size={12} className="animate-spin text-[#555568]" />
-              <span className="text-[#555568] text-[10px]">Generando con IA...</span>
+          )}
+
+          {currentImage ? (
+            <div className="space-y-2">
+              {/* Main preview */}
+              <div className="relative rounded-xl overflow-hidden bg-[#0A0A0F] border border-[#2A2A3A]"
+                style={{ aspectRatio: "1/1.4" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={currentImage} alt={section.label} className="w-full h-full object-cover" />
+                {/* Overlay actions */}
+                <div className="absolute bottom-2 right-2 flex gap-1.5">
+                  <a href={currentImage} download={`${section.id}-${previewIdx + 1}.jpg`} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/70 hover:bg-black/90 text-white text-[10px] font-medium transition-colors backdrop-blur-sm border border-white/10">
+                    <Download size={10} /> Descargar
+                  </a>
+                  <button onClick={handleGenerate} disabled={generating}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#7C3AED]/80 hover:bg-[#7C3AED] text-white text-[10px] font-medium transition-colors backdrop-blur-sm border border-[#7C3AED]/30">
+                    <RefreshCw size={10} /> Nueva versión
+                  </button>
+                </div>
+                {images.length > 1 && (
+                  <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] backdrop-blur-sm">
+                    {previewIdx + 1} / {images.length}
+                  </div>
+                )}
+              </div>
+              {/* Thumbnails */}
+              {images.length > 1 && (
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+                  {images.slice(0, 6).map((url, i) => (
+                    <button key={i} onClick={() => setPreviewIdx(i)}
+                      className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all"
+                      style={{ borderColor: i === previewIdx ? "#7C3AED" : "#2A2A3A" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
-            <span className="text-[#3A3A4A] text-[10px]">Haz clic en Generar</span>
+            <div className="rounded-xl border border-dashed border-[#2A2A3A] flex flex-col items-center justify-center gap-2 py-8"
+              style={selectedStyle ? { background: `${selectedStyle.gradient}`, opacity: 0.6 } : {}}>
+              {generating ? (
+                <>
+                  <Loader2 size={16} className="animate-spin text-[#555568]" />
+                  <span className="text-[#555568] text-[10px]">Generando con IA...</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-2xl">{section.icon}</span>
+                  <span className="text-[#3A3A4A] text-[10px]">
+                    {selectedStyle ? `Estilo: ${selectedStyle.name} · ` : ""}Haz clic en Generar
+                  </span>
+                </>
+              )}
+            </div>
           )}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -985,12 +1191,12 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
                   [section.id]: [url, ...(p[section.id] ?? [])],
                 }));
               }}
-              onTemplateRef={(url) => {
+              onStyleChange={(styleId) => {
                 upd({
-                  templateRefs: {
-                    ...config.templateRefs,
-                    [section.id]: url ?? undefined,
-                  } as Record<string, string>,
+                  sectionStyles: {
+                    ...config.sectionStyles,
+                    [section.id]: styleId,
+                  },
                 });
               }}
             />
