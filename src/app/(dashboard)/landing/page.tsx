@@ -79,7 +79,7 @@ function CreateModal({
   onCreate,
 }: {
   onClose: () => void;
-  onCreate: (name: string, product: string, template: string, mode: LandingMode) => Promise<void>;
+  onCreate: (name: string, product: string, template: string, mode: LandingMode) => Promise<string | null>;
 }) {
   const [step, setStep] = useState<"mode" | "template" | "details">("mode");
   const [selectedMode, setSelectedMode] = useState<LandingMode>("page");
@@ -87,12 +87,20 @@ function CreateModal({
   const [name, setName] = useState("");
   const [product, setProduct] = useState("");
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleCreate() {
     if (!name.trim() || !product.trim()) return;
+    setError(null);
     setCreating(true);
-    await onCreate(name.trim(), product.trim(), selectedTemplate, selectedMode);
-    setCreating(false);
+    try {
+      const err = await onCreate(name.trim(), product.trim(), selectedTemplate, selectedMode);
+      if (err) setError(err);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error inesperado. Intenta de nuevo.");
+    } finally {
+      setCreating(false);
+    }
   }
 
   function handleModeNext() {
@@ -341,6 +349,12 @@ function CreateModal({
                   </p>
                 </div>
               )}
+              {error && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2">
+                  <X size={13} className="text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-red-400 text-xs leading-snug">{error}</p>
+                </div>
+              )}
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={() => setStep(selectedMode === "page" ? "template" : "mode")}
@@ -561,11 +575,9 @@ export default function LandingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleCreate(name: string, product: string, template: string, mode: LandingMode) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+  async function handleCreate(name: string, product: string, template: string, mode: LandingMode): Promise<string | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return "No hay sesión activa. Recarga la página e inicia sesión de nuevo.";
 
     const slug = slugify(name);
     const { data, error } = await supabase
@@ -576,33 +588,35 @@ export default function LandingPage() {
 
     if (error) {
       if (error.code === "23505") {
-        alert("Ya existe una landing con ese nombre. Usa un nombre diferente.");
-      } else if (error.code === "42P01" || error.message?.includes("does not exist")) {
-        alert("⚠️ Las tablas no están configuradas en Supabase.\nEjecuta el archivo supabase/migrations/001_landings.sql en el SQL Editor de tu dashboard de Supabase.");
-      } else if (error.code === "42703" && error.message?.includes("mode")) {
+        return "Ya existe una landing con ese nombre. Usa uno diferente.";
+      }
+      if (error.code === "42P01" || error.message?.includes("does not exist")) {
+        return "Las tablas no están en Supabase. Ejecuta las migraciones SQL en tu dashboard de Supabase.";
+      }
+      if (error.code === "42703" && error.message?.includes("mode")) {
         // mode column missing — retry without it
         const { data: data2, error: error2 } = await supabase
           .from("landings")
           .insert({ user_id: user.id, name, product, slug, template, published: false, views: 0, conversions: 0 })
           .select()
           .single();
-        if (error2) { alert(`Error: ${error2.message}`); return; }
+        if (error2) return `Error: ${error2.message}`;
         if (data2) {
           setLandings((prev) => [rowToLanding(data2), ...prev]);
           setShowCreate(false);
           router.push(`/landing/${data2.id}/editor`);
         }
-        return;
-      } else {
-        alert(`Error al crear: ${error.message}`);
+        return null;
       }
-      return;
+      return `Error: ${error.message}`;
     }
+
     if (data) {
       setLandings((prev) => [rowToLanding(data), ...prev]);
       setShowCreate(false);
       router.push(`/landing/${data.id}/editor`);
     }
+    return null;
   }
 
   async function handleDelete(id: string) {
