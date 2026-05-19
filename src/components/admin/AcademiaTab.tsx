@@ -53,6 +53,33 @@ function videoIcon(url: string | null) {
 
 const LEVELS = ["Básico", "Intermedio", "Avanzado"];
 
+/** Compress image to max 1280px wide, JPEG 85% quality before uploading */
+async function compressImage(file: File): Promise<File> {
+  return new Promise((resolve) => {
+    const MAX_W = 1280;
+    const QUALITY = 0.85;
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { width, height } = img;
+      if (width > MAX_W) { height = Math.round(height * MAX_W / width); width = MAX_W; }
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return; }
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+        },
+        "image/jpeg", QUALITY,
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+    img.src = objectUrl;
+  });
+}
+
 // ─── Lesson Modal ─────────────────────────────────────────────
 
 function LessonModal({
@@ -84,9 +111,10 @@ function LessonModal({
   async function uploadFile(file: File, type: "thumb" | "video"): Promise<string | null> {
     setUploading(type);
     const supabase = createClient();
-    const ext = file.name.split(".").pop();
+    const ext = type === "thumb" ? "jpg" : (file.name.split(".").pop() ?? "mp4");
     const path = `${type === "thumb" ? "thumbnails" : "videos"}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("academy").upload(path, file, { upsert: true });
+    const opts = type === "thumb" ? { upsert: true, contentType: "image/jpeg" } : { upsert: true };
+    const { error } = await supabase.storage.from("academy").upload(path, file, opts);
     setUploading(null);
     if (error) { alert("Error subiendo archivo. Asegúrate de crear el bucket 'academy' en Supabase Storage."); return null; }
     const { data } = supabase.storage.from("academy").getPublicUrl(path);
@@ -96,7 +124,8 @@ function LessonModal({
   async function handleThumbFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = await uploadFile(file, "thumb");
+    const compressed = await compressImage(file);
+    const url = await uploadFile(compressed, "thumb");
     if (url) set("thumbnail_url", url);
   }
 
@@ -263,10 +292,10 @@ function CourseModal({
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    const compressed = await compressImage(file);
     const supabase = createClient();
-    const ext = file.name.split(".").pop();
-    const path = `thumbnails/course_${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("academy").upload(path, file, { upsert: true });
+    const path = `thumbnails/course_${Date.now()}.jpg`;
+    const { error } = await supabase.storage.from("academy").upload(path, compressed, { upsert: true, contentType: "image/jpeg" });
     setUploading(false);
     if (error) { alert("Error subiendo imagen. Crea el bucket 'academy' en Supabase Storage."); return; }
     const { data } = supabase.storage.from("academy").getPublicUrl(path);
