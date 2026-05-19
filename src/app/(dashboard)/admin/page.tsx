@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { AcademiaTab } from "@/components/admin/AcademiaTab";
 import {
   ShieldCheck,
   Users,
@@ -215,7 +216,9 @@ function OverviewTab({ users, suppliers, courses }: { users: AdminUser[]; suppli
 
 // ─── Tab: Academia ───────────────────────────────────────────────────────────
 
-function AcademiaTab({ courses, setCourses }: { courses: AdminCourse[]; setCourses: React.Dispatch<React.SetStateAction<AdminCourse[]>> }) {
+// AcademiaTab is now in src/components/admin/AcademiaTab.tsx
+// keeping this stub to avoid import errors during migration
+function _AcademiaTabOld({ courses, setCourses }: { courses: AdminCourse[]; setCourses: React.Dispatch<React.SetStateAction<AdminCourse[]>> }) {
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const [editingLesson, setEditingLesson] = useState<{ courseId: string; lesson: AdminLesson } | null>(null);
   const [newLesson, setNewLesson] = useState<{ courseId: string } | null>(null);
@@ -833,7 +836,7 @@ export default function AdminPage() {
 
       {/* Tab content */}
       {tab === "overview" && <OverviewTab users={users} suppliers={suppliers} courses={courses} />}
-      {tab === "academia" && <AcademiaTab courses={courses} setCourses={setCourses} />}
+      {tab === "academia" && <AcademiaTab />}
       {tab === "proveedores" && <ProveedoresTab suppliers={suppliers} setSuppliers={setSuppliers} />}
       {tab === "suscripciones" && <SuscripcionesTab users={users} setUsers={setUsers} />}
       {tab === "usuarios" && <UsuariosTab users={users} setUsers={setUsers} />}
