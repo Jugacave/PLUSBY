@@ -9,13 +9,17 @@
 CREATE TABLE IF NOT EXISTS public.courses (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title         text NOT NULL,
+  slug          text,
   description   text,
   thumbnail_url text,
+  trailer_url   text,
   instructor    text,
   category      text,
-  level         text NOT NULL DEFAULT 'Básico' CHECK (level IN ('Básico','Intermedio','Avanzado')),
+  level         text DEFAULT 'Básico',
   is_published  boolean NOT NULL DEFAULT false,
-  created_at    timestamptz DEFAULT now()
+  sort_order    integer DEFAULT 0,
+  created_at    timestamptz DEFAULT now(),
+  updated_at    timestamptz DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.course_modules (
@@ -31,13 +35,17 @@ CREATE TABLE IF NOT EXISTS public.lessons (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   module_id           uuid NOT NULL REFERENCES public.course_modules(id) ON DELETE CASCADE,
   title               text NOT NULL,
+  summary             text,
   description         text,
   thumbnail_url       text,
   video_url           text,
   video_storage_path  text,
   duration            text,
+  duration_seconds    integer,
   position            integer NOT NULL DEFAULT 0,
+  sort_order          integer DEFAULT 0,
   is_free             boolean NOT NULL DEFAULT false,
+  is_preview          boolean NOT NULL DEFAULT false,
   created_at          timestamptz DEFAULT now()
 );
 
