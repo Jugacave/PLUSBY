@@ -490,9 +490,14 @@ export function AcademiaTab() {
     const supabase = createClient();
     const courseModules = modules[newModuleForm.courseId] ?? [];
     const position = (courseModules[courseModules.length - 1]?.position ?? 0) + 1;
-    const { data } = await supabase.from("course_modules").insert({
+    const { data, error } = await supabase.from("course_modules").insert({
       course_id: newModuleForm.courseId, title: newModuleForm.title, position,
     }).select().single();
+    if (error) {
+      alert(`Error creando módulo: ${error.message}`);
+      setSavingModule(false);
+      return;
+    }
     if (data) {
       setModules(p => ({ ...p, [newModuleForm.courseId]: [...(p[newModuleForm.courseId] ?? []), data as SupaModule] }));
     }
