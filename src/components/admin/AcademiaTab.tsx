@@ -64,6 +64,7 @@ function LessonModal({
   onClose: () => void;
 }) {
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<"thumb" | "video" | null>(null);
   const thumbRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
@@ -109,6 +110,7 @@ function LessonModal({
   async function handleSave() {
     if (!form.title.trim()) return;
     setSaving(true);
+    setSaveError(null);
     const supabase = createClient();
     if (lesson) {
       const { data, error } = await supabase.from("lessons").update({
@@ -116,7 +118,8 @@ function LessonModal({
         thumbnail_url: form.thumbnail_url || null, video_url: form.video_url || null,
         duration: form.duration || null, is_free: form.is_free,
       }).eq("id", lesson.id).select().single();
-      if (!error && data) onSave(data as SupaLesson);
+      if (error) { setSaveError(error.message); setSaving(false); return; }
+      if (data) { onSave(data as SupaLesson); onClose(); }
     } else {
       const { data: maxPos } = await supabase.from("lessons").select("position").eq("module_id", moduleId).order("position", { ascending: false }).limit(1).single();
       const position = (maxPos?.position ?? 0) + 1;
@@ -125,10 +128,10 @@ function LessonModal({
         thumbnail_url: form.thumbnail_url || null, video_url: form.video_url || null,
         duration: form.duration || null, is_free: form.is_free, position,
       }).select().single();
-      if (!error && data) onSave(data as SupaLesson);
+      if (error) { setSaveError(error.message); setSaving(false); return; }
+      if (data) { onSave(data as SupaLesson); onClose(); }
     }
     setSaving(false);
-    onClose();
   }
 
   return (
@@ -210,6 +213,14 @@ function LessonModal({
             <span className="text-[#8888A0] text-sm">Lección gratuita (visible sin plan)</span>
           </label>
         </div>
+        {saveError && (
+          <div className="mx-5 mb-3 px-3 py-2 rounded-xl bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.3)]">
+            <p className="text-[#EF4444] text-xs font-medium">Error: {saveError}</p>
+            {saveError.includes("relation") && (
+              <p className="text-[#EF4444] text-[10px] mt-0.5">Ejecuta la migración <code>002_academy.sql</code> en Supabase SQL Editor primero.</p>
+            )}
+          </div>
+        )}
         <div className="flex justify-end gap-2 p-5 border-t border-[#2A2A3A]">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] text-sm transition-colors">Cancelar</button>
           <button onClick={handleSave} disabled={saving || !form.title.trim()}
@@ -233,6 +244,7 @@ function CourseModal({
   onClose: () => void;
 }) {
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const thumbRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
@@ -264,16 +276,18 @@ function CourseModal({
   async function handleSave() {
     if (!form.title.trim()) return;
     setSaving(true);
+    setSaveError(null);
     const supabase = createClient();
     if (course) {
       const { data, error } = await supabase.from("courses").update(form).eq("id", course.id).select().single();
-      if (!error && data) onSave(data as SupaCourse);
+      if (error) { setSaveError(error.message); setSaving(false); return; }
+      if (data) { onSave(data as SupaCourse); onClose(); }
     } else {
       const { data, error } = await supabase.from("courses").insert(form).select().single();
-      if (!error && data) onSave(data as SupaCourse);
+      if (error) { setSaveError(error.message); setSaving(false); return; }
+      if (data) { onSave(data as SupaCourse); onClose(); }
     }
     setSaving(false);
-    onClose();
   }
 
   return (
@@ -342,6 +356,14 @@ function CourseModal({
             <span className="text-[#8888A0] text-sm">Curso publicado (visible para usuarios)</span>
           </label>
         </div>
+        {saveError && (
+          <div className="mx-5 mb-3 px-3 py-2 rounded-xl bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.3)]">
+            <p className="text-[#EF4444] text-xs font-medium">Error: {saveError}</p>
+            {saveError.includes("relation") && (
+              <p className="text-[#EF4444] text-[10px] mt-0.5">Ejecuta la migración <code>002_academy.sql</code> en Supabase SQL Editor primero.</p>
+            )}
+          </div>
+        )}
         <div className="flex justify-end gap-2 p-5 border-t border-[#2A2A3A]">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] text-sm transition-colors">Cancelar</button>
           <button onClick={handleSave} disabled={saving || !form.title.trim()}
