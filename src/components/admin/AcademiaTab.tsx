@@ -18,7 +18,7 @@ interface SupaCourse {
   instructor: string | null;
   category: string | null;
   level: string;
-  published: boolean;
+  is_published: boolean;
   created_at: string;
 }
 
@@ -254,7 +254,7 @@ function CourseModal({
     instructor: course?.instructor ?? "",
     category: course?.category ?? "",
     level: course?.level ?? "Básico",
-    published: course?.published ?? false,
+    is_published: course?.is_published ?? false,
   });
 
   function set(k: string, v: string | boolean) { setForm(p => ({ ...p, [k]: v })); }
@@ -349,9 +349,9 @@ function CourseModal({
             )}
           </div>
           <label className="flex items-center gap-3 cursor-pointer">
-            <div onClick={() => set("published", !form.published)}
-              className={`w-10 h-5 rounded-full transition-colors relative ${form.published ? "bg-[#10B981]" : "bg-[#2A2A3A]"}`}>
-              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.published ? "translate-x-5" : "translate-x-0.5"}`} />
+            <div onClick={() => set("is_published", !form.is_published)}
+              className={`w-10 h-5 rounded-full transition-colors relative ${form.is_published ? "bg-[#10B981]" : "bg-[#2A2A3A]"}`}>
+              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.is_published ? "translate-x-5" : "translate-x-0.5"}`} />
             </div>
             <span className="text-[#8888A0] text-sm">Curso publicado (visible para usuarios)</span>
           </label>
@@ -428,8 +428,8 @@ export function AcademiaTab() {
 
   async function togglePublish(course: SupaCourse) {
     const supabase = createClient();
-    await supabase.from("courses").update({ published: !course.published }).eq("id", course.id);
-    setCourses(p => p.map(c => c.id === course.id ? { ...c, published: !c.published } : c));
+    await supabase.from("courses").update({ is_published: !course.is_published }).eq("id", course.id);
+    setCourses(p => p.map(c => c.id === course.id ? { ...c, is_published: !c.is_published } : c));
   }
 
   async function deleteCourse(id: string) {
@@ -546,8 +546,8 @@ export function AcademiaTab() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-[#F0F0F5] font-semibold text-sm">{course.title}</p>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${course.published ? "bg-[rgba(16,185,129,0.1)] text-[#10B981]" : "bg-[rgba(85,85,104,0.2)] text-[#555568]"}`}>
-                    {course.published ? "Publicado" : "Borrador"}
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${course.is_published ? "bg-[rgba(16,185,129,0.1)] text-[#10B981]" : "bg-[rgba(85,85,104,0.2)] text-[#555568]"}`}>
+                    {course.is_published ? "Publicado" : "Borrador"}
                   </span>
                 </div>
                 <p className="text-[#555568] text-xs mt-0.5">
@@ -555,9 +555,9 @@ export function AcademiaTab() {
                 </p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => togglePublish(course)} title={course.published ? "Despublicar" : "Publicar"}
+                <button onClick={() => togglePublish(course)} title={course.is_published ? "Despublicar" : "Publicar"}
                   className="w-7 h-7 flex items-center justify-center rounded-lg text-[#555568] hover:text-[#F0F0F5] hover:bg-[#2A2A3A] transition-colors">
-                  {course.published ? <EyeOff size={13} /> : <Eye size={13} />}
+                  {course.is_published ? <EyeOff size={13} /> : <Eye size={13} />}
                 </button>
                 <button onClick={() => setCourseModal(course)}
                   className="w-7 h-7 flex items-center justify-center rounded-lg text-[#555568] hover:text-[#F0F0F5] hover:bg-[#2A2A3A] transition-colors">

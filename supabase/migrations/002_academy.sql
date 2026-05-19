@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.courses (
   instructor    text,
   category      text,
   level         text NOT NULL DEFAULT 'Básico' CHECK (level IN ('Básico','Intermedio','Avanzado')),
-  published     boolean NOT NULL DEFAULT false,
+  is_published  boolean NOT NULL DEFAULT false,
   created_at    timestamptz DEFAULT now()
 );
 
@@ -68,7 +68,7 @@ ALTER TABLE public.lesson_ratings  ENABLE ROW LEVEL SECURITY;
 
 -- Courses: authenticated users can read published; admins manage all
 CREATE POLICY "courses_read_published" ON public.courses FOR SELECT
-  USING (published = true OR (auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin','superadmin'));
+  USING (is_published = true OR (auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin','superadmin'));
 CREATE POLICY "admins_manage_courses" ON public.courses FOR ALL
   USING ((auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin','superadmin'));
 
@@ -105,7 +105,7 @@ DECLARE
   v_mod1 uuid; v_mod2 uuid; v_mod3 uuid; v_mod4 uuid;
 BEGIN
 
-INSERT INTO public.courses (id, title, description, instructor, category, level, published)
+INSERT INTO public.courses (id, title, description, instructor, category, level, is_published)
 VALUES (
   gen_random_uuid(),
   'PLUS ACADEMY — Dropshipping Completo',

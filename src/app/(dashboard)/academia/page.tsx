@@ -17,7 +17,7 @@ interface CourseRow {
   category: string | null;
   level: string | null;
   thumbnail_url: string | null;
-  published: boolean;
+  is_published: boolean;
   _lesson_count?: number;
   _avg_rating?: number;
 }
@@ -122,11 +122,11 @@ export default function AcademiaPage() {
       const { data } = await supabase
         .from("courses")
         .select(`
-          id, title, description, instructor, category, level, thumbnail_url, published,
+          id, title, description, instructor, category, level, thumbnail_url, is_published,
           course_modules(lessons(id)),
           lesson_ratings:course_modules(lessons(lesson_ratings(rating)))
         `)
-        .eq("published", true)
+        .eq("is_published", true)
         .order("created_at", { ascending: true });
 
       if (!data) { setLoading(false); return; }
@@ -148,7 +148,7 @@ export default function AcademiaPage() {
           category: c.category,
           level: c.level,
           thumbnail_url: c.thumbnail_url,
-          published: c.published,
+          is_published: c.is_published,
           _lesson_count: allLessons.length,
           _avg_rating: Math.round(avg * 10) / 10,
         };
