@@ -46,7 +46,7 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith("/admin")) {
     const role = user?.user_metadata?.role;
-    if (role !== "superadmin") {
+    if (role !== "superadmin" && role !== "admin") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }

@@ -23,7 +23,10 @@ import {
   X,
   Zap,
   ShieldCheck,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useThemeStore } from "@/store/theme";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/sidebar";
 
@@ -80,20 +83,23 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isOpen, close } = useSidebarStore();
+  const { theme, toggle: toggleTheme, init: initTheme } = useThemeStore();
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("Usuario");
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    initTheme();
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setUserEmail(user.email ?? "");
         setUserName(user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Usuario");
-        setIsAdmin(user.user_metadata?.role === "superadmin");
+        const role = user.user_metadata?.role;
+        setIsAdmin(role === "superadmin" || role === "admin");
       }
     });
-  }, []);
+  }, [initTheme]);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -241,13 +247,23 @@ export function Sidebar() {
               <p className="text-[#555568] text-xs truncate">{userEmail}</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="mt-1 w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[#8888A0] hover:bg-[#1C1C26] hover:text-[#EF4444] transition-all text-sm"
-          >
-            <LogOut size={15} />
-            <span>Cerrar Sesión</span>
-          </button>
+          <div className="mt-1 flex items-center gap-1">
+            <button
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#8888A0] hover:bg-[#1C1C26] hover:text-[#F0F0F5] transition-all text-sm flex-1"
+            >
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+              <span>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              className="flex items-center justify-center w-9 h-9 rounded-lg text-[#8888A0] hover:bg-[#1C1C26] hover:text-[#EF4444] transition-all"
+            >
+              <LogOut size={15} />
+            </button>
+          </div>
         </div>
       </aside>
     </>
