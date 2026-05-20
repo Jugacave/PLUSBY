@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
+// ─── Types ───────────────────────────────────────────────────
+
 interface Course {
   id: string;
   title: string;
@@ -49,6 +51,8 @@ interface Comment {
   replies?: Comment[];
 }
 
+// ─── Video player ─────────────────────────────────────────────
+
 function getEmbed(url: string): { type: "iframe" | "video"; src: string } | null {
   if (!url) return null;
   const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
@@ -83,6 +87,8 @@ function VideoPlayer({ url }: { url: string | null }) {
   );
 }
 
+// ─── Star rating ──────────────────────────────────────────────
+
 function StarRatingInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hovered, setHovered] = useState(0);
   return (
@@ -105,11 +111,15 @@ function StarDisplay({ avg, count }: { avg: number; count: number }) {
           <Star key={i} size={14} className={i <= Math.round(avg) ? "text-[#F59E0B] fill-[#F59E0B]" : "text-[#2A2A3A]"} />
         ))}
       </div>
-      {count > 0 && <span className="text-[#F59E0B] font-bold text-sm">{avg.toFixed(1)}</span>}
+      {count > 0 && (
+        <span className="text-[#F59E0B] font-bold text-sm">{avg.toFixed(1)}</span>
+      )}
       <span className="text-[#555568] text-xs">({count} calificaciones)</span>
     </div>
   );
 }
+
+// ─── Comments ─────────────────────────────────────────────────
 
 function CommentItem({
   comment, currentUserId, isAdmin, onReply, onDelete,
@@ -175,6 +185,8 @@ function CommentItem({
           )}
         </div>
       </div>
+
+      {/* Replies */}
       {(comment.replies ?? []).length > 0 && (
         <div className="ml-11 space-y-2 border-l-2 border-[#2A2A3A] pl-4">
           {(comment.replies ?? []).map(reply => (
@@ -185,6 +197,8 @@ function CommentItem({
     </div>
   );
 }
+
+// ─── Main page ────────────────────────────────────────────────
 
 export default function CoursePlayerPage() {
   const params = useParams();
@@ -201,6 +215,7 @@ export default function CoursePlayerPage() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const [userRating, setUserRating] = useState(0);
   const [savingRating, setSavingRating] = useState(false);
@@ -211,6 +226,7 @@ export default function CoursePlayerPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState<"descripcion" | "comentarios" | "calificacion">("descripcion");
 
+  // Load course + modules + lessons
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -233,6 +249,7 @@ export default function CoursePlayerPage() {
           })
         );
         setModules(modulesWithLessons);
+        // Auto-expand first module and select first lesson
         if (modulesWithLessons.length > 0) {
           setExpandedModules(new Set([modulesWithLessons[0].id]));
           const firstLesson = modulesWithLessons[0].lessons[0];
@@ -244,6 +261,7 @@ export default function CoursePlayerPage() {
     load();
   }, [courseId]);
 
+  // Load comments and ratings when lesson changes
   useEffect(() => {
     if (!activeLesson) return;
     loadComments();
@@ -263,6 +281,7 @@ export default function CoursePlayerPage() {
       .order("created_at", { ascending: false });
 
     if (data) {
+      // Load replies for each comment
       const withReplies = await Promise.all(
         (data as Comment[]).map(async (comment) => {
           const { data: replies } = await supabase
@@ -282,10 +301,14 @@ export default function CoursePlayerPage() {
     if (!activeLesson) return;
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
+
+    // Load user's own rating
     if (user) {
       const { data: own } = await supabase.from("lesson_ratings").select("rating").eq("lesson_id", activeLesson.id).eq("user_id", user.id).single();
       setUserRating(own?.rating ?? 0);
     }
+
+    // Load average
     const { data: all } = await supabase.from("lesson_ratings").select("rating").eq("lesson_id", activeLesson.id);
     if (all && all.length > 0) {
       const avg = all.reduce((s, r) => s + r.rating, 0) / all.length;
@@ -300,12 +323,18 @@ export default function CoursePlayerPage() {
   async function handleComment() {
     if (!commentText.trim() || !activeLesson) return;
     setSendingComment(true);
+    setCommentError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase.from("lesson_comments")
+    if (!user) { setSendingComment(false); return; }
+    const { data, error } = await supabase.from("lesson_comments")
       .insert({ lesson_id: activeLesson.id, user_id: user.id, content: commentText.trim() })
       .select("*, profiles(full_name, email)").single();
+    if (error) {
+      setCommentError(error.message);
+      setSendingComment(false);
+      return;
+    }
     if (data) setComments(p => [{ ...data as Comment, replies: [] }, ...p]);
     setCommentText("");
     setSendingComment(false);
@@ -351,8 +380,8 @@ export default function CoursePlayerPage() {
   }
 
   const totalLessons = modules.reduce((s, m) => s + m.lessons.length, 0);
+  const lessonIndex = modules.flatMap(m => m.lessons).findIndex(l => l.id === activeLesson?.id);
   const allLessons = modules.flatMap(m => m.lessons);
-  const lessonIndex = allLessons.findIndex(l => l.id === activeLesson?.id);
   const prevLesson = lessonIndex > 0 ? allLessons[lessonIndex - 1] : null;
   const nextLesson = lessonIndex < allLessons.length - 1 ? allLessons[lessonIndex + 1] : null;
 
@@ -379,6 +408,7 @@ export default function CoursePlayerPage() {
 
   return (
     <div className="flex h-screen bg-[#0A0A0F] overflow-hidden">
+      {/* ── Sidebar ── */}
       <aside className={`${sidebarOpen ? "w-72" : "w-0"} flex-shrink-0 transition-all duration-300 overflow-hidden border-r border-[#2A2A3A] bg-[#13131A] flex flex-col`}>
         <div className="p-4 border-b border-[#2A2A3A] flex-shrink-0">
           <Link href="/academia" className="flex items-center gap-2 text-[#8888A0] hover:text-[#F0F0F5] transition-colors text-sm mb-3">
@@ -427,7 +457,9 @@ export default function CoursePlayerPage() {
         </nav>
       </aside>
 
+      {/* ── Main content ── */}
       <main className="flex-1 overflow-y-auto">
+        {/* Top bar */}
         <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-[#13131A]/95 backdrop-blur border-b border-[#2A2A3A]">
           <button onClick={() => setSidebarOpen(p => !p)}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-[#555568] hover:text-[#F0F0F5] hover:bg-[#1C1C26] transition-colors">
@@ -436,12 +468,16 @@ export default function CoursePlayerPage() {
           <div className="flex-1 min-w-0">
             <p className="text-[#F0F0F5] font-semibold text-sm truncate">{activeLesson?.title ?? course.title}</p>
           </div>
-          {ratingCount > 0 && <StarDisplay avg={avgRating} count={ratingCount} />}
+          {ratingCount > 0 && (
+            <StarDisplay avg={avgRating} count={ratingCount} />
+          )}
         </div>
 
         <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-5">
+          {/* Video */}
           <VideoPlayer url={activeLesson?.video_url ?? null} />
 
+          {/* Nav prev/next */}
           <div className="flex items-center justify-between">
             <button onClick={() => prevLesson && setActiveLesson(prevLesson)} disabled={!prevLesson}
               className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] transition-colors text-sm disabled:opacity-30">
@@ -454,6 +490,7 @@ export default function CoursePlayerPage() {
             </button>
           </div>
 
+          {/* Tabs */}
           <div className="flex gap-1 bg-[#13131A] border border-[#2A2A3A] rounded-xl p-1">
             {(["descripcion", "comentarios", "calificacion"] as const).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
@@ -465,6 +502,7 @@ export default function CoursePlayerPage() {
             ))}
           </div>
 
+          {/* Tab: Descripción */}
           {activeTab === "descripcion" && (
             <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl p-5">
               <h2 className="text-[#F0F0F5] font-bold text-lg mb-2">{activeLesson?.title}</h2>
@@ -486,8 +524,10 @@ export default function CoursePlayerPage() {
             </div>
           )}
 
+          {/* Tab: Comentarios */}
           {activeTab === "comentarios" && (
             <div className="space-y-4">
+              {/* New comment */}
               <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl p-4">
                 <p className="text-[#F0F0F5] font-semibold text-sm mb-3 flex items-center gap-2">
                   <MessageCircle size={14} className="text-[#FF6B35]" /> Deja tu comentario
@@ -498,6 +538,11 @@ export default function CoursePlayerPage() {
                     rows={3}
                     className="flex-1 px-3 py-2.5 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] text-sm resize-none" />
                 </div>
+                {commentError && (
+                  <div className="mt-2 px-3 py-2 rounded-xl bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.3)]">
+                    <p className="text-[#EF4444] text-xs font-medium">Error: {commentError}</p>
+                  </div>
+                )}
                 <div className="flex justify-end mt-2">
                   <button onClick={handleComment} disabled={sendingComment || !commentText.trim()}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white text-sm font-semibold transition-colors disabled:opacity-50">
@@ -506,6 +551,8 @@ export default function CoursePlayerPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Comments list */}
               <div className="space-y-4">
                 {commentsLoading ? (
                   <div className="flex items-center gap-2 py-6 justify-center text-[#555568]">
@@ -526,6 +573,7 @@ export default function CoursePlayerPage() {
             </div>
           )}
 
+          {/* Tab: Calificación */}
           {activeTab === "calificacion" && (
             <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl p-5 space-y-5">
               <div>
