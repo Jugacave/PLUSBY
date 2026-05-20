@@ -1773,79 +1773,147 @@ function getStylesForSection(sectionId: string): BannerStyle[] {
   return HERO_STYLES;
 }
 
-// ─── Banner Mode: StylePickerModal ────────────────────────────────────────────
+// ─── Banner Mode: DesignGalleryModal ──────────────────────────────────────────
 
-function StyleThumbnail({ sectionId, styleId, gradient }: { sectionId: string; styleId: string; gradient: string }) {
+function GalleryThumbnail({ sectionId, styleId, gradient }: { sectionId: string; styleId: string; gradient: string }) {
   const [error, setError] = useState(false);
   const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/banner-templates/${sectionId}/${styleId}.jpg`;
   if (error) {
     return <div className="w-full h-full" style={{ background: gradient }} />;
   }
   return (
-    <img
-      src={url}
-      alt=""
-      className="w-full h-full object-cover"
-      onError={() => setError(true)}
-    />
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={url} alt="" className="w-full h-full object-cover" onError={() => setError(true)} />
   );
 }
 
-function StylePickerModal({ sectionId, sectionLabel, currentStyleId, onSelect, onClose }: {
-  sectionId: string;
-  sectionLabel: string;
+function DesignGalleryModal({ initialSectionId, currentStyleId, onSelect, onClose }: {
+  initialSectionId: string;
   currentStyleId: string | null;
-  onSelect: (styleId: string) => void;
+  onSelect: (sectionId: string, styleId: string) => void;
   onClose: () => void;
 }) {
-  const styles = getStylesForSection(sectionId);
+  const [activeTab, setActiveTab] = useState(initialSectionId);
+  const [pending, setPending] = useState<string | null>(currentStyleId);
+
+  const styles = getStylesForSection(activeTab);
+  const activeSection = BANNER_SECTIONS.find((s) => s.id === activeTab);
+
+  function handleConfirm() {
+    if (pending !== null) {
+      onSelect(activeTab, pending);
+    }
+    onClose();
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl w-full max-w-xl shadow-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b border-[#2A2A3A] flex-shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-[#0D0D14] border border-[#2A2A3A] rounded-2xl shadow-2xl flex flex-col"
+        style={{ width: "min(92vw, 900px)", maxHeight: "88vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#2A2A3A] flex-shrink-0">
           <div>
-            <p className="text-[#F0F0F5] font-bold text-sm">Elige un estilo visual</p>
-            <p className="text-[#555568] text-[10px] mt-0.5">{sectionLabel} · El estilo guía la IA al generar</p>
+            <p className="text-[#F0F0F5] font-bold text-sm">Galería de Diseños</p>
+            <p className="text-[#555568] text-[11px] mt-0.5">Elige un diseño de referencia · La IA lo adaptará a tu producto</p>
           </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#555568] hover:text-[#F0F0F5] hover:bg-[#2A2A3A] transition-colors">
             <X size={14} />
           </button>
         </div>
-        <div className="p-3 grid grid-cols-2 gap-2.5 overflow-y-auto flex-1">
-          {styles.map((style) => {
-            const active = currentStyleId === style.id;
-            return (
-              <button key={style.id} onClick={() => { onSelect(style.id); onClose(); }}
-                className="rounded-xl border overflow-hidden transition-all text-left flex flex-col"
-                style={active
-                  ? { border: `2px solid ${style.accentColor}`, background: `${style.accentColor}10` }
-                  : { border: "1px solid #2A2A3A", background: "#0D0D14" }}>
-                <div className="w-full aspect-video overflow-hidden relative">
-                  <StyleThumbnail sectionId={sectionId} styleId={style.id} gradient={style.gradient} />
-                  {active && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ background: style.accentColor }}>
-                      <Check size={10} color="#fff" />
-                    </div>
-                  )}
+
+        {/* Section tabs — horizontal scroll */}
+        <div className="flex gap-1 px-4 py-3 overflow-x-auto flex-shrink-0 border-b border-[#1C1C26]" style={{ scrollbarWidth: "none" }}>
+          {BANNER_SECTIONS.map((sec) => (
+            <button
+              key={sec.id}
+              onClick={() => { setActiveTab(sec.id); setPending(null); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all flex-shrink-0"
+              style={activeTab === sec.id
+                ? { background: "#7C3AED", color: "#fff" }
+                : { background: "#1C1C26", color: "#8888A0" }}>
+              <span>{sec.icon}</span>
+              <span>{sec.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Grid */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {/* "Sin estilo" option */}
+            <button
+              onClick={() => setPending("")}
+              className="rounded-xl border overflow-hidden text-left flex flex-col transition-all"
+              style={pending === ""
+                ? { border: "2px solid #7C3AED", background: "rgba(124,58,237,0.08)" }
+                : { border: "1px solid #2A2A3A", background: "#13131A" }}>
+              <div className="w-full overflow-hidden relative" style={{ aspectRatio: "9/16" }}>
+                <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-[#1C1C26]">
+                  <span className="text-3xl">✨</span>
+                  <span className="text-[#555568] text-[10px] text-center px-2">IA libre</span>
                 </div>
-                <div className="px-2.5 py-2">
-                  <p className="text-[#F0F0F5] font-semibold text-[11px] leading-tight">{style.name}</p>
-                  <p className="text-[#555568] text-[9px] mt-0.5 leading-tight">{style.desc}</p>
-                </div>
-              </button>
-            );
-          })}
-          <button onClick={() => { onSelect(""); onClose(); }}
-            className="rounded-xl border border-dashed border-[#2A2A3A] bg-[#0A0A0F] text-left flex flex-col overflow-hidden transition-all hover:border-[#3A3A4A]">
-            <div className="w-full aspect-video flex items-center justify-center bg-[#0D0D14]">
-              <span className="text-2xl">✨</span>
-            </div>
-            <div className="px-2.5 py-2">
-              <p className="text-[#8888A0] font-semibold text-[11px] leading-tight">Sin estilo (IA libre)</p>
-              <p className="text-[#3A3A4A] text-[9px] mt-0.5 leading-tight">La IA genera sin restricción</p>
-            </div>
-          </button>
+                {pending === "" && (
+                  <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#7C3AED] flex items-center justify-center">
+                    <Check size={10} color="#fff" />
+                  </div>
+                )}
+              </div>
+              <div className="px-2 py-1.5">
+                <p className="text-[#8888A0] font-semibold text-[10px]">Sin estilo</p>
+                <p className="text-[#3A3A4A] text-[9px] mt-0.5">La IA genera libremente</p>
+              </div>
+            </button>
+
+            {styles.map((style) => {
+              const selected = pending === style.id;
+              return (
+                <button
+                  key={style.id}
+                  onClick={() => setPending(style.id)}
+                  className="rounded-xl border overflow-hidden text-left flex flex-col transition-all"
+                  style={selected
+                    ? { border: `2px solid ${style.accentColor}`, background: `${style.accentColor}12` }
+                    : { border: "1px solid #2A2A3A", background: "#13131A" }}>
+                  <div className="w-full overflow-hidden relative" style={{ aspectRatio: "9/16" }}>
+                    <GalleryThumbnail sectionId={activeTab} styleId={style.id} gradient={style.gradient} />
+                    {selected && (
+                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                        style={{ background: style.accentColor }}>
+                        <Check size={10} color="#fff" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-2 py-1.5">
+                    <p className="text-[#F0F0F5] font-semibold text-[10px] leading-tight truncate">{style.name}</p>
+                    <p className="text-[#555568] text-[9px] mt-0.5 leading-tight line-clamp-1">{style.desc}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-[#2A2A3A] flex items-center justify-between flex-shrink-0">
+          <p className="text-[#555568] text-[11px]">
+            {pending
+              ? `Seleccionado: ${styles.find((s) => s.id === pending)?.name ?? "Sin estilo"} · ${activeSection?.label}`
+              : "Ninguno seleccionado"}
+          </p>
+          <div className="flex gap-2">
+            <button onClick={onClose}
+              className="px-4 py-1.5 rounded-lg text-[11px] font-medium text-[#8888A0] hover:text-[#F0F0F5] border border-[#2A2A3A] hover:border-[#3A3A4A] transition-colors">
+              Cancelar
+            </button>
+            <button onClick={handleConfirm} disabled={pending === null}
+              className="px-4 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-colors disabled:opacity-40"
+              style={{ background: "#7C3AED" }}>
+              Usar este diseño
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1910,11 +1978,10 @@ function BannerImageCard({ section, config, images, externalGenerating, onImageG
   return (
     <>
       {showStylePicker && (
-        <StylePickerModal
-          sectionId={section.id}
-          sectionLabel={section.label}
+        <DesignGalleryModal
+          initialSectionId={section.id}
           currentStyleId={selectedStyleId}
-          onSelect={onStyleChange}
+          onSelect={(_sectionId, styleId) => onStyleChange(styleId)}
           onClose={() => setShowStylePicker(false)}
         />
       )}
