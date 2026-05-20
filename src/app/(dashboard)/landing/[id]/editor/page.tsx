@@ -1854,23 +1854,25 @@ function StylePickerModal({ sectionId, sectionLabel, currentStyleId, onSelect, o
 
 // ─── Banner Mode: BannerImageCard ─────────────────────────────────────────────
 
-function BannerImageCard({ section, config, images, onImageGenerated, onStyleChange }: {
+function BannerImageCard({ section, config, images, externalGenerating, onImageGenerated, onStyleChange }: {
   section: { id: string; label: string; icon: string };
   config: BannerConfig;
   images: string[];
+  externalGenerating?: boolean;
   onImageGenerated: (url: string) => void;
   onStyleChange: (styleId: string) => void;
 }) {
-  const [generating, setGenerating] = useState(false);
+  const [localGenerating, setLocalGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showStylePicker, setShowStylePicker] = useState(false);
   const [previewIdx, setPreviewIdx] = useState(0);
+  const generating = localGenerating || !!externalGenerating;
   const selectedStyleId = config.sectionStyles[section.id] ?? null;
   const allStyles = getStylesForSection(section.id);
   const selectedStyle = allStyles.find((s) => s.id === selectedStyleId) ?? null;
 
   async function handleGenerate() {
-    setGenerating(true);
+    setLocalGenerating(true);
     setError(null);
     try {
       const res = await fetch("/api/landing/generate-banner-image", {
@@ -1899,7 +1901,7 @@ function BannerImageCard({ section, config, images, onImageGenerated, onStyleCha
     } catch {
       setError("Error de conexión");
     } finally {
-      setGenerating(false);
+      setLocalGenerating(false);
     }
   }
 
@@ -1961,7 +1963,7 @@ function BannerImageCard({ section, config, images, onImageGenerated, onStyleCha
             <div className="space-y-2">
               {/* Main preview */}
               <div className="relative rounded-xl overflow-hidden bg-[#0A0A0F] border border-[#2A2A3A]"
-                style={{ aspectRatio: "1/1.4" }}>
+                style={{ aspectRatio: "9/16" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={currentImage} alt={section.label} className="w-full h-full object-cover" />
                 {/* Overlay actions */}
@@ -2033,8 +2035,60 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
   const [generatingContext, setGeneratingContext] = useState(false);
   const [contextError, setContextError] = useState<string | null>(null);
   const [anglesError, setAnglesError] = useState<string | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
+  const [pendingSections, setPendingSections] = useState<Set<string>>(new Set());
 
   function upd(patch: Partial<BannerConfig>) { setConfig((p) => ({ ...p, ...patch })); }
+
+  async function generateAllBanners(angle: string) {
+    const total = BANNER_SECTIONS.length;
+    setBulkProgress({ current: 0, total });
+    setPendingSections(new Set(BANNER_SECTIONS.map((s) => s.id)));
+
+    let completed = 0;
+    const BATCH = 2;
+    const queue = [...BANNER_SECTIONS];
+
+    while (queue.length > 0) {
+      const batch = queue.splice(0, BATCH);
+      await Promise.all(batch.map(async (section) => {
+        const styleId = config.sectionStyles[section.id];
+        const styleKeywords = styleId
+          ? getStylesForSection(section.id).find((s) => s.id === styleId)?.promptKeywords ?? ""
+          : "";
+        try {
+          const res = await fetch("/api/landing/generate-banner-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sectionType: section.id,
+              productDescription: config.description,
+              angle,
+              colors: config.colors,
+              font: config.font,
+              country: config.country,
+              aiModel: config.aiModel,
+              styleKeywords,
+              priceSale: config.priceSale,
+              priceOriginal: config.priceOriginal,
+            }),
+          });
+          const data = await res.json();
+          if (data.ok && data.imageUrl) {
+            setGeneratedImages((p) => ({
+              ...p,
+              [section.id]: [data.imageUrl, ...(p[section.id] ?? [])],
+            }));
+          }
+        } catch { /* skip on error, continue queue */ }
+        completed++;
+        setBulkProgress({ current: completed, total });
+        setPendingSections((p) => { const n = new Set(p); n.delete(section.id); return n; });
+      }));
+    }
+
+    setBulkProgress(null);
+  }
 
   async function blobToBase64(url: string): Promise<{ kind: "base64"; data: string; mediaType: string } | null> {
     try {
@@ -2114,7 +2168,13 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
       });
       const data = await res.json();
       if (data.ok && data.angles) {
-        upd({ angles: data.angles, selectedAngle: data.angles[0] ?? "" });
+        const newAngle = data.angles[0] ?? "";
+        upd({ angles: data.angles, selectedAngle: newAngle });
+        setGeneratingAngles(false);
+        if (newAngle) {
+          await generateAllBanners(newAngle);
+        }
+        return;
       } else {
         setAnglesError(data.error ?? "Error al generar ángulos. Verifica que ANTHROPIC_API_KEY esté configurada en Vercel.");
       }
@@ -2264,11 +2324,15 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
               className="w-full px-2.5 py-2 rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#3A3A4A] focus:outline-none focus:border-[#7C3AED] text-xs transition-colors" />
           </div>
 
-          <button onClick={handleGenerateAngles} disabled={generatingAngles}
+          <button onClick={handleGenerateAngles} disabled={generatingAngles || !!bulkProgress}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors disabled:opacity-60"
             style={{ background: "#FF6B35" }}>
-            {generatingAngles ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-            {generatingAngles ? "Generando ángulos..." : "💡 Generar Ángulos de Venta"}
+            {(generatingAngles || bulkProgress) ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+            {generatingAngles
+              ? "Generando ángulos..."
+              : bulkProgress
+                ? `Generando banners ${bulkProgress.current}/${bulkProgress.total}...`
+                : "💡 Generar Ángulos + Banners"}
           </button>
 
           {anglesError && (
@@ -2327,7 +2391,7 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-[#F0F0F5] font-bold text-sm">Secciones de Banners</h2>
-            <p className="text-[#555568] text-[10px] mt-0.5">Genera cada banner individualmente con IA</p>
+            <p className="text-[#555568] text-[10px] mt-0.5">Formato 1080×1920 · Se generan al crear ángulos · Regenera cualquiera individualmente</p>
           </div>
           {config.selectedAngle && (
             <div className="max-w-[200px] px-2.5 py-1.5 rounded-lg border border-[rgba(255,107,53,0.3)] bg-[rgba(255,107,53,0.08)]">
@@ -2336,6 +2400,22 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
           )}
         </div>
 
+        {bulkProgress && (
+          <div className="mb-4 p-3 rounded-xl border border-[rgba(124,58,237,0.3)] bg-[rgba(124,58,237,0.08)]">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Loader2 size={13} className="animate-spin text-[#A78BFA]" />
+                <p className="text-[#A78BFA] text-xs font-semibold">Generando banners con IA…</p>
+              </div>
+              <p className="text-[#A78BFA] text-xs font-mono">{bulkProgress.current} / {bulkProgress.total}</p>
+            </div>
+            <div className="h-1.5 rounded-full bg-[#1C1C26] overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-[#7C3AED] to-[#A78BFA] transition-all duration-500"
+                style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }} />
+            </div>
+          </div>
+        )}
+
         <div className="space-y-2">
           {BANNER_SECTIONS.map((section) => (
             <BannerImageCard
@@ -2343,6 +2423,7 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
               section={section}
               config={config}
               images={generatedImages[section.id] ?? []}
+              externalGenerating={pendingSections.has(section.id)}
               onImageGenerated={(url) => {
                 setGeneratedImages((p) => ({
                   ...p,
