@@ -133,6 +133,53 @@ const VALID_SECTIONS = [
   "autoridad", "testimonios", "ingredientes", "modo_uso", "logistica", "faqs",
 ];
 
+// Aliases de nombres de carpeta → id de sección canónico.
+// Normalizamos a minúsculas, sin acentos, sin espacios/guiones, sin "y/de/-".
+const SECTION_ALIASES = {
+  hero:           "hero",
+  portada:        "hero",
+  heroportada:    "hero",
+  oferta:         "oferta",
+  precio:         "oferta",
+  ofertaprecio:   "oferta",
+  antesdespues:   "antes_despues",
+  antesydespues:  "antes_despues",
+  antes:          "antes_despues",
+  beneficios:     "beneficios",
+  comparativa:    "comparativa",
+  vs:             "comparativa",
+  autoridad:      "autoridad",
+  confianza:      "autoridad",
+  autoridadconfianza: "autoridad",
+  testimonios:    "testimonios",
+  ingredientes:   "ingredientes",
+  materiales:     "ingredientes",
+  ingredientesmateriales: "ingredientes",
+  mododeuso:      "modo_uso",
+  modouso:        "modo_uso",
+  uso:            "modo_uso",
+  logistica:      "logistica",
+  envio:          "logistica",
+  logisticaenvio: "logistica",
+  faqs:           "faqs",
+  faq:            "faqs",
+  preguntas:      "faqs",
+  preguntasfrecuentes: "faqs",
+};
+
+function normalizeFolderName(name) {
+  return name
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "") // quita acentos
+    .replace(/[\s\-_]+/g, "")                          // quita espacios/guiones
+    .replace(/\b(y|de|del|la|el|las|los)\b/g, "");     // quita conectores
+}
+
+function resolveSectionId(folderName) {
+  const key = normalizeFolderName(folderName);
+  return SECTION_ALIASES[key] ?? null;
+}
+
 const MIME = {
   ".jpg":  "image/jpeg",
   ".jpeg": "image/jpeg",
@@ -181,12 +228,23 @@ if (!bucketExists) {
 }
 
 // Scan input directory
-const sections = (await readdir(INPUT_DIR, { withFileTypes: true }))
-  .filter((d) => d.isDirectory() && VALID_SECTIONS.includes(d.name));
+const allDirs = (await readdir(INPUT_DIR, { withFileTypes: true })).filter((d) => d.isDirectory());
+
+const sections = [];
+const unknownDirs = [];
+for (const d of allDirs) {
+  const sectionId = resolveSectionId(d.name);
+  if (sectionId) sections.push({ folder: d.name, sectionId });
+  else unknownDirs.push(d.name);
+}
+
+if (unknownDirs.length > 0) {
+  console.warn(yellow(`\n⚠ Carpetas no reconocidas (se saltarán):`));
+  unknownDirs.forEach((n) => console.warn(dim(`    ${n}`)));
+}
 
 if (sections.length === 0) {
-  console.warn(yellow(`\n⚠ No se encontraron carpetas de secciones válidas en "${INPUT_DIR}".`));
-  console.warn(dim(`  Carpetas válidas: ${VALID_SECTIONS.join(", ")}\n`));
+  console.warn(yellow(`\n⚠ No se encontraron carpetas de secciones válidas en "${INPUT_DIR}".\n`));
   process.exit(0);
 }
 
@@ -194,22 +252,22 @@ let uploaded = 0, skipped = 0, failed = 0, total = 0;
 const errors = [];
 
 for (const section of sections) {
-  const sectionPath = join(INPUT_DIR, section.name);
+  const sectionPath = join(INPUT_DIR, section.folder);
   const files = (await readdir(sectionPath, { withFileTypes: true }))
     .filter((f) => f.isFile() && MIME[extname(f.name).toLowerCase()]);
 
   if (files.length === 0) {
-    console.log(dim(`  ${section.name}/ — sin imágenes`));
+    console.log(dim(`  ${section.folder}/ — sin imágenes`));
     continue;
   }
 
-  console.log(bold(`\n  ${section.name}/`) + dim(` (${files.length} imágenes)`));
+  console.log(bold(`\n  ${section.folder}/`) + dim(` → ${section.sectionId}/ (${files.length} imágenes)`));
 
   for (const file of files) {
     total++;
     const ext = extname(file.name).toLowerCase();
     const styleId = basename(file.name, ext);
-    const storagePath = `${section.name}/${styleId}.jpg`;
+    const storagePath = `${section.sectionId}/${styleId}.jpg`;
     const filePath = join(sectionPath, file.name);
     const fileSize = (await stat(filePath)).size;
     const label = `    ${styleId}.jpg`;
