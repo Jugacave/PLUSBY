@@ -215,6 +215,7 @@ export default function CoursePlayerPage() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const [userRating, setUserRating] = useState(0);
   const [savingRating, setSavingRating] = useState(false);
@@ -322,12 +323,18 @@ export default function CoursePlayerPage() {
   async function handleComment() {
     if (!commentText.trim() || !activeLesson) return;
     setSendingComment(true);
+    setCommentError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase.from("lesson_comments")
+    if (!user) { setSendingComment(false); return; }
+    const { data, error } = await supabase.from("lesson_comments")
       .insert({ lesson_id: activeLesson.id, user_id: user.id, content: commentText.trim() })
       .select("*, profiles(full_name, email)").single();
+    if (error) {
+      setCommentError(error.message);
+      setSendingComment(false);
+      return;
+    }
     if (data) setComments(p => [{ ...data as Comment, replies: [] }, ...p]);
     setCommentText("");
     setSendingComment(false);
@@ -531,6 +538,11 @@ export default function CoursePlayerPage() {
                     rows={3}
                     className="flex-1 px-3 py-2.5 rounded-xl bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#FF6B35] text-sm resize-none" />
                 </div>
+                {commentError && (
+                  <div className="mt-2 px-3 py-2 rounded-xl bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.3)]">
+                    <p className="text-[#EF4444] text-xs font-medium">Error: {commentError}</p>
+                  </div>
+                )}
                 <div className="flex justify-end mt-2">
                   <button onClick={handleComment} disabled={sendingComment || !commentText.trim()}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white text-sm font-semibold transition-colors disabled:opacity-50">
