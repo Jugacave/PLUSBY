@@ -776,6 +776,28 @@ function BannerImageCard({ section, config, images, externalGenerating, template
     }
   }
 
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleDownload(url: string) {
+    setDownloading(true);
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `${section.id}-banner.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(url, "_blank");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   const currentImage = images[previewIdx] ?? null;
   return (
     <>
@@ -832,10 +854,10 @@ function BannerImageCard({ section, config, images, externalGenerating, template
                 <img src={currentImage} alt={section.label} className="w-full h-full object-cover" />
                 {/* Overlay actions */}
                 <div className="absolute bottom-2 right-2 flex gap-1.5">
-                  <a href={currentImage} download={`${section.id}-${previewIdx + 1}.jpg`} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/70 hover:bg-black/90 text-white text-[10px] font-medium transition-colors backdrop-blur-sm border border-white/10">
-                    <Download size={10} /> Descargar
-                  </a>
+                  <button onClick={() => handleDownload(currentImage!)} disabled={downloading}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/70 hover:bg-black/90 text-white text-[10px] font-medium transition-colors backdrop-blur-sm border border-white/10 disabled:opacity-60">
+                    {downloading ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />} Descargar
+                  </button>
                   <button onClick={handleGenerate} disabled={generating}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#7C3AED]/80 hover:bg-[#7C3AED] text-white text-[10px] font-medium transition-colors backdrop-blur-sm border border-[#7C3AED]/30">
                     <RefreshCw size={10} /> Nueva versión

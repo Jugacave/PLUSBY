@@ -1,51 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getAnthropicClient } from "@/lib/anthropic";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-// ─── Section-specific instructions for the AI ────────────────────────────────
-// These tell the model what each section should communicate visually.
+// ─── Section-specific instructions ───────────────────────────────────────────
 
 const SECTION_INSTRUCTIONS: Record<string, string> = {
   hero:
-    "Main hero product banner. Product featured prominently. Bold product name as headline. " +
-    "Eye-catching premium commercial photography. Lifestyle context if appropriate.",
+    "Main hero product banner. Product image featured prominently center or right. Bold product name as headline. Eye-catching premium commercial. Clean spacious layout.",
   oferta:
-    "Special offer / discount banner. Large prominent price display with strikethrough original price. " +
-    "Sense of urgency, sale, limited time. Product visible.",
+    "Special offer / discount banner. LARGE sale price dominant. Strikethrough original price. Urgency copy. Timer or 'Limited offer' label. Product visible.",
   antes_despues:
-    "Before-and-after transformation banner. Split composition (left = before/problem, right = after/result). " +
-    "Show contrast clearly. Product as the solution.",
+    "Before-and-after split banner. LEFT half = problem state (dull, damaged, before). RIGHT half = result after using product (glowing, improved, after). Product bottle/package visible. Clear contrast.",
   beneficios:
-    "Product benefits showcase. Multiple benefit highlights as floating cards/pills/icons around the product. " +
-    "Clean layout, easy to scan, professional iconography.",
+    "Product benefits showcase. 3-4 benefit items as icons + short text arranged around the product. Clean card layout. Scannable.",
   comparativa:
-    "Product comparison banner. 'Our product' vs 'others' / generic alternative. " +
-    "Clearly show superiority. Two-column or split composition with checkmarks vs crosses.",
+    "Comparison banner. Left column: OUR PRODUCT with green checkmarks. Right column: 'Others' with red X marks. Two-column split. Show superiority clearly.",
   autoridad:
-    "Authority and trust banner. Certifications, badges, lab-tested, professional endorsement. " +
-    "Premium, credible, scientific feel.",
+    "Authority and trust banner. Certification badges. 'Dermatologically tested' or lab-approved style. Scientific, premium, credible feel. Product central.",
   testimonios:
-    "Customer testimonials banner. Happy customer photo, 5-star rating, quote bubble. " +
-    "Real, relatable, trustworthy. Social proof.",
+    "Customer testimonial banner. Happy customer photo (stock), 5-star rating, quote bubble with testimonial text. Real, relatable, trustworthy.",
   ingredientes:
-    "Ingredients / materials showcase. Close-up detail of key components or natural ingredients arranged elegantly. " +
-    "Quality, transparency, premium materials.",
+    "Ingredients / materials showcase. Natural ingredients arranged elegantly around the product. Close-up details. Quality and transparency.",
   modo_uso:
-    "How to use / usage guide. Step-by-step numbered visual (1, 2, 3). Clean instructional layout. " +
-    "Simple, clear, actionable.",
+    "How-to-use guide. Step 1, Step 2, Step 3 visual flow. Clean numbered icons. Simple instructional layout. Product visible.",
   logistica:
-    "Shipping and logistics banner. Fast delivery, secure packaging, money-back guarantee. " +
-    "Trust badges, payment methods, delivery icons.",
+    "Shipping and logistics banner. Fast delivery icon, money-back guarantee badge, secure payment icons. Trust focused.",
   faqs:
-    "Frequently asked questions banner. Clean Q&A cards with question marks. " +
-    "Informative, trustworthy, organized design.",
+    "FAQ banner. 2-3 question-answer cards with question mark icons. Informative, organized, clean.",
 };
 
 const COUNTRY_NAMES: Record<string, string> = {
-  CO: "Colombia", MX: "Mexico", PA: "Panama", EC: "Ecuador", PE: "Peru",
-  CL: "Chile", PY: "Paraguay", AR: "Argentina", GT: "Guatemala", ES: "Spain",
+  CO: "Colombia", MX: "México", PA: "Panamá", EC: "Ecuador", PE: "Perú",
+  CL: "Chile", PY: "Paraguay", AR: "Argentina", GT: "Guatemala", ES: "España",
 };
 
 // ─── Body type ────────────────────────────────────────────────────────────────
@@ -69,83 +58,157 @@ type RequestBody = {
   priceOriginal?: string;
 };
 
-// ─── Prompt builders ──────────────────────────────────────────────────────────
+// ─── Stage 1: Claude Vision — analyze template + generate Spanish copy ────────
 
-function buildMultiImagePrompt(b: RequestBody): string {
-  const sectionDesc = SECTION_INSTRUCTIONS[b.sectionType] ?? "Product advertisement banner";
-  const benefits = (b.productBenefits ?? []).filter(Boolean);
-  const problems = (b.productProblems ?? []).filter(Boolean);
-  const ingredients = (b.productIngredients ?? []).filter(Boolean);
-  const market = COUNTRY_NAMES[b.country] ?? "Latin America";
-
-  const productLine = b.productName
-    ? `${b.productName}${b.productDescription ? " — " + b.productDescription : ""}`
-    : b.productDescription || "the product";
-
-  const benefitsLine = benefits.length
-    ? `Key benefits to highlight (translate to natural Spanish for ${market}): ${benefits.join("; ")}.`
-    : "";
-  const problemsLine = problems.length
-    ? `Pain points this product solves: ${problems.join("; ")}.`
-    : "";
-  const ingredientsLine = ingredients.length && b.sectionType === "ingredientes"
-    ? `Show these ingredients/components: ${ingredients.join(", ")}.`
-    : "";
-  const differentiatorLine = b.productDifferentiator
-    ? `Differentiator: ${b.productDifferentiator}.`
-    : "";
-  const angleLine = b.angle ? `Marketing angle: ${b.angle}.` : "";
-  const priceLine =
-    b.sectionType === "oferta" && b.priceSale
-      ? `Show price ${b.priceSale}${b.priceOriginal ? ` (original ${b.priceOriginal} crossed out)` : ""}.`
-      : "";
-
-  return [
-    `Create a vertical 9:16 advertising banner (1080×1920 portrait format) for Spanish-speaking ${market}.`,
-    "",
-    `IMAGE 1 is the LAYOUT TEMPLATE: replicate its composition, text positioning, hierarchy, font weight, and overall design structure.`,
-    `IMAGES 2+ show the ACTUAL PRODUCT to feature in the banner. Use these as the product reference — keep the product identity, shape and details faithful.`,
-    "",
-    `${sectionDesc}`,
-    "",
-    `Product: ${productLine}.`,
-    benefitsLine,
-    problemsLine,
-    ingredientsLine,
-    differentiatorLine,
-    angleLine,
-    priceLine,
-    "",
-    "COLOR PALETTE: adapt the colors to harmonize with the product's natural dominant colors (the colors visible in IMAGES 2+). Do NOT copy the template's exact colors — derive a complementary palette from the product itself.",
-    "TYPOGRAPHY: bold, advertising-style, easy to read. Spanish copy. Heavy headlines, supporting body text.",
-    "OUTPUT: a finished social media advertising banner. Professional commercial quality. Sharp, clean, high contrast. No watermarks, no logos that don't belong, no English text.",
-  ].filter(Boolean).join(" ");
+interface GeneratedCopy {
+  layoutDescription: string;
+  headline: string;
+  subheadline: string;
+  bodyText: string;
+  cta: string;
+  bullets: string[];
 }
 
-function buildTextOnlyPrompt(b: RequestBody): string {
-  const sectionDesc = SECTION_INSTRUCTIONS[b.sectionType] ?? "Product advertisement banner";
-  const colorsText = (b.colors ?? []).filter(Boolean).join(", ");
-  const market = COUNTRY_NAMES[b.country] ?? "Latin America";
-  const productLine = b.productName
-    ? `${b.productName}${b.productDescription ? " — " + b.productDescription : ""}`
-    : b.productDescription || "dropshipping product";
-  const benefits = (b.productBenefits ?? []).filter(Boolean);
-  const benefitsLine = benefits.length ? `Benefits: ${benefits.join("; ")}.` : "";
-  const priceLine =
-    b.sectionType === "oferta" && b.priceSale
-      ? ` Sale price: ${b.priceSale}${b.priceOriginal ? `, original ${b.priceOriginal}` : ""}.`
-      : "";
+async function analyzeTemplateAndGenerateCopy(body: RequestBody): Promise<GeneratedCopy | null> {
+  try {
+    const anthropic = getAnthropicClient();
+    const market = COUNTRY_NAMES[body.country] ?? "Latinoamérica";
+    const sectionDesc = SECTION_INSTRUCTIONS[body.sectionType] ?? "advertising banner";
+    const benefits = (body.productBenefits ?? []).filter(Boolean);
+    const problems = (body.productProblems ?? []).filter(Boolean);
+    const ingredients = (body.productIngredients ?? []).filter(Boolean);
 
+    const priceInfo =
+      body.sectionType === "oferta" && body.priceSale
+        ? `Precio oferta: ${body.priceSale}${body.priceOriginal ? ` (antes: ${body.priceOriginal})` : ""}`
+        : "";
+
+    const productSummary = [
+      body.productName ? `Producto: ${body.productName}` : "",
+      body.productDescription ? `Descripción: ${body.productDescription}` : "",
+      benefits.length ? `Beneficios: ${benefits.join(", ")}` : "",
+      problems.length ? `Problemas que resuelve: ${problems.join(", ")}` : "",
+      ingredients.length && body.sectionType === "ingredientes"
+        ? `Ingredientes: ${ingredients.join(", ")}`
+        : "",
+      body.productDifferentiator ? `Diferenciador: ${body.productDifferentiator}` : "",
+      priceInfo,
+      body.angle ? `Ángulo de marketing: ${body.angle}` : "",
+    ].filter(Boolean).join("\n");
+
+    const contentBlocks: Parameters<typeof anthropic.messages.create>[0]["messages"][0]["content"] = [];
+
+    if (body.templateUrl) {
+      contentBlocks.push({
+        type: "image",
+        source: { type: "url", url: body.templateUrl },
+      });
+    }
+
+    contentBlocks.push({
+      type: "text",
+      text: `${body.templateUrl ? "Analiza esta plantilla de banner publicitario.\n\n" : ""}Necesito dos cosas:
+
+1. DESCRIPCIÓN DEL DISEÑO (2-3 oraciones): Describe la estructura visual — dónde va el titular principal, dónde va la imagen del producto, dónde van los textos secundarios/beneficios, cuál es la jerarquía visual, zonas de color.
+
+2. COPY PUBLICITARIO EN ESPAÑOL para el mercado de ${market}
+Tipo de banner: ${sectionDesc}
+
+${productSummary}
+
+Genera copy publicitario convincente, real y en español latinoamericano natural:
+- TITULAR: máx 8 palabras, impactante, directo
+- SUBTITULAR: máx 15 palabras
+- TEXTO CUERPO: 1-2 oraciones de apoyo
+- CTA (llamado a la acción): 3-5 palabras, botón de acción
+- 3 PUNTOS DE BENEFICIO: cortos, poderosos (máx 6 palabras cada uno)
+
+Responde ÚNICAMENTE con este JSON (sin markdown):
+{
+  "layoutDescription": "...",
+  "headline": "...",
+  "subheadline": "...",
+  "bodyText": "...",
+  "cta": "...",
+  "bullets": ["...", "...", "..."]
+}`,
+    });
+
+    const message = await anthropic.messages.create({
+      model: "claude-opus-4-7",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: contentBlocks }],
+    });
+
+    const raw = message.content[0].type === "text" ? message.content[0].text : "";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    return {
+      layoutDescription: parsed.layoutDescription ?? "",
+      headline: parsed.headline ?? "",
+      subheadline: parsed.subheadline ?? "",
+      bodyText: parsed.bodyText ?? "",
+      cta: parsed.cta ?? "",
+      bullets: Array.isArray(parsed.bullets) ? parsed.bullets : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Stage 2: Build generation prompt from Claude copy ────────────────────────
+
+function buildGenerationPrompt(body: RequestBody, copy: GeneratedCopy | null): string {
+  const market = COUNTRY_NAMES[body.country] ?? "Latinoamérica";
+  const sectionDesc = SECTION_INSTRUCTIONS[body.sectionType] ?? "advertising banner";
+  const productLine = body.productName
+    ? `${body.productName}${body.productDescription ? " — " + body.productDescription : ""}`
+    : body.productDescription || "el producto";
+
+  if (copy) {
+    const bulletList = copy.bullets.length ? copy.bullets.map((b) => `• ${b}`).join("  ") : "";
+    const priceText =
+      body.sectionType === "oferta" && body.priceSale
+        ? ` PRECIO: "${body.priceSale}"${body.priceOriginal ? ` (tachado: "${body.priceOriginal}")` : ""}.`
+        : "";
+
+    return [
+      `Crea un banner publicitario vertical 9:16 (1080×1920 píxeles) para ${market}.`,
+      copy.layoutDescription
+        ? `DISEÑO: ${copy.layoutDescription}`
+        : sectionDesc,
+      `PRODUCTO: ${productLine}.`,
+      "",
+      `TEXTO EXACTO a incluir en el banner (respeta las palabras exactas):`,
+      `TITULAR PRINCIPAL: "${copy.headline}"`,
+      `SUBTITULAR: "${copy.subheadline}"`,
+      copy.bodyText ? `TEXTO DE APOYO: "${copy.bodyText}"` : "",
+      copy.bullets.length ? `BENEFICIOS: ${bulletList}` : "",
+      `BOTÓN/CTA: "${copy.cta}"`,
+      priceText,
+      "",
+      "ESTILO VISUAL: banner publicitario profesional, alta calidad comercial, fotografía de producto limpia y nítida. Sin marcas de agua. Sin texto en inglés.",
+      "TIPOGRAFÍA: bold, peso heavy para titular. Legible. Letras en español correctas.",
+      "COLOR: paleta que armonice con el producto.",
+    ].filter(Boolean).join(" ");
+  }
+
+  // Fallback without Claude copy
+  const benefits = (body.productBenefits ?? []).filter(Boolean);
+  const colorsText = (body.colors ?? []).filter(Boolean).join(", ");
   return [
     sectionDesc,
-    `Product: ${productLine}.`,
-    benefitsLine,
-    b.angle ? `Marketing angle: ${b.angle}.` : "",
-    colorsText ? `Color palette: ${colorsText}.` : "",
-    `Typography style: ${b.font || "modern sans-serif"}.`,
-    `Target market: Spanish-speaking ${market}.`,
-    priceLine,
-    "Vertical 9:16 portrait format. Professional commercial photography. Spanish copy. High quality. Perfect for social media advertising.",
+    `Producto: ${productLine}.`,
+    benefits.length ? `Beneficios: ${benefits.join("; ")}.` : "",
+    body.angle ? `Ángulo: ${body.angle}.` : "",
+    colorsText ? `Paleta de colores: ${colorsText}.` : "",
+    `Mercado: ${market}.`,
+    body.sectionType === "oferta" && body.priceSale
+      ? `Precio: ${body.priceSale}${body.priceOriginal ? ` (antes ${body.priceOriginal})` : ""}.`
+      : "",
+    "Banner vertical 9:16. Copy en español. Calidad comercial premium.",
   ].filter(Boolean).join(" ");
 }
 
@@ -161,28 +224,65 @@ export async function POST(req: NextRequest) {
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   const productImages = (body.productImages ?? []).filter((u): u is string => !!u);
   const hasTemplate = !!body.templateUrl;
   const hasProduct = productImages.length > 0;
-  const useMultiImage = hasTemplate && hasProduct;
 
-  // ── BRANCH 1: Multi-image editing (template + product → composed banner)
-  if (useMultiImage) {
-    const falKey = user.user_metadata?.ai_key_fal;
-    if (!falKey) {
+  // ── Stage 1: Claude Vision analyzes template + generates Spanish copy ──────
+  // Runs whenever we have a template URL (it's fast ~2-3s and critical for quality)
+  const copy = hasTemplate ? await analyzeTemplateAndGenerateCopy(body) : null;
+  const prompt = buildGenerationPrompt(body, copy);
+
+  // ── DALL-E 3 path (best text rendering, hd quality) ──────────────────────
+  const openaiKey = user.user_metadata?.ai_key_openai;
+  if (body.aiModel === "openai-dalle3" || (!user.user_metadata?.ai_key_fal && openaiKey)) {
+    if (!openaiKey) {
       return NextResponse.json(
-        { error: "Configura tu API key de Fal.ai en Ajustes > Modelos IA" },
+        { error: "Configura tu API key de OpenAI en Ajustes > Modelos IA" },
         { status: 400 }
       );
     }
+    try {
+      const res = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt,
+          n: 1,
+          size: "1024x1792",
+          quality: "hd",
+          style: "vivid",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return NextResponse.json({ error: data.error?.message ?? "Error OpenAI" }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, imageUrl: data.data?.[0]?.url, mode: "dalle3-hd" });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Error" },
+        { status: 500 }
+      );
+    }
+  }
 
-    const prompt = buildMultiImagePrompt(body);
+  // ── Fal.ai path ───────────────────────────────────────────────────────────
+  const falKey = user.user_metadata?.ai_key_fal;
+  if (!falKey) {
+    return NextResponse.json(
+      { error: "Configura tu API key de Fal.ai en Ajustes > Modelos IA" },
+      { status: 400 }
+    );
+  }
+
+  // Branch A: template + product images → Flux Kontext Multi
+  // (passes product reference images so product appears in the banner)
+  if (hasTemplate && hasProduct) {
     const imageUrls = [body.templateUrl!, ...productImages];
-
     try {
       const res = await fetch("https://fal.run/fal-ai/flux-pro/kontext/max/multi", {
         method: "POST",
@@ -197,20 +297,15 @@ export async function POST(req: NextRequest) {
           safety_tolerance: "2",
         }),
       });
-
       const data = await res.json();
       if (!res.ok) {
         return NextResponse.json(
-          { error: data.detail ?? data.message ?? "Error de Fal.ai (Kontext Multi)" },
+          { error: data.detail ?? data.message ?? "Error Fal.ai Kontext Multi" },
           { status: 500 }
         );
       }
-
       const imageUrl = data.images?.[0]?.url ?? data.image?.url;
-      if (!imageUrl) {
-        return NextResponse.json({ error: "No se generó imagen" }, { status: 500 });
-      }
-
+      if (!imageUrl) return NextResponse.json({ error: "No se generó imagen" }, { status: 500 });
       return NextResponse.json({ ok: true, imageUrl, mode: "kontext-multi" });
     } catch (err) {
       return NextResponse.json(
@@ -220,41 +315,44 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── BRANCH 2: Single-image editing (just template → product-less banner)
+  // Branch B: template only (no product photos) → Ideogram v2 for best text rendering
   if (hasTemplate && !hasProduct) {
-    const falKey = user.user_metadata?.ai_key_fal;
-    if (!falKey) {
-      return NextResponse.json(
-        { error: "Configura tu API key de Fal.ai en Ajustes > Modelos IA" },
-        { status: 400 }
-      );
-    }
-
-    const prompt = buildMultiImagePrompt(body);
     try {
-      const res = await fetch("https://fal.run/fal-ai/flux-pro/kontext/max", {
+      const res = await fetch("https://fal.run/fal-ai/ideogram/v2", {
         method: "POST",
         headers: { Authorization: `Key ${falKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          image_url: body.templateUrl!,
-          aspect_ratio: "9:16",
-          guidance_scale: 3.5,
-          num_images: 1,
-          output_format: "jpeg",
-          safety_tolerance: "2",
+          aspect_ratio: "9_16",
+          rendering_speed: "QUALITY",
+          magic_prompt_option: "OFF",
+          style_type: "REALISTIC",
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        return NextResponse.json(
-          { error: data.detail ?? data.message ?? "Error de Fal.ai (Kontext)" },
-          { status: 500 }
-        );
+        // Fallback to Flux Kontext single if Ideogram fails
+        const res2 = await fetch("https://fal.run/fal-ai/flux-pro/kontext/max", {
+          method: "POST",
+          headers: { Authorization: `Key ${falKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt,
+            image_url: body.templateUrl!,
+            aspect_ratio: "9:16",
+            guidance_scale: 3.5,
+            num_images: 1,
+            output_format: "jpeg",
+            safety_tolerance: "2",
+          }),
+        });
+        const data2 = await res2.json();
+        const imageUrl2 = data2.images?.[0]?.url ?? data2.image?.url;
+        if (imageUrl2) return NextResponse.json({ ok: true, imageUrl: imageUrl2, mode: "kontext-single" });
+        return NextResponse.json({ error: data.detail ?? data.message ?? "Error Fal.ai" }, { status: 500 });
       }
       const imageUrl = data.images?.[0]?.url ?? data.image?.url;
       if (!imageUrl) return NextResponse.json({ error: "No se generó imagen" }, { status: 500 });
-      return NextResponse.json({ ok: true, imageUrl, mode: "kontext-single" });
+      return NextResponse.json({ ok: true, imageUrl, mode: "ideogram-template" });
     } catch (err) {
       return NextResponse.json(
         { error: err instanceof Error ? err.message : "Error" },
@@ -263,45 +361,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── BRANCH 3: Text-to-image fallback (no template selected)
-  const prompt = buildTextOnlyPrompt(body);
-  const isOpenAI = body.aiModel === "openai-dalle3";
-
-  if (isOpenAI) {
-    const openaiKey = user.user_metadata?.ai_key_openai;
-    if (!openaiKey) {
-      return NextResponse.json(
-        { error: "Configura tu API key de OpenAI en Ajustes > Modelos IA" },
-        { status: 400 }
-      );
-    }
-    try {
-      const res = await fetch("https://api.openai.com/v1/images/generations", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1792", quality: "standard" }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        return NextResponse.json({ error: data.error?.message ?? "Error OpenAI" }, { status: 500 });
-      }
-      return NextResponse.json({ ok: true, imageUrl: data.data?.[0]?.url, mode: "dalle3" });
-    } catch (err) {
-      return NextResponse.json(
-        { error: err instanceof Error ? err.message : "Error" },
-        { status: 500 }
-      );
-    }
-  }
-
-  const falKey = user.user_metadata?.ai_key_fal;
-  if (!falKey) {
-    return NextResponse.json(
-      { error: "Configura tu API key de Fal.ai en Ajustes > Modelos IA para generar imágenes" },
-      { status: 400 }
-    );
-  }
-
+  // Branch C: no template, no product → text-to-image with selected model
   const falModelMap: Record<string, string> = {
     "fal-flux-dev":   "fal-ai/flux/dev",
     "fal-flux-pro":   "fal-ai/flux-pro/v1.1",
@@ -310,19 +370,28 @@ export async function POST(req: NextRequest) {
     "fal-imagen3":    "fal-ai/imagen3",
     "fal-sd-xl":      "fal-ai/stable-diffusion-xl",
   };
-  const modelPath = falModelMap[body.aiModel] ?? "fal-ai/flux/dev";
-  const falEndpoint = `https://fal.run/${modelPath}`;
-  const falBody = {
-    prompt,
-    image_size: "portrait_16_9",
-    num_inference_steps: 28,
-    guidance_scale: 3.5,
-    num_images: 1,
-    enable_safety_checker: true,
-  };
+  const modelPath = falModelMap[body.aiModel] ?? "fal-ai/ideogram/v2";
+
+  const isIdeogram = modelPath.includes("ideogram");
+  const falBody = isIdeogram
+    ? {
+        prompt,
+        aspect_ratio: "9_16",
+        rendering_speed: "QUALITY",
+        magic_prompt_option: "OFF",
+        style_type: "REALISTIC",
+      }
+    : {
+        prompt,
+        image_size: "portrait_16_9",
+        num_inference_steps: 28,
+        guidance_scale: 3.5,
+        num_images: 1,
+        enable_safety_checker: true,
+      };
 
   try {
-    const res = await fetch(falEndpoint, {
+    const res = await fetch(`https://fal.run/${modelPath}`, {
       method: "POST",
       headers: { Authorization: `Key ${falKey}`, "Content-Type": "application/json" },
       body: JSON.stringify(falBody),
