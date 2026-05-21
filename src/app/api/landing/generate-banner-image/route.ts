@@ -6,30 +6,71 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 // ─── Section-specific instructions ───────────────────────────────────────────
+// IMPORTANT: every section limits the number of text strings to 2-3 maximum.
+// Image generation models render text correctly only when there are few strings.
 
-const SECTION_INSTRUCTIONS: Record<string, string> = {
-  hero:
-    "Main hero product banner. Product image featured prominently center or right. Bold product name as headline. Eye-catching premium commercial. Clean spacious layout.",
-  oferta:
-    "Special offer / discount banner. LARGE sale price dominant. Strikethrough original price. Urgency copy. Product visible.",
-  antes_despues:
-    "Before-and-after split banner. LEFT half = problem state. RIGHT half = result after using product. Product bottle/package visible. Clear contrast.",
-  beneficios:
-    "Product benefits showcase. 3-4 benefit items as icons + short text arranged around the product. Clean card layout.",
-  comparativa:
-    "Comparison banner. Left column: OUR PRODUCT with green checkmarks. Right column: 'Others' with red X marks.",
-  autoridad:
-    "Authority and trust banner. Certification badges, dermatologically-tested style. Premium, scientific, credible feel.",
-  testimonios:
-    "Customer testimonial banner. Happy customer photo, 5-star rating, quote bubble. Real, trustworthy.",
-  ingredientes:
-    "Ingredients / materials showcase. Natural ingredients arranged elegantly around the product. Close-up details.",
-  modo_uso:
-    "How-to-use guide. Numbered step 1, step 2, step 3 visual flow. Clean instructional layout.",
-  logistica:
-    "Shipping and logistics banner. Fast delivery icon, money-back guarantee badge, secure payment icons.",
-  faqs:
-    "FAQ banner. 2-3 question-answer cards with question mark icons. Clean, organized.",
+interface SectionSpec {
+  visualDescription: string;  // visual description in Spanish
+  textElements: Array<"headline" | "subheadline" | "cta" | "price" | "priceOriginal" | "saleLabel" | "bullets" | "beforeAfter" | "stepNumbers" | "trustBadges" | "ourVsOthers" | "rating">;
+  maxBullets: number;
+}
+
+const SECTION_SPECS: Record<string, SectionSpec> = {
+  hero: {
+    visualDescription: "Banner hero principal vertical. Producto destacado al centro o derecha. Fondo limpio. Solo TITULAR grande y botón CTA.",
+    textElements: ["headline", "cta"],
+    maxBullets: 0,
+  },
+  oferta: {
+    visualDescription: "Banner de oferta. Precio grande dominante, etiqueta 'OFERTA' o '50% OFF', producto visible, botón de compra. Sensación de urgencia.",
+    textElements: ["saleLabel", "price", "priceOriginal", "cta"],
+    maxBullets: 0,
+  },
+  antes_despues: {
+    visualDescription: "Banner antes/después vertical. División horizontal: arriba problema (ANTES), abajo resultado (DESPUÉS). Producto al centro entre las dos zonas. Solo las palabras 'ANTES' y 'DESPUÉS' como texto.",
+    textElements: ["beforeAfter"],
+    maxBullets: 0,
+  },
+  beneficios: {
+    visualDescription: "Banner de beneficios. Producto al centro con 3 iconos circulares alrededor, cada uno con un texto corto debajo. Layout limpio y aireado.",
+    textElements: ["headline", "bullets"],
+    maxBullets: 3,
+  },
+  comparativa: {
+    visualDescription: "Banner comparativo. Dos columnas verticales: izquierda 'NOSOTROS' con checks verdes, derecha 'OTROS' con X rojas. Producto destacado en columna izquierda.",
+    textElements: ["headline", "ourVsOthers"],
+    maxBullets: 0,
+  },
+  autoridad: {
+    visualDescription: "Banner de autoridad. Producto al centro, badges/sellos de certificación alrededor (ej 'TESTEADO', 'DERMATOLÓGICO'). Estilo premium y científico.",
+    textElements: ["headline", "trustBadges"],
+    maxBullets: 3,
+  },
+  testimonios: {
+    visualDescription: "Banner de testimonio. Foto sonriente de cliente, 5 estrellas doradas grandes, una cita corta entre comillas. Producto pequeño al lado.",
+    textElements: ["rating", "headline"],
+    maxBullets: 0,
+  },
+  ingredientes: {
+    visualDescription: "Banner de ingredientes. Producto al centro con 3 ingredientes naturales alrededor (frutas, hojas, etc), cada uno con su nombre debajo.",
+    textElements: ["headline", "bullets"],
+    maxBullets: 3,
+  },
+  modo_uso: {
+    visualDescription: "Banner de modo de uso. Tres pasos numerados con iconos: 1, 2, 3. Cada paso con texto corto de máximo 2 palabras. Producto visible.",
+    textElements: ["headline", "stepNumbers"],
+    maxBullets: 3,
+  },
+  logistica: {
+    visualDescription: "Banner de logística. Tres iconos en fila: envío, garantía, pago. Cada uno con label corto. Estilo limpio con producto visible.",
+    textElements: ["headline", "trustBadges"],
+    maxBullets: 3,
+  },
+  faqs: {
+    visualDescription: "Banner de preguntas frecuentes. Dos cards con signo de pregunta '?' grande y un texto MUY corto debajo. Producto pequeño al lado.",
+    textElements: ["headline", "bullets"],
+    maxBullets: 2,
+  },
 };
 
 const COUNTRY_NAMES: Record<string, string> = {
@@ -68,6 +109,11 @@ interface GeneratedCopy {
   subheadline: string;
   bodyText: string;
   cta: string;
+  saleLabel: string;
+  ourLabel: string;
+  othersLabel: string;
+  badges: string[];
+  steps: string[];
   bullets: string[];
 }
 
@@ -75,7 +121,7 @@ async function analyzeAndWriteCopy(body: RequestBody): Promise<GeneratedCopy | n
   try {
     const anthropic = getAnthropicClient();
     const market = COUNTRY_NAMES[body.country] ?? "Latinoamérica";
-    const sectionDesc = SECTION_INSTRUCTIONS[body.sectionType] ?? "advertising banner";
+    const spec = SECTION_SPECS[body.sectionType] ?? SECTION_SPECS.hero;
     const benefits = (body.productBenefits ?? []).filter(Boolean);
     const problems = (body.productProblems ?? []).filter(Boolean);
     const ingredients = (body.productIngredients ?? []).filter(Boolean);
@@ -90,12 +136,28 @@ async function analyzeAndWriteCopy(body: RequestBody): Promise<GeneratedCopy | n
       body.productDescription ? `Descripción: ${body.productDescription}` : "",
       benefits.length ? `Beneficios: ${benefits.join(", ")}` : "",
       problems.length ? `Problemas que resuelve: ${problems.join(", ")}` : "",
-      ingredients.length && body.sectionType === "ingredientes"
-        ? `Ingredientes: ${ingredients.join(", ")}` : "",
+      ingredients.length ? `Ingredientes: ${ingredients.join(", ")}` : "",
       body.productDifferentiator ? `Diferenciador: ${body.productDifferentiator}` : "",
       priceInfo,
-      body.angle ? `Ángulo de marketing: ${body.angle}` : "",
+      body.angle ? `Ángulo: ${body.angle}` : "",
     ].filter(Boolean).join("\n");
+
+    // Build the JSON spec request based on what THIS section actually needs
+    const needsField = (f: string) => spec.textElements.includes(f as never);
+    const jsonFields: string[] = [];
+    if (needsField("headline")) jsonFields.push(`"headline": "TITULAR de máximo 5 palabras, impactante, en español de ${market}"`);
+    if (needsField("subheadline")) jsonFields.push(`"subheadline": "SUBTITULAR de máximo 8 palabras"`);
+    if (needsField("cta")) jsonFields.push(`"cta": "Botón de acción, máximo 3 palabras (ej Comprar Ya, Pídelo Hoy)"`);
+    if (needsField("saleLabel")) jsonFields.push(`"saleLabel": "Etiqueta corta de oferta, máximo 2 palabras (ej OFERTA, 50% OFF, GRAN VENTA)"`);
+    if (needsField("ourVsOthers")) jsonFields.push(`"ourLabel": "Palabra única para nuestra columna (ej NOSOTROS, ECHQ)"`, `"othersLabel": "Palabra única para la competencia (ej OTROS, GENÉRICO)"`);
+    if (needsField("trustBadges")) jsonFields.push(`"badges": ["3 sellos cortos máx 2 palabras cada uno, ej ENVÍO GRATIS, GARANTÍA 30 DÍAS, PAGO SEGURO"]`);
+    if (spec.maxBullets > 0 && needsField("bullets")) jsonFields.push(`"bullets": ["${spec.maxBullets} textos MUY cortos máx 2 palabras cada uno, sin emojis, sin signos raros"]`);
+    if (needsField("stepNumbers")) jsonFields.push(`"steps": ["3 textos MUY cortos máx 2 palabras: paso 1, paso 2, paso 3"]`);
+
+    // Always include visual descriptors for the image model
+    jsonFields.push(`"layoutDescription": "Descripción en español de la disposición visual del banner (1 oración)"`);
+    jsonFields.push(`"visualStyle": "Estilo visual: paleta de colores en español, ambiente, mood (1 oración)"`);
+    jsonFields.push(`"productDescription": "Descripción visual del producto en español: tipo, color, forma del envase (1 oración corta)"`);
 
     const userContent: Array<
       | { type: "image"; source: { type: "url"; url: string } }
@@ -108,40 +170,27 @@ async function analyzeAndWriteCopy(body: RequestBody): Promise<GeneratedCopy | n
 
     userContent.push({
       type: "text",
-      text: `${body.templateUrl ? "Analiza esta plantilla de banner publicitario.\n\n" : ""}Eres un copywriter publicitario senior para ecommerce en ${market}.
+      text: `${body.templateUrl ? "Analiza la plantilla de banner adjunta para inspirarte en el diseño.\n\n" : ""}Eres copywriter publicitario senior de ecommerce en ${market}.
 
-Tipo de banner: ${sectionDesc}
+TIPO DE BANNER: ${spec.visualDescription}
 
 INFORMACIÓN DEL PRODUCTO:
 ${productSummary}
 
-Necesito un JSON con dos cosas:
+REGLAS CRÍTICAS:
+1. Todo el texto debe estar en ESPAÑOL real de ${market} — palabras correctamente escritas
+2. NO inventes palabras. NO mezcles con inglés.
+3. Sé EXTREMADAMENTE breve. Mejor 2 palabras que 5.
+4. NO uses tildes raras ni caracteres especiales.
+5. Si tienes el precio "${body.priceSale ?? ""}", úsalo EXACTAMENTE como está.
 
-A) ANÁLISIS VISUAL (en inglés, para un modelo de generación de imágenes):
-- "layoutDescription": cómo está organizado el banner — dónde va el titular, el producto, los iconos/beneficios, la jerarquía visual
-- "visualStyle": estilo gráfico — paleta de colores, tipografía aproximada, ambiente (clean / vibrant / minimal / etc), iluminación
-- "productDescription": descripción visual del producto en inglés (forma, color, tipo de envase) para que el modelo lo dibuje correctamente
-
-B) COPY PUBLICITARIO EN ESPAÑOL (${market}) — texto REAL y correcto, sin inventar palabras:
-- "headline": titular principal, máximo 6 palabras, impactante
-- "subheadline": subtitular, máximo 10 palabras
-- "bodyText": 1 oración corta de apoyo (máx 12 palabras) — opcional, "" si no aplica
-- "cta": botón de acción, 2-4 palabras (ej "Comprar Ahora", "Pídelo Ya")
-- "bullets": exactamente 3 beneficios cortos, máx 3 palabras cada uno (ej "100% Natural", "Sin Parabenos", "Resultados Visibles")
-
-Reglas estrictas para el copy:
-- Solo palabras reales en español, correctamente escritas
-- NO inventes palabras
-- NO mezcles con inglés
-- Que suene natural para alguien de ${market}
-
-Responde ÚNICAMENTE con este JSON, sin markdown ni explicación:
-{"layoutDescription":"...","visualStyle":"...","productDescription":"...","headline":"...","subheadline":"...","bodyText":"...","cta":"...","bullets":["...","...","..."]}`,
+Responde ÚNICAMENTE con este JSON (sin markdown):
+{${jsonFields.join(",\n")}}`,
     });
 
     const message = await anthropic.messages.create({
       model: "claude-opus-4-7",
-      max_tokens: 1024,
+      max_tokens: 800,
       messages: [{ role: "user", content: userContent }],
     });
 
@@ -156,8 +205,13 @@ Responde ÚNICAMENTE con este JSON, sin markdown ni explicación:
       productDescription: parsed.productDescription ?? "",
       headline: (parsed.headline ?? "").trim(),
       subheadline: (parsed.subheadline ?? "").trim(),
-      bodyText: (parsed.bodyText ?? "").trim(),
+      bodyText: "",
       cta: (parsed.cta ?? "").trim(),
+      saleLabel: (parsed.saleLabel ?? "").trim(),
+      ourLabel: (parsed.ourLabel ?? "").trim(),
+      othersLabel: (parsed.othersLabel ?? "").trim(),
+      badges: Array.isArray(parsed.badges) ? parsed.badges.map((b: unknown) => String(b).trim()).filter(Boolean) : [],
+      steps: Array.isArray(parsed.steps) ? parsed.steps.map((b: unknown) => String(b).trim()).filter(Boolean) : [],
       bullets: Array.isArray(parsed.bullets)
         ? parsed.bullets.map((b: unknown) => String(b).trim()).filter(Boolean)
         : [],
@@ -167,52 +221,86 @@ Responde ÚNICAMENTE con este JSON, sin markdown ni explicación:
   }
 }
 
-// ─── Stage 2: Build Ideogram prompt with EXACT text strings ──────────────────
+// ─── Stage 2: Build Spanish prompt with ONLY the texts needed per section ────
 
-function buildIdeogramPrompt(body: RequestBody, copy: GeneratedCopy | null): string {
-  const market = COUNTRY_NAMES[body.country] ?? "Latin America";
-  const sectionDesc = SECTION_INSTRUCTIONS[body.sectionType] ?? "advertising banner";
+function buildImagePrompt(body: RequestBody, copy: GeneratedCopy | null): string {
+  const spec = SECTION_SPECS[body.sectionType] ?? SECTION_SPECS.hero;
 
   if (!copy) {
-    // Fallback without Claude analysis
-    const benefits = (body.productBenefits ?? []).filter(Boolean);
-    const productLine = body.productName ?? body.productDescription ?? "the product";
+    const productLine = body.productName ?? body.productDescription ?? "el producto";
     return [
-      `Vertical 9:16 advertising banner for ${market} Spanish-speaking market.`,
-      sectionDesc,
-      `Product: ${productLine}.`,
-      benefits.length ? `Benefits: ${benefits.join(", ")}.` : "",
-      "Professional commercial quality. Clean Spanish text. High resolution.",
-    ].filter(Boolean).join(" ");
+      `Banner publicitario vertical 9:16 de alta calidad.`,
+      spec.visualDescription,
+      `Producto: ${productLine}.`,
+      `Estilo: fotografía publicitaria profesional, iluminación premium, sin texto en inglés.`,
+    ].join(" ");
   }
 
-  // Build a prompt that QUOTES exact text strings — this is how Ideogram renders them perfectly
-  const textsToRender: string[] = [];
-  if (copy.headline) textsToRender.push(`large bold headline text reading "${copy.headline}"`);
-  if (copy.subheadline) textsToRender.push(`subheadline text reading "${copy.subheadline}"`);
-  if (copy.bodyText) textsToRender.push(`supporting text reading "${copy.bodyText}"`);
-  if (copy.bullets.length) {
-    const bulletText = copy.bullets.map((b) => `"${b}"`).join(", ");
-    textsToRender.push(`benefit labels: ${bulletText}`);
+  // Build the EXACT list of texts to render. Each text is QUOTED.
+  // The fewer text strings, the better the rendering.
+  const textElements: string[] = [];
+
+  if (spec.textElements.includes("headline") && copy.headline) {
+    textElements.push(`UN TITULAR GRANDE que dice exactamente: "${copy.headline}"`);
   }
-  if (copy.cta) textsToRender.push(`call-to-action button text reading "${copy.cta}"`);
-  if (body.sectionType === "oferta" && body.priceSale) {
-    textsToRender.push(`large price text "${body.priceSale}"${body.priceOriginal ? ` with crossed-out original price "${body.priceOriginal}"` : ""}`);
+  if (spec.textElements.includes("subheadline") && copy.subheadline) {
+    textElements.push(`Un subtítulo más pequeño que dice: "${copy.subheadline}"`);
+  }
+  if (spec.textElements.includes("saleLabel") && copy.saleLabel) {
+    textElements.push(`Un sello/etiqueta de oferta que dice: "${copy.saleLabel}"`);
+  }
+  if (spec.textElements.includes("price") && body.priceSale) {
+    textElements.push(`Un precio grande que dice exactamente: "${body.priceSale}"`);
+  }
+  if (spec.textElements.includes("priceOriginal") && body.priceOriginal) {
+    textElements.push(`Un precio tachado más pequeño que dice: "${body.priceOriginal}"`);
+  }
+  if (spec.textElements.includes("beforeAfter")) {
+    textElements.push(`Dos etiquetas: una arriba que dice "ANTES" y otra abajo que dice "DESPUÉS"`);
+  }
+  if (spec.textElements.includes("ourVsOthers") && (copy.ourLabel || copy.othersLabel)) {
+    textElements.push(`Dos encabezados de columna: izquierda "${copy.ourLabel || "NOSOTROS"}", derecha "${copy.othersLabel || "OTROS"}"`);
+  }
+  if (spec.textElements.includes("rating")) {
+    textElements.push(`Cinco estrellas doradas grandes`);
+  }
+  if (spec.textElements.includes("bullets") && copy.bullets.length) {
+    const limited = copy.bullets.slice(0, spec.maxBullets);
+    textElements.push(`${limited.length} textos cortos: ${limited.map((b) => `"${b}"`).join(", ")}`);
+  }
+  if (spec.textElements.includes("trustBadges") && copy.badges.length) {
+    const limited = copy.badges.slice(0, 3);
+    textElements.push(`${limited.length} sellos pequeños: ${limited.map((b) => `"${b}"`).join(", ")}`);
+  }
+  if (spec.textElements.includes("stepNumbers") && copy.steps.length) {
+    const limited = copy.steps.slice(0, 3);
+    textElements.push(`Tres pasos numerados (1, 2, 3) con etiquetas: ${limited.map((b) => `"${b}"`).join(", ")}`);
+  }
+  if (spec.textElements.includes("cta") && copy.cta) {
+    textElements.push(`Un botón de acción que dice: "${copy.cta}"`);
   }
 
-  return [
-    `Vertical 9:16 advertising banner for ${market} ecommerce.`,
-    sectionDesc,
-    `Product: ${copy.productDescription || body.productName || "the product"}.`,
-    `Layout: ${copy.layoutDescription}`,
-    `Visual style: ${copy.visualStyle}`,
-    "",
-    "TEXT TO RENDER (must appear exactly as written, all in correct Spanish, perfectly spelled):",
-    textsToRender.join(". "),
-    ".",
-    "",
-    "High-end commercial advertising photography. Sharp typography, clean kerning, perfect letterforms. Professional retouching. No watermarks. No English text. No misspellings. Photorealistic product.",
-  ].filter(Boolean).join(" ");
+  const textList = textElements.map((t, i) => `${i + 1}. ${t}`).join("\n");
+
+  return `Crea un banner publicitario vertical 9:16 (1080x1920) en español, calidad comercial premium.
+
+DISEÑO: ${spec.visualDescription}
+${copy.layoutDescription ? `Disposición: ${copy.layoutDescription}` : ""}
+
+PRODUCTO A MOSTRAR: ${copy.productDescription || body.productName || ""}. Debe verse fotorealista, nítido, con iluminación profesional de estudio.
+
+ESTILO VISUAL: ${copy.visualStyle || "moderno, limpio, profesional"}
+
+TEXTO EN EL BANNER — RENDERIZA EXACTAMENTE ESTAS PALABRAS EN ESPAÑOL CORRECTO, NADA MÁS:
+${textList}
+
+REGLAS ESTRICTAS:
+- Renderiza ÚNICAMENTE los textos listados arriba. NO añadas ningún otro texto.
+- Cada palabra debe estar PERFECTAMENTE escrita en español, letra por letra.
+- NO inventes palabras. NO escribas texto en inglés.
+- Tipografía clara, bold, legible. Kerning perfecto.
+- Sin marcas de agua. Sin logos extra. Sin texto decorativo random.
+- Fotografía publicitaria de alta gama. 4K, nítido, profesional.`;
 }
 
 // ─── Image generation calls ───────────────────────────────────────────────────
@@ -348,7 +436,7 @@ export async function POST(req: NextRequest) {
 
   // ── Stage 1: Claude Vision + Spanish copywriting ───────────────────────────
   const copy = await analyzeAndWriteCopy(body);
-  const prompt = buildIdeogramPrompt(body, copy);
+  const prompt = buildImagePrompt(body, copy);
 
   const falKey = user.user_metadata?.ai_key_fal;
   const openaiKey = user.user_metadata?.ai_key_openai;
