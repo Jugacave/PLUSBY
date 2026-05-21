@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -9,6 +10,12 @@ import {
   ChevronRight, RefreshCw, AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+
+// Dynamic import — html-to-image is browser-only
+const BannerCanvas = dynamic(() => import("@/components/banner-canvas/BannerCanvas"), { ssr: false });
+
+// Sections that have HTML templates (perfect text + real product photo)
+const HTML_TEMPLATE_SECTIONS = new Set(["hero", "beneficios", "oferta", "antes_despues"]);
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -713,6 +720,148 @@ function DesignGalleryModal({ initialSectionId, templates, loadingSections, curr
   );
 }
 
+// ─── Banner Mode: BannerHTMLCard (HTML template system — perfect text) ────────
+
+interface BannerCopyData {
+  headline: string; subheadline: string; cta: string; saleLabel: string;
+  bullets: string[]; steps: string[]; badges: string[]; ourLabel: string; othersLabel: string;
+  primaryColor: string; secondaryColor: string; bgColor: string; accentColor: string;
+}
+
+function BannerHTMLCard({ section, config, productName }: {
+  section: { id: string; label: string; icon: string };
+  config: BannerConfig;
+  productName: string;
+}) {
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copy, setCopy] = useState<BannerCopyData | null>(null);
+  const [expanded, setExpanded] = useState(true);
+
+  const productImageUrl = config.refImages.find((u): u is string => !!u && u.startsWith("http")) ?? null;
+
+  async function handleGenerate() {
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/landing/generate-banner-copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sectionType: section.id,
+          productName,
+          productDescription: config.description,
+          productBenefits: config.benefits.filter(Boolean),
+          productProblems: config.problems.filter(Boolean),
+          productIngredients: config.ingredients.filter(Boolean),
+          productDifferentiator: config.differentiator,
+          angle: config.selectedAngle,
+          country: config.country,
+          priceSale: config.priceSale,
+          priceOriginal: config.priceOriginal,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setCopy({
+          headline: data.headline,
+          subheadline: data.subheadline ?? "",
+          cta: data.cta,
+          saleLabel: data.saleLabel ?? "",
+          bullets: data.bullets ?? [],
+          steps: data.steps ?? [],
+          badges: data.badges ?? [],
+          ourLabel: data.ourLabel ?? "",
+          othersLabel: data.othersLabel ?? "",
+          primaryColor: data.primaryColor ?? (config.colors[0] || "#7C3AED"),
+          secondaryColor: data.secondaryColor ?? (config.colors[1] || "#1C1C26"),
+          bgColor: data.bgColor ?? "#0A0A0F",
+          accentColor: data.accentColor ?? "#FFFFFF",
+        });
+      } else {
+        setError(data.error ?? "Error al generar");
+      }
+    } catch {
+      setError("Error de conexión");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  const bannerData = copy ? {
+    productName,
+    productImageUrl,
+    headline: copy.headline,
+    subheadline: copy.subheadline,
+    cta: copy.cta,
+    saleLabel: copy.saleLabel,
+    bullets: section.id === "modo_uso" ? copy.steps : section.id === "logistica" || section.id === "autoridad" ? copy.badges : copy.bullets,
+    priceSale: config.priceSale,
+    priceOriginal: config.priceOriginal,
+    primaryColor: copy.primaryColor,
+    secondaryColor: copy.secondaryColor,
+    bgColor: copy.bgColor,
+    accentColor: copy.accentColor,
+    sectionType: section.id,
+    country: config.country,
+  } : null;
+
+  return (
+    <div className="bg-[#13131A] border border-[#2A2A3A] rounded-xl overflow-hidden hover:border-[#3A3A4A] transition-colors">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#1C1C26]">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">{section.icon}</span>
+          <p className="text-[#F0F0F5] font-semibold text-xs">{section.label}</p>
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[rgba(124,58,237,0.15)] text-[#A78BFA] font-medium border border-[rgba(124,58,237,0.3)]">
+            ✦ Template
+          </span>
+        </div>
+        <button onClick={() => setExpanded((p) => !p)} className="text-[#555568] hover:text-[#8888A0]">
+          {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="p-3 space-y-3">
+          {error && (
+            <div className="px-2 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-1.5">
+              <AlertCircle size={11} className="text-red-400 shrink-0" />
+              <p className="text-red-400 text-[10px]">{error}</p>
+            </div>
+          )}
+
+          {!copy ? (
+            <div className="flex flex-col items-center gap-3 py-6">
+              <p className="text-[#555568] text-[11px] text-center">
+                Genera el banner con tu foto de producto + texto perfecto
+              </p>
+              <button onClick={handleGenerate} disabled={generating}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] text-white font-semibold text-xs hover:opacity-90 disabled:opacity-60 transition-all">
+                {generating ? <><Loader2 size={13} className="animate-spin" />Generando copy...</> : <><Sparkles size={13} />Generar Banner</>}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Preview via BannerCanvas */}
+              <BannerCanvas
+                data={bannerData!}
+                sectionType={section.id}
+                showSelector
+              />
+              {/* Regenerate */}
+              <button onClick={handleGenerate} disabled={generating}
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] text-[10px] font-medium transition-colors disabled:opacity-50">
+                {generating ? <><Loader2 size={10} className="animate-spin" />Regenerando...</> : <><RefreshCw size={10} />Nueva variación de copy</>}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Banner Mode: BannerImageCard ─────────────────────────────────────────────
 
 function BannerImageCard({ section, config, images, externalGenerating, templates, loadingSections, productName, onImageGenerated, onStyleChange, onOpenGallery }: {
@@ -1341,28 +1490,37 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
         )}
 
         <div className="space-y-2">
-          {BANNER_SECTIONS.map((section) => (
-            <BannerImageCard
-              key={section.id}
-              section={section}
-              config={config}
-              images={generatedImages[section.id] ?? []}
-              externalGenerating={pendingSections.has(section.id)}
-              templates={templates}
-              loadingSections={loadingSections}
-              productName={initialProduct}
-              onImageGenerated={(url) => {
-                setGeneratedImages((p) => ({
-                  ...p,
-                  [section.id]: [url, ...(p[section.id] ?? [])],
-                }));
-              }}
-              onStyleChange={(styleId) => {
-                upd({ sectionStyles: { ...config.sectionStyles, [section.id]: styleId } });
-              }}
-              onOpenGallery={() => setGalleryForSection(section.id)}
-            />
-          ))}
+          {BANNER_SECTIONS.map((section) =>
+            HTML_TEMPLATE_SECTIONS.has(section.id) ? (
+              <BannerHTMLCard
+                key={section.id}
+                section={section}
+                config={config}
+                productName={initialProduct}
+              />
+            ) : (
+              <BannerImageCard
+                key={section.id}
+                section={section}
+                config={config}
+                images={generatedImages[section.id] ?? []}
+                externalGenerating={pendingSections.has(section.id)}
+                templates={templates}
+                loadingSections={loadingSections}
+                productName={initialProduct}
+                onImageGenerated={(url) => {
+                  setGeneratedImages((p) => ({
+                    ...p,
+                    [section.id]: [url, ...(p[section.id] ?? [])],
+                  }));
+                }}
+                onStyleChange={(styleId) => {
+                  upd({ sectionStyles: { ...config.sectionStyles, [section.id]: styleId } });
+                }}
+                onOpenGallery={() => setGalleryForSection(section.id)}
+              />
+            )
+          )}
         </div>
 
         <div className="flex items-center justify-center gap-2 py-6 mt-2">
