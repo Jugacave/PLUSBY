@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import {
   ArrowLeft, Sparkles, Eye, Globe, GripVertical, Pencil, Trash2, Plus,
   Check, Loader2, ChevronDown, ChevronUp, Copy, X, Upload, Download,
-  ChevronRight, RefreshCw, AlertCircle,
+  ChevronRight, RefreshCw, AlertCircle, Wand2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -733,6 +733,8 @@ function BannerHTMLCard({ section, config, productName }: {
   config: BannerConfig;
   productName: string;
 }) {
+  const htmlCardParams = useParams();
+  const landingId = htmlCardParams?.id as string;
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copy, setCopy] = useState<BannerCopyData | null>(null);
@@ -817,9 +819,15 @@ function BannerHTMLCard({ section, config, productName }: {
             ✦ Template
           </span>
         </div>
-        <button onClick={() => setExpanded((p) => !p)} className="text-[#555568] hover:text-[#8888A0]">
-          {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <Link href={`/landing/${landingId}/studio/${section.id}`}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[rgba(124,58,237,0.4)] bg-[rgba(124,58,237,0.10)] text-[#A78BFA] text-[9px] font-semibold hover:bg-[rgba(124,58,237,0.18)] transition-colors">
+            <Wand2 size={10} />Studio
+          </Link>
+          <button onClick={() => setExpanded((p) => !p)} className="text-[#555568] hover:text-[#8888A0]">
+            {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
+        </div>
       </div>
 
       {expanded && (
@@ -876,6 +884,8 @@ function BannerImageCard({ section, config, images, externalGenerating, template
   onStyleChange: (styleId: string) => void;
   onOpenGallery: () => void;
 }) {
+  const cardParams = useParams();
+  const landingId = cardParams?.id as string;
   const [localGenerating, setLocalGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewIdx, setPreviewIdx] = useState(0);
@@ -977,6 +987,10 @@ function BannerImageCard({ section, config, images, externalGenerating, template
               )}
               <span className="truncate">{selectedTemplate ? selectedTemplate.name : "Elegir plantilla"}</span>
             </button>
+            <Link href={`/landing/${landingId}/studio/${section.id}`}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[rgba(124,58,237,0.4)] bg-[rgba(124,58,237,0.10)] text-[#A78BFA] text-[9px] font-semibold hover:bg-[rgba(124,58,237,0.18)] transition-colors">
+              <Wand2 size={10} />Studio
+            </Link>
             <button onClick={handleGenerate} disabled={generating}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-white text-[10px] font-semibold transition-colors disabled:opacity-60"
               style={{ background: "#7C3AED" }}>
