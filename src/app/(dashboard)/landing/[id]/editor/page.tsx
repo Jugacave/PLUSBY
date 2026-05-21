@@ -90,7 +90,7 @@ const DEFAULT_BANNER_CONFIG: BannerConfig = {
   colors: ["#FF6B35", "#1C1C26", "#F0F0F5"],
   font: "Poppins",
   country: "CO",
-  aiModel: "fal-flux-ultra",
+  aiModel: "openai-gpt-image-1",
   priceSale: "",
   priceOriginal: "",
   priceBundle2: "",
@@ -148,13 +148,14 @@ const COUNTRIES = [
 ];
 
 const AI_MODELS = [
-  { id: "fal-flux-ultra",  label: "Flux Pro Ultra",       price: "~$0.06", desc: "⭐ Más realista · Recomendado" },
-  { id: "fal-imagen3",     label: "Google Imagen 3",       price: "~$0.04", desc: "Google · Fotorrealismo extremo" },
-  { id: "fal-ideogram2",   label: "Ideogram v2",           price: "~$0.08", desc: "Texto en imagen · Banners con copy" },
-  { id: "fal-flux-pro",    label: "Flux Pro 1.1",          price: "~$0.05", desc: "Alta calidad · 4K" },
-  { id: "fal-flux-dev",    label: "Flux Dev",              price: "~$0.03", desc: "Rápido · Ideal para volumen" },
-  { id: "openai-dalle3",   label: "DALL·E 3",              price: "~$0.04", desc: "OpenAI · Requiere key OpenAI" },
-  { id: "fal-sd-xl",       label: "Stable Diffusion XL",   price: "~$0.02", desc: "Creativo · Versátil" },
+  { id: "openai-gpt-image-1", label: "GPT Image 1",          price: "~$0.04", desc: "⭐ OpenAI · Mejor texto · Recomendado" },
+  { id: "fal-ideogram2",      label: "Ideogram v3",           price: "~$0.08", desc: "Fal.ai · Ideal para banners con copy" },
+  { id: "fal-flux-ultra",     label: "Flux Pro Ultra",        price: "~$0.06", desc: "Fal.ai · Fotorrealismo extremo" },
+  { id: "fal-imagen3",        label: "Google Imagen 3",       price: "~$0.04", desc: "Fal.ai · Google · Alta calidad" },
+  { id: "fal-flux-pro",       label: "Flux Pro 1.1",          price: "~$0.05", desc: "Fal.ai · Alta calidad · 4K" },
+  { id: "fal-flux-dev",       label: "Flux Dev",              price: "~$0.03", desc: "Fal.ai · Rápido · Volumen" },
+  { id: "openai-dalle3",      label: "DALL·E 3 HD",           price: "~$0.04", desc: "OpenAI · Requiere key OpenAI" },
+  { id: "fal-sd-xl",          label: "Stable Diffusion XL",   price: "~$0.02", desc: "Fal.ai · Creativo · Versátil" },
 ];
 
 const FONTS = [
