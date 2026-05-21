@@ -714,13 +714,14 @@ function DesignGalleryModal({ initialSectionId, templates, loadingSections, curr
 
 // ─── Banner Mode: BannerImageCard ─────────────────────────────────────────────
 
-function BannerImageCard({ section, config, images, externalGenerating, templates, loadingSections, onImageGenerated, onStyleChange, onOpenGallery }: {
+function BannerImageCard({ section, config, images, externalGenerating, templates, loadingSections, productName, onImageGenerated, onStyleChange, onOpenGallery }: {
   section: { id: string; label: string; icon: string };
   config: BannerConfig;
   images: string[];
   externalGenerating?: boolean;
   templates: Record<string, BannerTemplate[]>;
   loadingSections: Set<string>;
+  productName: string;
   onImageGenerated: (url: string) => void;
   onStyleChange: (styleId: string) => void;
   onOpenGallery: () => void;
@@ -744,13 +745,19 @@ function BannerImageCard({ section, config, images, externalGenerating, template
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sectionType: section.id,
+          templateUrl: selectedTemplate?.imageUrl,
+          productImages: config.refImages.filter((u): u is string => !!u && u.startsWith("http")),
+          productName,
           productDescription: config.description,
+          productBenefits: config.benefits.filter(Boolean),
+          productProblems: config.problems.filter(Boolean),
+          productIngredients: config.ingredients.filter(Boolean),
+          productDifferentiator: config.differentiator,
           angle: config.selectedAngle,
           colors: config.colors,
           font: config.font,
           country: config.country,
           aiModel: config.aiModel,
-          styleKeywords: selectedTemplateId ? templateKeywords(selectedTemplateId) : "",
           priceSale: config.priceSale,
           priceOriginal: config.priceOriginal,
         }),
@@ -922,24 +929,34 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
     const BATCH = 2;
     const queue = [...BANNER_SECTIONS];
 
+    const productImages = config.refImages.filter((u): u is string => !!u && u.startsWith("http"));
+
     while (queue.length > 0) {
       const batch = queue.splice(0, BATCH);
       await Promise.all(batch.map(async (section) => {
         const styleId = config.sectionStyles[section.id];
-        const styleKeywords = styleId ? templateKeywords(styleId) : "";
+        const templateForSection = styleId
+          ? templates[section.id]?.find((t) => t.id === styleId)
+          : null;
         try {
           const res = await fetch("/api/landing/generate-banner-image", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               sectionType: section.id,
+              templateUrl: templateForSection?.imageUrl,
+              productImages,
+              productName: initialProduct,
               productDescription: config.description,
+              productBenefits: config.benefits.filter(Boolean),
+              productProblems: config.problems.filter(Boolean),
+              productIngredients: config.ingredients.filter(Boolean),
+              productDifferentiator: config.differentiator,
               angle,
               colors: config.colors,
               font: config.font,
               country: config.country,
               aiModel: config.aiModel,
-              styleKeywords,
               priceSale: config.priceSale,
               priceOriginal: config.priceOriginal,
             }),
@@ -1310,6 +1327,7 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
               externalGenerating={pendingSections.has(section.id)}
               templates={templates}
               loadingSections={loadingSections}
+              productName={initialProduct}
               onImageGenerated={(url) => {
                 setGeneratedImages((p) => ({
                   ...p,
