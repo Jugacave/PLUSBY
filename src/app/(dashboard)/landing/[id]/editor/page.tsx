@@ -47,14 +47,38 @@ interface BannerConfig {
   sectionStyles: Record<string, string>; // sectionId → styleId
 }
 
-interface BannerStyle {
-  id: string;
-  name: string;
-  desc: string;
-  gradient: string;
-  accentColor: string;
-  textColor: string;
-  promptKeywords: string;
+interface BannerTemplate {
+  id: string;        // filename without extension
+  name: string;      // prettified for display
+  imageUrl: string;  // public Supabase URL
+}
+
+const TEMPLATE_BUCKET_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/banner-templates`;
+
+function prettifyTemplateName(filename: string): string {
+  return filename
+    .replace(/\.[^.]+$/, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function templateKeywords(id: string): string {
+  return id.replace(/[-_]+/g, " ").trim();
+}
+
+async function fetchTemplatesForSection(sectionId: string): Promise<BannerTemplate[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.storage
+    .from("banner-templates")
+    .list(sectionId, { limit: 200, sortBy: { column: "name", order: "asc" } });
+  if (error || !data) return [];
+  return data
+    .filter((f) => /\.(jpe?g|png|webp)$/i.test(f.name))
+    .map((f) => ({
+      id: f.name.replace(/\.[^.]+$/, ""),
+      name: prettifyTemplateName(f.name),
+      imageUrl: `${TEMPLATE_BUCKET_URL}/${sectionId}/${f.name}`,
+    }));
 }
 
 const DEFAULT_BANNER_CONFIG: BannerConfig = {
@@ -527,1282 +551,26 @@ function CompactList({ label, items, onChange, placeholder }: {
   );
 }
 
-// ─── Banner Mode: Estilos Visuales ────────────────────────────────────────────
-
-const HERO_STYLES: BannerStyle[] = [
-  {
-    id: "purple-glow",
-    name: "Purple Glow",
-    desc: "Púrpura oscuro · Magia y lujo",
-    gradient: "radial-gradient(ellipse at 50% 70%, #4c1d95 0%, #2d0a6b 40%, #0f0118 100%)",
-    accentColor: "#A78BFA",
-    textColor: "#fff",
-    promptKeywords: "deep purple violet atmospheric gradient background, glowing magical bokeh light particles floating, product on illuminated stage platform, circular icon badges with purple gradient glow, bold white and purple typography, decorative nature leaves floating, premium luxury advertisement, dramatic spotlight chromatic lighting, vibrant glowing accents, product hero shot",
-  },
-  {
-    id: "pink-romance",
-    name: "Pink Romance",
-    desc: "Rosa suave · Romántico · Femenino",
-    gradient: "radial-gradient(ellipse at 50% 40%, #fdf2f8 0%, #fce7f3 50%, #f9a8d4 100%)",
-    accentColor: "#EC4899",
-    textColor: "#831843",
-    promptKeywords: "soft blush pink rose gradient background, romantic dreamy bokeh flower petals scattered, subtle heart shape element, product on golden hexagonal platform with sparkle glow, pink circular badge icons with illustrations, elegant cursive mixed with bold typography, lens flare sparkle effects, warm feminine pastel atmosphere, luxury beauty gift advertisement",
-  },
-  {
-    id: "sky-kids",
-    name: "Sky & Kids",
-    desc: "Azul cielo · Infantil · Familiar",
-    gradient: "linear-gradient(180deg, #bfdbfe 0%, #93c5fd 30%, #dbeafe 70%, #eff6ff 100%)",
-    accentColor: "#F97316",
-    textColor: "#1e3a5f",
-    promptKeywords: "bright sky blue gradient background with fluffy white clouds, rainbow arc element, cheerful children family lifestyle photography, product on wooden platform stage, circular icon badges with orange accents, bold orange and dark blue typography with price badge strikethrough, floating hearts or balloons decorative elements, warm sunny cheerful family advertisement",
-  },
-  {
-    id: "green-nature",
-    name: "Green Nature",
-    desc: "Verde natural · Salud · Orgánico",
-    gradient: "radial-gradient(ellipse at 50% 30%, #d1fae5 0%, #6ee7b7 30%, #065f46 100%)",
-    accentColor: "#10B981",
-    textColor: "#fff",
-    promptKeywords: "rich green gradient background with tropical leaves and natural foliage, health wellness product photography, golden circular trust badge 100% natural seal, circular icon badges with green gradient, bold white and green typography with golden price badge, before and after transformation split composition, fresh clean natural organic health advertisement",
-  },
-  {
-    id: "teal-aqua",
-    name: "Teal Aqua",
-    desc: "Turquesa · Fresco · Limpieza",
-    gradient: "radial-gradient(ellipse at 40% 30%, #ccfbf1 0%, #5eead4 40%, #0f766e 100%)",
-    accentColor: "#14B8A6",
-    textColor: "#fff",
-    promptKeywords: "bright teal cyan aqua gradient background, fresh clean health product photography, before and after split layout with arrow transformation, circular teal icon badges with white icons, bold white typography with teal dark price badge, floating capsules or liquid drops, clean fresh deodorant supplement health advertisement, light airy atmosphere",
-  },
-  {
-    id: "sports-blue",
-    name: "Sports Blue",
-    desc: "Azul eléctrico · Deporte · Alto rendimiento",
-    gradient: "linear-gradient(160deg, #1d4ed8 0%, #1e40af 40%, #1e3a8a 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "vibrant electric blue gradient background with lightning bolt energy effects, athlete model holding product dynamic pose, fruit splash and liquid splash effects, circular spec badges with blue gradient, bold white blue red typography large headline, price offer badge, bottom trust icons strip pago seguro garantia envio gratis, high energy sports nutrition supplement advertisement",
-  },
-  {
-    id: "sports-blue-white",
-    name: "Blue & White Sport",
-    desc: "Azul + blanco · Geométrico · Fresco",
-    gradient: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #f0f9ff 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e3a8a",
-    promptKeywords: "bright blue and white geometric diagonal split background, athlete model with product studio clean photography, circular icon feature badges with blue outline, bold blue white typography, clean infographic feature list layout, product label clearly visible, professional sports supplement health advertisement, fresh modern design",
-  },
-  {
-    id: "dark-navy-gold",
-    name: "Dark Navy Gold",
-    desc: "Azul marino oscuro · Dorado · Premium tech",
-    gradient: "radial-gradient(ellipse at 50% 30%, #1e3a5f 0%, #0f1f3a 50%, #060d1a 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "deep dark navy blue gradient background, golden particle ion effects streaming from product, hand holding product dramatic product reveal, star rating and social proof top header, bold white and gold typography extra large headline, price badge with strikethrough gold accent, circular spec icons with gold borders left sidebar, premium technology product advertisement",
-  },
-  {
-    id: "dark-power",
-    name: "Dark Power",
-    desc: "Gris oscuro · Oro · Alto impacto",
-    gradient: "radial-gradient(ellipse at 50% 50%, #3a3a3a 0%, #1a1a1a 50%, #080808 100%)",
-    accentColor: "#F59E0B",
-    textColor: "#fff",
-    promptKeywords: "dark charcoal gray background with radial sunburst light rays from center, bold white and orange gold typography massive headline, price badge strikethrough urgency, four circular spec icons floating around product, dynamic hero product shot center stage, bottom brand bar strip yellow red contrasting, high energy industrial commercial advertisement power aesthetic",
-  },
-  {
-    id: "bold-aggressive",
-    name: "Bold Aggressive",
-    desc: "Negro intenso · Rojo · Dramático",
-    gradient: "radial-gradient(ellipse at 50% 100%, #450a0a 0%, #1a0000 40%, #0a0a0a 100%)",
-    accentColor: "#DC2626",
-    textColor: "#fff",
-    promptKeywords: "deep black background with red volcanic lava rock texture accents, chrome metallic product photography dramatic lighting, heavy bold white and red headline typography, five star rating social proof customer count badge, price strikethrough urgency deal badge, feature icons left sidebar list layout, circular sticker badge accent, masculine aggressive powerful aesthetic, high contrast dramatic advertisement",
-  },
-  {
-    id: "warm-lifestyle",
-    name: "Warm Lifestyle",
-    desc: "Beige cálido · Mascotas · Familia",
-    gradient: "radial-gradient(ellipse at 50% 40%, #fef3c7 0%, #fde68a 30%, #d97706 100%)",
-    accentColor: "#DC2626",
-    textColor: "#1a1a1a",
-    promptKeywords: "warm golden beige neutral background, lifestyle photography with pet or family model, product displayed prominently with pet or person, red price urgency badge with bold price, circular feature icon badges with red green accents, bold dark typography, warm cozy atmosphere, feature list left sidebar, lifestyle product advertisement homey comfortable feel",
-  },
-  {
-    id: "space-galaxy",
-    name: "Space Galaxy",
-    desc: "Galaxia · Cosmos · Wow factor",
-    gradient: "radial-gradient(ellipse at 50% 50%, #312e81 0%, #1e1b4b 40%, #030712 100%)",
-    accentColor: "#818CF8",
-    textColor: "#fff",
-    promptKeywords: "deep space galaxy background with nebula colors teal blue pink purple, floating planets and stars, product or character centered floating in space, cosmic glowing light effects, star rating badge top, bold white and cyan glowing typography with price, magical universe atmosphere, wow factor premium product advertisement cosmic futuristic",
-  },
-  {
-    id: "outdoor-adventure",
-    name: "Outdoor Adventure",
-    desc: "Montaña · Atardecer · Acción",
-    gradient: "linear-gradient(180deg, #92400e 0%, #b45309 30%, #1c1917 100%)",
-    accentColor: "#EF4444",
-    textColor: "#fff",
-    promptKeywords: "mountain outdoor landscape background golden sunset dusty terrain, action product photography dramatic natural light, red and dark price badge with arrow, three feature badges rounded rectangle red background, bold white and red metallic chrome typography, product hero shot outdoor adventure setting, athletic outdoor adventure sport advertisement dramatic composition",
-  },
-];
-
-const OFERTA_STYLES: BannerStyle[] = [
-  {
-    id: "neon-gym-dark",
-    name: "Neon Gym Dark",
-    desc: "Negro · Neón rojo+azul · Atleta",
-    gradient: "radial-gradient(ellipse at 50% 80%, #1a0a0a 0%, #0a0a14 50%, #000005 100%)",
-    accentColor: "#EF4444",
-    textColor: "#fff",
-    promptKeywords: "dark black gym background with neon red and blue LED light trails and hexagon grid lines, muscular athlete holding product, three pricing bundle columns with red header badges Basic Duo Pro, bold white red blue typography large headline, product visible in each column, bottom payment logos strip, high energy sports supplement offer advertisement",
-  },
-  {
-    id: "sports-blue-grid",
-    name: "Sports Blue Grid",
-    desc: "Azul gym · Profesional · 3 columnas",
-    gradient: "linear-gradient(180deg, #0f1f3a 0%, #1e3a5f 40%, #0a0a14 100%)",
-    accentColor: "#3B82F6",
-    textColor: "#fff",
-    promptKeywords: "dark blue gym mirror background with overhead lighting, two athletes man and woman with product, three pricing columns with blue-purple gradient header badges Pack Basico Pack Duo Pack Pro, bold white blue typography, product images in each column, strikethrough original price and sale price red, free shipping icon, payment logos footer mercadopago mastercard visa, professional sports bundle offer",
-  },
-  {
-    id: "navy-fire-dynamic",
-    name: "Navy Fire Dynamic",
-    desc: "Azul marino · Atleta corriendo · Energía",
-    gradient: "radial-gradient(ellipse at 50% 0%, #1e3a8a 0%, #1e1b4b 50%, #050510 100%)",
-    accentColor: "#DC2626",
-    textColor: "#fff",
-    promptKeywords: "dark navy blue gradient background with dynamic running female athlete on fire energy aura, three pricing cards red and blue rounded, product quantity per card 1x 2x 3x with bold price, red CTA button Llevalo Ahora on each card, five star rating strip and customer count testimonial below, bottom icons strip delivery guarantee electrolytes, high energy sports nutrition bundle offer advertisement",
-  },
-  {
-    id: "blue-white-vivid",
-    name: "Blue White Vivid",
-    desc: "Azul brillante · Blanco · Fruta flotante",
-    gradient: "linear-gradient(160deg, #1d4ed8 0%, #2563eb 40%, #dbeafe 80%, #f0f9ff 100%)",
-    accentColor: "#1D4ED8",
-    textColor: "#1e3a8a",
-    promptKeywords: "bright vivid blue-to-white gradient background, female athlete running with product, floating fruit kiwi strawberry splash elements, three dark navy blue pricing cards rounded corners with white price text, product images clearly visible in each card, CTA button Llevalo Ahora on each card, five star review section below, bottom icons delivery guarantee formula alto rendimiento, fresh vivid sports bundle offer",
-  },
-  {
-    id: "clean-white-minimal",
-    name: "Clean White Minimal",
-    desc: "Blanco limpio · Navy · Minimalista",
-    gradient: "linear-gradient(180deg, #f8fafc 0%, #e0f2fe 50%, #bfdbfe 100%)",
-    accentColor: "#1D4ED8",
-    textColor: "#0f172a",
-    promptKeywords: "clean white light background with subtle blue gradient at bottom, female athlete in running pose lifestyle photography, product prominently displayed with hexagonal ingredient spec badges cluster dextrin electrolyte matrix flavor, product specifications callouts, two pricing CTA buttons horizontal layout Comprar 1 Bote and Comprar 2 Botes, clean price with was strikethrough, minimal navy blue typography, trust badge header strip, professional clean minimal offer advertisement",
-  },
-  {
-    id: "outdoor-red-bold",
-    name: "Outdoor Red Bold",
-    desc: "Aventura exterior · Rojo bold · Pago footer",
-    gradient: "linear-gradient(180deg, #7c2d12 0%, #9a3412 30%, #1c0a00 100%)",
-    accentColor: "#EF4444",
-    textColor: "#fff",
-    promptKeywords: "outdoor mountain adventure earthy terrain background with cycling product, three bundle pricing columns with red header badges bold white text, red CTA button on each column, delivery truck free shipping icon in each column, bottom payment methods logos strip pagos contraentrega mercadopago mastercard visa, bold white red typography large headline product name, adventure outdoor bundle deal advertisement",
-  },
-  {
-    id: "warm-amber-urgency",
-    name: "Warm Amber Urgency",
-    desc: "Ámbar dorado · Hogar · Urgencia stock",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #f59e0b 50%, #78350f 100%)",
-    accentColor: "#F59E0B",
-    textColor: "#1a1a1a",
-    promptKeywords: "warm golden amber home office lifestyle background soft lighting, product displayed on desk with lifestyle context, three pricing columns warm orange buttons, stock availability progress bar urgency element, bold dark typography with orange accent price, feature list alongside bundles, warm cozy home ambiance bundle offer advertisement",
-  },
-  {
-    id: "dark-gold-premium",
-    name: "Dark Gold Premium",
-    desc: "Azul marino + partículas doradas · Lujo",
-    gradient: "radial-gradient(ellipse at 50% 30%, #1e3a5f 0%, #0f1f3a 50%, #030712 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "deep dark navy blue background with golden shimmering particle effects streaming, premium product with gold particle aura, stacked vertical bundle tiers with gold border cards dark background, gold header badge on best value tier, bold white and gold typography premium large headline, price strikethrough original in gold, delivery truck guarantee icons, premium luxury bundle offer advertisement high end",
-  },
-  {
-    id: "neon-green-winner",
-    name: "Neon Green Winner",
-    desc: "Negro · Verde neón · Columna ganadora",
-    gradient: "radial-gradient(ellipse at 50% 50%, #052e16 0%, #0a0a0a 60%, #000000 100%)",
-    accentColor: "#22C55E",
-    textColor: "#fff",
-    promptKeywords: "black dark background with neon green glow energy aura, sports nutrition supplement product center, three pricing columns with middle winner column highlighted in neon green border glow Mejor Valor label, white basic and winner columns, bold white and neon green typography, product image in each column, pricing strikethrough deal, high contrast neon fitness supplement bundle offer advertisement",
-  },
-  {
-    id: "blush-feminine-soft",
-    name: "Blush Feminine Soft",
-    desc: "Rosa blush · Pétalos · Oferta femenina",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fff1f2 0%, #fecdd3 50%, #fb7185 100%)",
-    accentColor: "#F43F5E",
-    textColor: "#881337",
-    promptKeywords: "soft blush pink background with rose petals bokeh scattered romantic, feminine lifestyle product photography, two pricing offer cards side by side rounded corners pink gradient, elegant pink rose accent typography, product image in each card, price badge with discount, feminine gift or beauty wellness product bundle offer advertisement",
-  },
-  {
-    id: "space-galaxy-offer",
-    name: "Space Galaxy Offer",
-    desc: "Galaxia profunda · Dorado · Premium stacked",
-    gradient: "radial-gradient(ellipse at 50% 50%, #1e1b4b 0%, #0f0a2a 50%, #020108 100%)",
-    accentColor: "#818CF8",
-    textColor: "#fff",
-    promptKeywords: "deep space galaxy nebula background blue purple teal cosmic atmosphere, premium product floating in space with glowing light halo, stacked vertical pricing tiers with gold border and indigo border alternating, gold badge Best Value Mejor Valor on premium tier, bold white and gold indigo typography, cosmic premium luxury bundle offer advertisement",
-  },
-  {
-    id: "red-split-athlete",
-    name: "Red Split Athlete",
-    desc: "Rojo + blanco split · Atleta · Beneficios",
-    gradient: "linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #f8fafc 50%, #ffffff 100%)",
-    accentColor: "#DC2626",
-    textColor: "#fff",
-    promptKeywords: "bold red and white diagonal split background, muscular athlete model with product on red side, three pricing columns named with benefit headings Equilibrio Energia Bienestar, red header with white text on each column, circular dose amount badge, product image per column, black price text on white card background, trust icons strip bottom certification badges, strong contrast red white bold bundle offer advertisement",
-  },
-];
-
-const ANTES_DESPUES_STYLES: BannerStyle[] = [
-  {
-    id: "romantic-split",
-    name: "Romantic Split",
-    desc: "Gris frío → Dorado cálido · Romance · Lifestyle",
-    gradient: "linear-gradient(135deg, #b0bec5 0%, #78909c 50%, #d4a017 50%, #8B6914 100%)",
-    accentColor: "#D4A017",
-    textColor: "#fff",
-    promptKeywords: "cold desaturated gray blue BEFORE side vs warm romantic golden light AFTER side, diagonal split composition with thin gold dividing line, lifestyle couple photography romantic dinner candles roses, product gift box or beauty item displayed, dark bottom section with gold serif headline and testimonial quote, percentage stat social proof, emotional transformation advertisement",
-  },
-  {
-    id: "outdoor-mountain-bridge",
-    name: "Outdoor Mountain",
-    desc: "Paisaje naturaleza · Producto al centro · Oro",
-    gradient: "linear-gradient(180deg, #4a6741 0%, #2d4a2a 40%, #1a2d18 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "dramatic outdoor mountain landscape background split left vs right, ANTES tired person hunched on mountain left side vs DESPUÉS triumphant confident person standing tall right side, product supplement jar centered bridging between both scenes on stone platform glowing particles, gold text strip banner bottom with bold headline, testimonial quote and percentage stat, outdoor adventure transformation advertisement",
-  },
-  {
-    id: "dark-problem-solution",
-    name: "Problem / Solution",
-    desc: "Negro · Columna problema vs producto · Oro",
-    gradient: "linear-gradient(90deg, #0d1117 0%, #0d1117 50%, #1a1a2e 100%)",
-    accentColor: "#F59E0B",
-    textColor: "#fff",
-    promptKeywords: "dark black background diagonal split blue and red accent corners, left column PROBLEMA with stacked circular photo badges showing problems lifestyle issues with dark red pill labels, right side SOLUCIÓN with large product jar center and fruit or ingredient splash, bottom text block with product name bullet point benefits specs, bold headline top asking question urgency, red and blue contrast sports supplement transformation layout",
-  },
-  {
-    id: "peach-multishot-skin",
-    name: "Peach Multishot",
-    desc: "Melocotón · Múltiples pares piel · Femenino",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fde8d8 0%, #f5c6a8 50%, #e8956a 100%)",
-    accentColor: "#C2410C",
-    textColor: "#7c2d12",
-    promptKeywords: "soft warm peach salmon background with floral corner elements, multiple stacked pairs of real before and after skin closeup photos in rounded frames, Antes Después label pills below each pair, bold dark headline questioning doubts about product, three feature icon badges in warm tones top section, real transformation skin beauty product advertisement feminine warm style",
-  },
-  {
-    id: "cream-arrow-lifestyle",
-    name: "Cream Arrow",
-    desc: "Crema claro · Flecha naranja · Lifestyle limpio",
-    gradient: "linear-gradient(180deg, #fdf6ec 0%, #faebd7 60%, #c0392b 100%)",
-    accentColor: "#EA580C",
-    textColor: "#1a1a1a",
-    promptKeywords: "clean cream beige light background top section, side by side ANTES outdoor or old method photo vs DESPUÉS clean modern product result photo, bold orange arrow pointing right between the two photos, result time badge orange circle bottom right, dark rust red or warm brown bottom strip with customer testimonial face photo and large percentage satisfaction stat, simple clean lifestyle transformation advertisement",
-  },
-  {
-    id: "dark-tech-lightning",
-    name: "Dark Tech Lightning",
-    desc: "Negro · Rayo dorado/cian · Tech · Producto HUD",
-    gradient: "radial-gradient(ellipse at 50% 50%, #0a0a0a 0%, #050505 100%)",
-    accentColor: "#F59E0B",
-    textColor: "#fff",
-    promptKeywords: "dark black background full screen, bold large white and red headline top, diagonal or vertical lightning bolt divider gold and electric blue neon between ANTES dull dark left side and DESPUÉS glowing tech product right side, before dull analog or old method vs after digital smart glowing product with neon rings or HUD display, bottom rounded gold border testimonial card with customer quote and percentage stat improvement, high contrast dramatic tech product transformation",
-  },
-  {
-    id: "pink-floral-product",
-    name: "Pink Floral",
-    desc: "Rosa suave · Flores · Producto hero · Piel",
-    gradient: "radial-gradient(ellipse at 50% 40%, #fce7f3 0%, #fbcfe8 50%, #f9a8d4 100%)",
-    accentColor: "#DB2777",
-    textColor: "#831843",
-    promptKeywords: "soft blush pink full background with cherry blossom flowers scattered, circular or oval face closeup photos before and after with pink splash liquid effect, feature icon badges pink rounded squares at top, product jar or cream prominently displayed center with soft shadow, script elegant typography for testimonial section, secondary small before after photo comparison at bottom, feminine luxury beauty skin transformation advertisement",
-  },
-  {
-    id: "dark-gold-pedestal",
-    name: "Dark Gold Pedestal",
-    desc: "Negro cálido · Atletas flanqueando · Pedestal dorado",
-    gradient: "radial-gradient(ellipse at 50% 40%, #2d1b00 0%, #1a0f00 50%, #0a0500 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "dark warm black background with gym environment subtle, ANTES dejected tired athlete left side vs DESPUÉS triumphant flexing muscular athlete right side, product supplement jar centered on golden glowing pedestal between both figures, floating ingredient elements chocolate cocoa or flavor accents, gold white bottom strip banner with bold product name headline, customer testimonial face avatar and percentage stat, premium dark gold sports nutrition transformation advertisement",
-  },
-  {
-    id: "neon-vertical-stacked",
-    name: "Neon Vertical Stack",
-    desc: "Oscuro gris ANTES arriba · Neón DESPUÉS abajo",
-    gradient: "linear-gradient(180deg, #1a1a1a 0%, #111111 40%, #052e16 60%, #000000 100%)",
-    accentColor: "#22C55E",
-    textColor: "#fff",
-    promptKeywords: "vertical stacked split composition, top half dark desaturated gray gym environment ANTES with tired dejected athlete moody lighting, middle divider with neon brand logo icon and electric lightning bolt flash, bottom half dark green neon glow gym DESPUÉS with triumphant screaming athlete holding product arms raised victorious, product jar centered at divider between sections, bold white headline bottom tagline, high energy sports supplement dramatic vertical transformation",
-  },
-  {
-    id: "dreamy-kids",
-    name: "Dreamy Kids",
-    desc: "Azul frío vs rosa soñador · Niños · Estrellas",
-    gradient: "linear-gradient(90deg, #1e3a5f 0%, #2563eb 50%, #db2777 50%, #be185d 100%)",
-    accentColor: "#FDE68A",
-    textColor: "#fff",
-    promptKeywords: "vertical split background left cool blue dark bedroom ANTES vs right warm pink dreamy cozy room DESPUÉS, floating golden stars fairy lights bokeh atmosphere right side, sad or lonely child on left side vs happy smiling child hugging plush toy product right side, rounded pill badge buttons ANTES and DESPUÉS labels, bottom testimonial pill card with parent customer quote, bold percentage stat, dreamlike magical children product transformation advertisement",
-  },
-  {
-    id: "purple-pink-energy",
-    name: "Purple Pink Energy",
-    desc: "Púrpura-rosa gym · Aura eléctrica · Mujer atleta",
-    gradient: "radial-gradient(ellipse at 50% 30%, #6b21a8 0%, #9d174d 50%, #1a1a1a 100%)",
-    accentColor: "#EC4899",
-    textColor: "#fff",
-    promptKeywords: "purple pink magenta gym environment background with electric lightning aura, female athlete transformation split or side by side ANTES calm neutral pose vs DESPUÉS flexing with electric energy glow aura and lightning bolts around transformed figure, product overlaid on DESPUÉS side floating, three circular or pill feature icon badges flanking composition MAYOR DEFINICION MUSCULAR FUERZA RESISTENCIA CUERPO TONIFICADO, bottom navy strip testimonial quote and percentage stat, feminine fitness transformation advertisement high energy",
-  },
-  {
-    id: "blue-double-proof",
-    name: "Blue Double Proof",
-    desc: "Gym azul · Múltiples pares retrato · Testimonios",
-    gradient: "linear-gradient(180deg, #1e3a8a 0%, #1d4ed8 30%, #0f172a 100%)",
-    accentColor: "#3B82F6",
-    textColor: "#fff",
-    promptKeywords: "dark blue neon gym background with red and blue LED accent lights geometric shapes, two separate stacked pairs of portrait before and after photos in rounded rectangle frames each with red ANTES badge and blue DESPUÉS badge, after each pair a red or dark testimonial card with customer name 5 stars and quote text, product jar displayed at bottom with fruit elements, three feature icon badges strip, bold headline top, multiple social proof customer transformation fitness supplement advertisement",
-  },
-];
-
-const BENEFICIOS_STYLES: BannerStyle[] = [
-  {
-    id: "blue-circular-orbit",
-    name: "Blue Circular Orbit",
-    desc: "Azul deportivo · Badges orbitan producto · Clásico",
-    gradient: "radial-gradient(ellipse at 50% 60%, #1d4ed8 0%, #1e3a8a 50%, #0f1f3a 100%)",
-    accentColor: "#3B82F6",
-    textColor: "#fff",
-    promptKeywords: "vibrant blue sports stadium background, athlete sprinting dynamically, product jar or item centered with 6 white circular icon badges arranged symmetrically 3 left 3 right with dotted connecting lines to product, each badge has icon and benefit title text below, fruit or ingredient elements scattered, bold blue-red-white headline top, tagline bottom, professional sports supplement benefits advertisement",
-  },
-  {
-    id: "dark-arrow-callouts",
-    name: "Dark Arrow Callouts",
-    desc: "Oscuro · Atleta full-bleed · Flechas con specs",
-    gradient: "radial-gradient(ellipse at 50% 40%, #1e3a8a 0%, #0a0a14 60%, #000000 100%)",
-    accentColor: "#22D3EE",
-    textColor: "#fff",
-    promptKeywords: "dark navy blue gradient background with green and blue electric energy aura effects, muscular athlete holding product center composition, 6 text labels with curved arrows pointing outward from product to different specs callouts (2 top left, 2 top right, 2 bottom sides), bold large white headline top, blue CTA strip bottom tagline, high energy sports product specifications callout advertisement",
-  },
-  {
-    id: "dark-gold-4panel",
-    name: "Dark Gold 4 Panel",
-    desc: "Negro dorado · Atleta centro · 4 circles 2x2",
-    gradient: "radial-gradient(ellipse at 50% 60%, #3d2a00 0%, #1a1200 50%, #050400 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "dark warm brown gold background with subtle gym equipment and chocolate or cocoa elements, triumphant muscular athlete arms raised flexing center, 4 large circular white badges with gold outline arranged in 2x2 grid around athlete (top left, top right, bottom left, bottom right), each badge has gold line icon and bold benefit title with short description, gold and white bold headline top, premium dark sports nutrition benefits advertisement",
-  },
-  {
-    id: "blue-stacked-pills",
-    name: "Blue Stacked Pills",
-    desc: "Gym azul · Feature bars izquierda · Producto derecha",
-    gradient: "linear-gradient(160deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "dark blue gradient gym background with blue energy swirl light trails, product jar and shaker bottle right side with fruit splash, 4-5 horizontal dark navy pill-shaped feature bars stacked on left side each with small icon and bold benefit text uppercase, triumphant athlete at bottom center, blue-white bold headline top, blue swirl energy motion blur effects, sports supplement feature list benefits advertisement",
-  },
-  {
-    id: "vivid-color-columns",
-    name: "Vivid Color Columns",
-    desc: "Colores vivos · Columnas izq/der · Producto centro",
-    gradient: "linear-gradient(90deg, #1d4ed8 0%, #059669 33%, #dc2626 66%, #1d4ed8 100%)",
-    accentColor: "#F59E0B",
-    textColor: "#fff",
-    promptKeywords: "vivid electric background with blue green red zones and lightning bolts, athlete sprinting top right corner, product centered with fruit and liquid splash elements, 3 blue rounded benefit bars stacked left side (bold white caps text), 3 red rounded benefit bars stacked right side (bold white caps text), brand name and product name top in large bold text, high energy vibrant sports nutrition benefits advertisement",
-  },
-  {
-    id: "white-3cards-lifestyle",
-    name: "White 3 Cards",
-    desc: "Blanco limpio · Lifestyle · 3 tarjetas descripción",
-    gradient: "linear-gradient(180deg, #1d4ed8 0%, #2563eb 30%, #f8fafc 60%, #ffffff 100%)",
-    accentColor: "#DC2626",
-    textColor: "#1e3a8a",
-    promptKeywords: "white and blue background, happy athlete sitting or posing in bright gym, product with fruit bottom right, bold blue headline top with red accent word, 3 dark navy benefit cards at bottom each with circular icon top and benefit title bold and short description text, blue red white color scheme, clean professional gym lifestyle sports supplement benefits advertisement",
-  },
-  {
-    id: "warm-gym-floating-gold",
-    name: "Warm Gym Floating Gold",
-    desc: "Gym dorado cálido · 3-4 badges flotantes · Running",
-    gradient: "radial-gradient(ellipse at 50% 50%, #7c5a00 0%, #3d2d00 50%, #1a1300 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "warm golden brown luxury gym interior background soft light bokeh, man or woman running or jogging front view smiling, 3-4 gold circular icon badges floating alongside the person arranged left and right with benefit title and description text, product visible on wrist or in hand, white and gold bold headline top, warm premium smartwatch or health product lifestyle benefits advertisement",
-  },
-  {
-    id: "dreamy-4badges-grid",
-    name: "Dreamy 4 Badges Grid",
-    desc: "Fondo soñador · Personaje · 4 badges en cuadrícula",
-    gradient: "radial-gradient(ellipse at 50% 40%, #fef9c3 0%, #fde68a 30%, #fbbf24 60%, #92400e 100%)",
-    accentColor: "#F59E0B",
-    textColor: "#78350f",
-    promptKeywords: "dreamy soft warm pastel background with bokeh lights stars or dream catchers hanging, cute child or sleeping person in cozy pink fluffy cloud setting, 4 dark rounded square or circular icon badges arranged in 2x2 grid at bottom (top left, top right, bottom left, bottom right), each badge has white icon and bold benefit title with short description, warm pink and gold headline title, cozy soft children product or comfort lifestyle benefits advertisement",
-  },
-  {
-    id: "dark-sport-3gold",
-    name: "Dark Sport 3 Gold",
-    desc: "Gym oscuro · Deporte intenso · 3 badges dorados",
-    gradient: "radial-gradient(ellipse at 50% 40%, #1a1a2e 0%, #0a0a14 60%, #000000 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "dark industrial gym or outdoor dramatic background, athlete in intense sport pose boxing punching or sprinting with gold and blue energy aura effects, 3 gold circular icon badges arranged (bottom left, bottom right, bottom center) each with icon and bold benefit title with description text, bold white and gold headline top, tagline or CTA strip bottom, high energy intense sport product benefits advertisement",
-  },
-  {
-    id: "pink-feminine-icons",
-    name: "Pink Feminine Icons",
-    desc: "Rosa intenso · Femenino · Badges circulares rojos",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fce7f3 0%, #f9a8d4 40%, #ec4899 80%, #be185d 100%)",
-    accentColor: "#DC2626",
-    textColor: "#fff",
-    promptKeywords: "vibrant pink gradient background with rose petals or bokeh flowers floating, female lifestyle product (intimate care, supplement, beauty) displayed prominently, 3-4 red circular icon badges arranged diagonally or around product each with white icon and bold benefit text with short description, bold white headline top with red accent word, bottom CTA strip or trust message, feminine health beauty lifestyle product benefits advertisement",
-  },
-  {
-    id: "soft-beauty-face",
-    name: "Soft Beauty Face",
-    desc: "Rosa suave · Modelo · 4 badges line-art alrededor",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fff1f2 0%, #fecdd3 50%, #fda4af 100%)",
-    accentColor: "#E11D48",
-    textColor: "#881337",
-    promptKeywords: "very soft pink cherry blossom background with lens flare rainbow light, beautiful woman face profile portrait center glowing healthy skin, 4 minimal line-art style icon badges floating around the face (2 left: benefit icon + title + description, 2 right: benefit icon + title + description), elegant pink serif typography headline top, bottom result claim text, ultra feminine luxury beauty skincare benefits advertisement",
-  },
-  {
-    id: "light-tech-specs",
-    name: "Light Tech Specs",
-    desc: "Blanco/azul · Producto técnico · Callouts dimensiones",
-    gradient: "radial-gradient(ellipse at 50% 30%, #f0fdf4 0%, #dcfce7 40%, #bbf7d0 100%)",
-    accentColor: "#16A34A",
-    textColor: "#14532d",
-    promptKeywords: "clean white or light blue-gray background with green leaf accents and water drops, technical product (faucet, gadget, tool) displayed large with measurement dimension lines and callout labels showing specifications (160mm, 60mm etc), 4 green circular icon badges arranged around product (2 top, 2 bottom) with bold benefit text and description, factual problem-statement headline top in green, bottom compatibility or accessory product shots, technical product quality specifications advertisement",
-  },
-];
-
-const COMPARATIVA_STYLES: BannerStyle[] = [
-  {
-    id: "vs-dark-split",
-    name: "VS Dark Split",
-    desc: "Negro · Rojo vs Verde · Impacto",
-    gradient: "linear-gradient(135deg, #0a0a0a 0%, #1a0a0a 50%, #0a1a0a 100%)",
-    accentColor: "#EF4444",
-    textColor: "#fff",
-    promptKeywords: "dark black background with dramatic diagonal split composition left side red tones right side green, bold VS badge center, competitor product grayed out left column, our product bright highlighted right column, checkmark green icons list right, X red icons list left, bold white headline comparison advertisement high contrast dramatic",
-  },
-  {
-    id: "vs-blue-clean",
-    name: "VS Blue Clean",
-    desc: "Azul marino · Limpio · Profesional",
-    gradient: "linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #1d4ed8 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "deep navy blue gradient background clean professional layout, two-column comparison table floating card design left competitor right our product, blue checkmark icons right column red X icons left column, bold white typography headline, winner badge ribbon gold top right corner, trust strip bottom, clean professional product comparison advertisement",
-  },
-  {
-    id: "vs-white-modern",
-    name: "VS White Modern",
-    desc: "Blanco · Minimalista · Corporativo",
-    gradient: "linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e293b",
-    promptKeywords: "clean white light gray gradient background, minimal modern comparison layout two columns rounded card shadows, blue accent highlights our product column, gray muted competitor column, clear typography dark blue and gray, green checkmark icons right blue column, subtly floating shadow cards, corporate professional product comparison advertisement minimal design",
-  },
-  {
-    id: "vs-red-aggro",
-    name: "VS Red Power",
-    desc: "Rojo intenso · Agresivo · Ganador",
-    gradient: "radial-gradient(ellipse at 50% 100%, #7f1d1d 0%, #450a0a 50%, #0a0000 100%)",
-    accentColor: "#FCA5A5",
-    textColor: "#fff",
-    promptKeywords: "deep blood red dark gradient background, dramatic versus battle composition, our product on illuminated pedestal winner side, competitor product shadowed defeated side, bold red and white VS badge center explosive burst, championship winner crown or trophy element, bold aggressive white typography headline, high contrast dramatic comparison advertisement",
-  },
-  {
-    id: "vs-green-winner",
-    name: "Green Winner",
-    desc: "Verde · Natural · Nuestro mejor",
-    gradient: "linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%)",
-    accentColor: "#4ADE80",
-    textColor: "#fff",
-    promptKeywords: "deep green gradient background, clear winner checkmark composition, our product prominent center highlighted green glow, six comparison attribute rows with green checkmarks all our side and red X competitor side, bold white and green typography, green winner badge ribbon, natural health organic product comparison advertisement",
-  },
-  {
-    id: "vs-gold-premium",
-    name: "Gold Premium",
-    desc: "Dorado · Premium · Lujo ganador",
-    gradient: "radial-gradient(ellipse at 50% 30%, #1c1407 0%, #0a0a0a 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "ultra dark black with gold foil shimmer background, premium luxury comparison layout, our product on golden trophy pedestal illuminated, competitor shown as silver muted shadow, gold star rating badges, comparison attributes in gold vs silver, bold gold and white typography, crown award element, premium luxury product comparison banner",
-  },
-  {
-    id: "vs-teal-fresh",
-    name: "Teal Fresh",
-    desc: "Turquesa · Fresco · Tabla clara",
-    gradient: "linear-gradient(160deg, #0f766e 0%, #0d9488 40%, #ccfbf1 100%)",
-    accentColor: "#14B8A6",
-    textColor: "#fff",
-    promptKeywords: "fresh teal aqua gradient background, clean floating comparison table white card, our product column teal accent highlighted, competitor column gray muted, clear icon checkmarks and X marks, product image floating above table, fresh clean health supplement comparison advertisement table layout",
-  },
-  {
-    id: "vs-purple-tech",
-    name: "Purple Tech",
-    desc: "Púrpura · Tech · Innovador",
-    gradient: "radial-gradient(ellipse at 30% 70%, #4c1d95 0%, #2d0a6b 50%, #0f0118 100%)",
-    accentColor: "#A78BFA",
-    textColor: "#fff",
-    promptKeywords: "deep purple gradient tech background with glowing grid lines hexagon pattern, futuristic comparison layout holographic floating table, our product glowing purple aura winner, competitor product dark shadow, purple and white glowing checkmarks, tech innovation product comparison advertisement futuristic design",
-  },
-  {
-    id: "vs-orange-bold",
-    name: "Orange Bold",
-    desc: "Naranja · Energético · Directo",
-    gradient: "linear-gradient(160deg, #7c2d12 0%, #c2410c 50%, #ea580c 100%)",
-    accentColor: "#FED7AA",
-    textColor: "#fff",
-    promptKeywords: "bold orange gradient background, direct bold comparison layout, big bold versus typography center, our product on orange lit platform, competitor product dimmed left, orange circular badge icons comparison attributes, bold white orange typography headline, high energy food supplement comparison advertisement bold direct style",
-  },
-  {
-    id: "vs-sky-clean",
-    name: "Sky Comparison",
-    desc: "Azul cielo · Claro · Familiar",
-    gradient: "linear-gradient(180deg, #bfdbfe 0%, #eff6ff 50%, #dbeafe 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e3a8a",
-    promptKeywords: "bright sky blue light gradient background, cheerful friendly comparison layout, floating white card comparison table rounded corners, blue checkmarks winner column, gray X loser column, product image on platform, friendly family health product comparison advertisement clean bright",
-  },
-  {
-    id: "vs-pink-girly",
-    name: "Pink Winner",
-    desc: "Rosa · Femenino · Nuestra marca gana",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fdf2f8 0%, #fce7f3 40%, #ec4899 100%)",
-    accentColor: "#BE185D",
-    textColor: "#831843",
-    promptKeywords: "soft pink rose gradient background, feminine beauty comparison layout, our product on floral decorated winner pedestal, competitor shown minimally, heart and star winner icons pink, comparison attribute rows with pink checkmarks, elegant feminine typography, beauty skincare feminine product comparison advertisement warm rose aesthetic",
-  },
-  {
-    id: "vs-warm-neutral",
-    name: "Warm Neutral",
-    desc: "Beige · Natural · Honesto",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fef9c3 0%, #fde68a 40%, #d97706 100%)",
-    accentColor: "#92400E",
-    textColor: "#1a1a1a",
-    promptKeywords: "warm golden beige background, honest natural comparison layout, two column floating cards white with subtle shadow, our product warm amber highlighted column, competitor muted gray, natural ingredient icons comparison rows, warm dark typography, natural organic comparison advertisement warm honest straightforward design",
-  },
-];
-
-const AUTORIDAD_STYLES: BannerStyle[] = [
-  {
-    id: "auth-dark-gold",
-    name: "Authority Gold",
-    desc: "Negro · Dorado · Premios y sellos",
-    gradient: "radial-gradient(ellipse at 50% 30%, #1c1407 0%, #0a0a0a 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "ultra dark luxury black background with gold shimmer particle effects, three or four golden circular trust seal badges (FDA registered, GMP certified, ISO, lab tested), central brand logo illuminated, gold ribbon award banner element, bold white and gold typography, media press logo strip as seen on, premium authority trust advertisement high end",
-  },
-  {
-    id: "auth-navy-trust",
-    name: "Navy Trust",
-    desc: "Azul marino · Serio · Confiable",
-    gradient: "linear-gradient(160deg, #0f172a 0%, #1e3a8a 80%, #1d4ed8 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "deep navy blue gradient background professional, horizontal strip of certification badge icons FDA GMP organic certified lab tested, doctor or expert figure endorsement photo, trust shield icon center, star rating large five stars with review count, bold white blue typography, bottom press media logos strip, professional authority trust advertisement clinical serious",
-  },
-  {
-    id: "auth-white-clean",
-    name: "Clean Authority",
-    desc: "Blanco · Clínico · Certificaciones",
-    gradient: "linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%)",
-    accentColor: "#0EA5E9",
-    textColor: "#0c4a6e",
-    promptKeywords: "clean white light blue clinical background, horizontal row of four certification badges rounded pill shape FDA approved GMP ISO lab tested, product prominently centered, clinical white coat doctor endorsement photo, blue checkmark trust points list, clean professional dark typography, press media logo strip bottom, clinical authority trust advertisement clean minimal",
-  },
-  {
-    id: "auth-green-natural",
-    name: "Green Certified",
-    desc: "Verde · Orgánico · Natural certificado",
-    gradient: "radial-gradient(ellipse at 50% 30%, #d1fae5 0%, #6ee7b7 30%, #065f46 100%)",
-    accentColor: "#10B981",
-    textColor: "#fff",
-    promptKeywords: "rich green nature background, four circular green trust badge seals USDA organic natural ingredients non-GMO lab tested, tropical leaves natural elements, product on natural wooden platform, green checkmark trust list, bold white and green typography, earth natural organic authority trust advertisement fresh genuine",
-  },
-  {
-    id: "auth-gold-ribbon",
-    name: "Gold Ribbon Award",
-    desc: "Dorado · Cintas · Premio del año",
-    gradient: "linear-gradient(160deg, #78350f 0%, #92400e 40%, #b45309 100%)",
-    accentColor: "#FDE68A",
-    textColor: "#fff",
-    promptKeywords: "warm golden amber gradient background, large central award ribbon badge Mejor Producto del Año or Premio de Excelencia, four gold medal icon badges around central trophy, product image on podium illuminated, star rating gold five stars, customer count social proof numbers, bold white gold typography, award winning product authority advertisement prestigious",
-  },
-  {
-    id: "auth-purple-expert",
-    name: "Expert Purple",
-    desc: "Púrpura · Experto · Validación médica",
-    gradient: "radial-gradient(ellipse at 50% 30%, #4c1d95 0%, #2d0a6b 50%, #0f0118 100%)",
-    accentColor: "#A78BFA",
-    textColor: "#fff",
-    promptKeywords: "deep purple atmospheric gradient, medical or nutrition expert professional endorsement photo, purple glow circular certification badges lab tested clinically proven recommended by experts, bold white purple typography, purple shimmer particle effects, five star rating badge, trust shield icon, expert validated authority advertisement premium scientific",
-  },
-  {
-    id: "auth-red-bold",
-    name: "Red Authority",
-    desc: "Rojo · Audaz · Garantía total",
-    gradient: "radial-gradient(ellipse at 50% 100%, #7f1d1d 0%, #450a0a 50%, #0a0000 100%)",
-    accentColor: "#FCA5A5",
-    textColor: "#fff",
-    promptKeywords: "deep dark red authority background, bold trust guarantee badges red circular icons satisfaction guarantee 30 day money back quality assured, product center prominent, large shield icon with checkmark, bold white typography authority headline, five star rating social proof numbers, bottom trust bar strip, bold authority guarantee advertisement",
-  },
-  {
-    id: "auth-teal-science",
-    name: "Science Teal",
-    desc: "Turquesa · Científico · Fórmula probada",
-    gradient: "linear-gradient(160deg, #0f766e 0%, #0d9488 40%, #134e4a 100%)",
-    accentColor: "#5EEAD4",
-    textColor: "#fff",
-    promptKeywords: "teal scientific clinical gradient background, DNA helix molecule graphic element background, four hexagonal science badge icons formula tested clinically proven patented ingredient results backed, product on lab platform, bold white teal typography, scientific graph chart element, clinical science authority product advertisement evidence based",
-  },
-  {
-    id: "auth-warm-human",
-    name: "Warm Human",
-    desc: "Beige · Humano · Testimonios de expertos",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #fde68a 30%, #d97706 100%)",
-    accentColor: "#92400E",
-    textColor: "#1a1a1a",
-    promptKeywords: "warm golden beige background, three circular expert photos nutritionists or doctors with credentials below name and title, quote speech bubble from each expert, product displayed, star rating gold, trust badge bottom strip, warm human authority endorsement advertisement professional yet approachable",
-  },
-  {
-    id: "auth-pink-beauty",
-    name: "Beauty Authority",
-    desc: "Rosa · Dermatólogos · Belleza avalada",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fdf2f8 0%, #fce7f3 40%, #ec4899 100%)",
-    accentColor: "#BE185D",
-    textColor: "#831843",
-    promptKeywords: "soft pink rose gradient background, dermatologist recommended badge pink circular seal, three ingredient certified icons hypoallergenic cruelty-free dermatologist tested, beauty expert endorsement photo, product prominently centered with glow, elegant feminine typography, five star beauty review rating, beauty authority trust advertisement feminine dermatologist",
-  },
-  {
-    id: "auth-sky-fresh",
-    name: "Sky Trust",
-    desc: "Azul cielo · Fresco · Sellos simples",
-    gradient: "linear-gradient(180deg, #bfdbfe 0%, #eff6ff 50%, #dbeafe 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e3a8a",
-    promptKeywords: "bright sky blue clean gradient background, five horizontal trust badge icons with labels pago seguro envio rapido garantia devoluciones atencion 24h, product centered, large five star rating, customer review count numbers, simple clean bold dark blue typography, friendly clean trust authority advertisement simple clear",
-  },
-  {
-    id: "auth-dark-press",
-    name: "Press Coverage",
-    desc: "Oscuro · Prensa · Medios de comunicación",
-    gradient: "radial-gradient(ellipse at 50% 50%, #18181b 0%, #09090b 100%)",
-    accentColor: "#71717A",
-    textColor: "#fff",
-    promptKeywords: "dark charcoal black background, as seen on featured in press media logos strip centered (magazine newspaper TV channel logos in white), product above press strip illuminated, bold white gray typography headline, subtle spotlight effect on product, simple clean press authority media coverage advertisement dark prestige",
-  },
-];
-
-const TESTIMONIOS_STYLES: BannerStyle[] = [
-  {
-    id: "test-dark-stars",
-    name: "Dark Stars",
-    desc: "Negro · Estrellas doradas · Premium",
-    gradient: "radial-gradient(ellipse at 50% 50%, #18181b 0%, #09090b 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "dark black background, three floating testimonial cards rounded with shadow and gold five star rating, customer photo circle avatar top each card, quote text testimonial centered, bold white and gold typography headline número de clientes felices, gold star icons large, product visible background, premium dark testimonial social proof advertisement",
-  },
-  {
-    id: "test-blue-trust",
-    name: "Blue Trust",
-    desc: "Azul · Confianza · Clientes reales",
-    gradient: "linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #1d4ed8 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "navy blue gradient background, three customer testimonial quote cards white floating rounded shadow, circular customer avatar photo top each card with star rating, bold blue five star icons, verified buyer badge check icon, product image right side, bold white typography headline customer count thousands, trust social proof advertisement blue professional",
-  },
-  {
-    id: "test-white-clean",
-    name: "Clean Reviews",
-    desc: "Blanco · Minimalista · App-style",
-    gradient: "linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e293b",
-    promptKeywords: "clean white light background minimal, three review cards white floating with subtle box shadow, customer avatar photo rounded, star rating blue five stars, short testimonial quote text, verified badge, product photo centered, app style clean minimal testimonial social proof advertisement modern",
-  },
-  {
-    id: "test-green-natural",
-    name: "Natural Reviews",
-    desc: "Verde · Orgánico · Resultados reales",
-    gradient: "radial-gradient(ellipse at 50% 30%, #d1fae5 0%, #6ee7b7 30%, #065f46 100%)",
-    accentColor: "#10B981",
-    textColor: "#fff",
-    promptKeywords: "green natural gradient background, three customer photo transformation testimonial cards, before and after mini badge on customer photo, green five star rating, bold white typography, customer name and city below, real results number counter (10000+ clientes), natural health testimonial social proof advertisement organic fresh",
-  },
-  {
-    id: "test-pink-beauty",
-    name: "Pink Reviews",
-    desc: "Rosa · Femenino · Belleza · Reviews",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fdf2f8 0%, #fce7f3 40%, #ec4899 100%)",
-    accentColor: "#BE185D",
-    textColor: "#831843",
-    promptKeywords: "soft pink rose gradient background, three female customer photos with glowing product results, five heart or star pink rating icons, quote testimonial text elegant italic font, cursive mixed typography, rose petals decorative floating, beauty skincare feminine product testimonial social proof advertisement warm elegant",
-  },
-  {
-    id: "test-warm-human",
-    name: "Warm Stories",
-    desc: "Beige · Familiar · Historia real",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #fde68a 30%, #d97706 100%)",
-    accentColor: "#92400E",
-    textColor: "#1a1a1a",
-    promptKeywords: "warm golden beige background, three customer lifestyle photos with warm tones, speech bubble quote overlay, five gold star rating, warm friendly dark typography, customer first name and verified badge, product displayed bottom, warm cozy testimonial social proof advertisement homey authentic",
-  },
-  {
-    id: "test-sports-energy",
-    name: "Sports Reviews",
-    desc: "Azul eléctrico · Deportistas · Resultados",
-    gradient: "linear-gradient(160deg, #1d4ed8 0%, #1e40af 40%, #1e3a8a 100%)",
-    accentColor: "#F97316",
-    textColor: "#fff",
-    promptKeywords: "electric blue sports gradient background, three athlete customer photos dynamic poses, bold results numbers overlaid (minus 8kg, plus 5kg masa), five star orange rating, bold white orange typography, sport energy quote short testimonial, verified athlete badge, high energy sports supplement testimonial social proof advertisement",
-  },
-  {
-    id: "test-purple-glow",
-    name: "Purple Glow Reviews",
-    desc: "Púrpura · Mágico · Transformación",
-    gradient: "radial-gradient(ellipse at 50% 70%, #4c1d95 0%, #2d0a6b 40%, #0f0118 100%)",
-    accentColor: "#A78BFA",
-    textColor: "#fff",
-    promptKeywords: "deep purple atmospheric gradient, three floating testimonial cards with purple glow border, customer photo avatar glowing circle, five purple star rating, transformation result quote, magic shimmer particles, bold white and purple typography, premium transformation testimonial social proof advertisement magical glow",
-  },
-  {
-    id: "test-teal-fresh",
-    name: "Teal Fresh Reviews",
-    desc: "Turquesa · Limpio · Salud",
-    gradient: "linear-gradient(160deg, #0f766e 0%, #0d9488 40%, #ccfbf1 100%)",
-    accentColor: "#14B8A6",
-    textColor: "#fff",
-    promptKeywords: "fresh teal aqua gradient background, three white floating review cards with subtle teal border, customer photo circle top, five teal star rating, short clean quote text, customer verified badge, product image side, health supplement testimonial social proof advertisement fresh clean minimal",
-  },
-  {
-    id: "test-red-bold",
-    name: "Bold Results",
-    desc: "Rojo · Audaz · Resultados impactantes",
-    gradient: "radial-gradient(ellipse at 50% 100%, #7f1d1d 0%, #450a0a 50%, #0a0000 100%)",
-    accentColor: "#FCA5A5",
-    textColor: "#fff",
-    promptKeywords: "dark deep red background, three dramatic result testimonial cards, bold large result numbers overlaid (perdí 12kg, gané masa, bajé talla), customer before and after mini composition, five star rating red and white, bold aggressive white typography headline thousands of customers, high impact testimonial social proof advertisement bold dramatic",
-  },
-  {
-    id: "test-galaxy",
-    name: "Galaxy Reviews",
-    desc: "Galaxia · Wow · Reseñas premium",
-    gradient: "radial-gradient(ellipse at 50% 50%, #312e81 0%, #1e1b4b 40%, #030712 100%)",
-    accentColor: "#818CF8",
-    textColor: "#fff",
-    promptKeywords: "deep space galaxy background, three testimonial cards with cosmic glowing border, customer avatar with star constellation, five cosmic star rating glowing, quote testimonial with typewriter cursor, floating star particles, bold white indigo typography headline, premium cosmic testimonial social proof advertisement wow factor",
-  },
-  {
-    id: "test-sky-simple",
-    name: "Sky Simple",
-    desc: "Azul cielo · Simple · Familiar",
-    gradient: "linear-gradient(180deg, #bfdbfe 0%, #eff6ff 50%, #dbeafe 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e3a8a",
-    promptKeywords: "bright sky blue clean gradient background, three simple testimonial quote cards white rounded, smiley face or happy customer simple avatar, five blue star rating, short simple quote testimonial, product bottom, cheerful friendly family happy customer testimonial advertisement simple approachable",
-  },
-];
-
-const INGREDIENTES_STYLES: BannerStyle[] = [
-  {
-    id: "ing-dark-science",
-    name: "Dark Science",
-    desc: "Negro · Científico · Ingredientes tech",
-    gradient: "radial-gradient(ellipse at 50% 50%, #18181b 0%, #09090b 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "dark black scientific background with glowing hexagonal molecule grid pattern, product center illuminated, five or six glowing hexagonal ingredient callout badges floating around product each with ingredient name and mg amount, arrows connecting from product to badges, bold white blue typography, lab scientific ingredients advertisement dark tech aesthetic",
-  },
-  {
-    id: "ing-green-natural",
-    name: "Natural Formula",
-    desc: "Verde · Natural · Ingredientes orgánicos",
-    gradient: "radial-gradient(ellipse at 50% 30%, #d1fae5 0%, #6ee7b7 30%, #065f46 100%)",
-    accentColor: "#10B981",
-    textColor: "#fff",
-    promptKeywords: "rich green natural gradient with tropical botanical leaves scattered, product bottle center, five or six circular badge icons with ingredient illustrations (leaf plant fruit spice) each ingredient name and benefit, arrows or lines connecting badges to product, bold white typography headline formula ingredientes, natural organic ingredients advertisement botanical fresh",
-  },
-  {
-    id: "ing-purple-premium",
-    name: "Purple Premium Formula",
-    desc: "Púrpura · Premium · Ciencia y magia",
-    gradient: "radial-gradient(ellipse at 50% 70%, #4c1d95 0%, #2d0a6b 40%, #0f0118 100%)",
-    accentColor: "#A78BFA",
-    textColor: "#fff",
-    promptKeywords: "deep purple atmospheric gradient with glowing molecule particle effects, product bottle glowing center, six purple glowing hexagonal callout badges each with ingredient name dosage and benefit arrow pointing to product, shimmer particle effects floating, bold white and purple headline typography fórmula exclusiva, premium ingredient formula advertisement magical science",
-  },
-  {
-    id: "ing-teal-clinical",
-    name: "Clinical Formula",
-    desc: "Turquesa · Clínico · Preciso",
-    gradient: "linear-gradient(160deg, #0f766e 0%, #0d9488 40%, #134e4a 100%)",
-    accentColor: "#5EEAD4",
-    textColor: "#fff",
-    promptKeywords: "teal clinical gradient background, DNA or molecule helix graphic element, product label prominent center showing ingredient panel, six rounded rectangle ingredient callout badges with precise percentage or mg amounts, clean precise typography ingredient name and dosage, clinical accurate ingredient breakdown advertisement teal professional",
-  },
-  {
-    id: "ing-navy-specs",
-    name: "Navy Specs",
-    desc: "Azul marino · Especificaciones · Técnico",
-    gradient: "linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #1d4ed8 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "navy blue gradient background technical professional, product center, six specification callout badges with lines pointing to product showing ingredient and amount, technical infographic style, bold white blue typography, bottom ingredient list strip, professional technical sports supplement ingredient specification advertisement",
-  },
-  {
-    id: "ing-white-clean",
-    name: "Clean Ingredients",
-    desc: "Blanco · Limpio · Transparente",
-    gradient: "linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%)",
-    accentColor: "#0EA5E9",
-    textColor: "#0c4a6e",
-    promptKeywords: "clean white light blue background transparent layout, product bottle centered label clearly visible, six ingredient icon cards floating white rounded shadow, each with small ingredient illustration and clean text name mg percentage, clean minimal typography dark blue, no artificial badge checkmark, clean transparent ingredient formula advertisement minimal honest",
-  },
-  {
-    id: "ing-gold-luxury",
-    name: "Luxury Formula",
-    desc: "Dorado · Lujo · Ingredientes exclusivos",
-    gradient: "radial-gradient(ellipse at 50% 30%, #1c1407 0%, #0a0a0a 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "ultra dark luxury background with gold shimmer particle effects, product on illuminated gold pedestal, six gold bordered hexagonal ingredient medallion badges scattered, each with premium ingredient name origin and benefit, gold connecting lines to product, bold white and gold typography exclusiva fórmula, luxury premium exclusive ingredient formula advertisement prestigious",
-  },
-  {
-    id: "ing-orange-energy",
-    name: "Energy Formula",
-    desc: "Naranja · Energía · Pre-workout ingredientes",
-    gradient: "linear-gradient(160deg, #7c2d12 0%, #c2410c 50%, #ea580c 100%)",
-    accentColor: "#FED7AA",
-    textColor: "#fff",
-    promptKeywords: "bold orange fire gradient background with energy sparks, product pre-workout supplement center, six energetic circular callout badges with ingredient names (cafeína creatina beta-alanina) and amounts, lightning bolt energy icons, bold white orange typography headline, high energy sports nutrition ingredient breakdown advertisement",
-  },
-  {
-    id: "ing-pink-beauty",
-    name: "Beauty Ingredients",
-    desc: "Rosa · Belleza · Ingredientes activos",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fdf2f8 0%, #fce7f3 40%, #ec4899 100%)",
-    accentColor: "#BE185D",
-    textColor: "#831843",
-    promptKeywords: "soft pink rose gradient, beauty skincare product center, six pink circular ingredient badges with beauty ingredient illustrations (collagen hyaluronic acid vitamin C retinol) each with name and percentage, rose petals floating decorative, elegant feminine typography active ingredients, beauty skincare ingredient formula advertisement feminine elegant",
-  },
-  {
-    id: "ing-earth-natural",
-    name: "Earth Natural",
-    desc: "Tierra · Cálido · Hierbas y plantas",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #fde68a 30%, #92400e 100%)",
-    accentColor: "#065F46",
-    textColor: "#1a1a1a",
-    promptKeywords: "warm earthy golden beige gradient, herbs plants and botanical elements scattered in background, product bottle center wooden surface, six earthy circular ingredient badges with botanical illustrations herb leaf root fruit, warm brown dark typography ingredient names and benefit, natural herbal supplement ingredient formula advertisement warm earthy",
-  },
-  {
-    id: "ing-sky-light",
-    name: "Light Formula",
-    desc: "Azul cielo · Ligero · Suplemento simple",
-    gradient: "linear-gradient(180deg, #bfdbfe 0%, #eff6ff 50%, #dbeafe 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e3a8a",
-    promptKeywords: "bright sky blue clean background, product label facing forward, four simple large ingredient highlight cards white floating, each with ingredient name benefit and small icon, clean simple bold dark blue typography, friendly clean simple ingredient highlight advertisement approachable minimal",
-  },
-  {
-    id: "ing-red-power",
-    name: "Power Blend",
-    desc: "Rojo · Potente · Mezcla activa",
-    gradient: "radial-gradient(ellipse at 50% 100%, #7f1d1d 0%, #450a0a 50%, #0a0000 100%)",
-    accentColor: "#FCA5A5",
-    textColor: "#fff",
-    promptKeywords: "dark deep red dramatic background, muscular athlete holding product, six ingredient callout red circular badges pointing to product with lines showing formula composition (cafeína vitamina b creatina taurina), bold white red typography active blend headline, high energy powerful ingredient formula advertisement dramatic",
-  },
-];
-
-const MODO_USO_STYLES: BannerStyle[] = [
-  {
-    id: "uso-dark-steps",
-    name: "Dark Steps",
-    desc: "Negro · Pasos claros · Premium",
-    gradient: "radial-gradient(ellipse at 50% 50%, #18181b 0%, #09090b 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "dark black background, three horizontal step cards floating with number badges (1 2 3) glowing blue, each step with icon and short instruction text, arrows between steps, product visible right side, bold white blue step numbers, bold headline Cómo Usarlo, clean dark instructions advertisement three steps",
-  },
-  {
-    id: "uso-blue-clean",
-    name: "Blue How-To",
-    desc: "Azul · Limpio · Instrucciones claras",
-    gradient: "linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #1d4ed8 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "navy blue gradient background, three vertical step cards numbered blue circles bold, step instruction icon and short text each card, connecting dotted or solid line between steps, product image right side prominent, bold white typography Modo de Uso headline, clean professional how to use advertisement",
-  },
-  {
-    id: "uso-green-natural",
-    name: "Green How-To",
-    desc: "Verde · Natural · Pasos orgánicos",
-    gradient: "radial-gradient(ellipse at 50% 30%, #d1fae5 0%, #6ee7b7 30%, #065f46 100%)",
-    accentColor: "#10B981",
-    textColor: "#fff",
-    promptKeywords: "green natural gradient, three step instruction cards floating leaf organic style, numbered green circles, each step icon and instruction text, nature botanical leaf decorations, product bottle right, bold white typography Cómo Tomarlo, natural health supplement how to use advertisement organic fresh",
-  },
-  {
-    id: "uso-white-minimal",
-    name: "Clean Steps",
-    desc: "Blanco · Minimalista · Fácil de seguir",
-    gradient: "linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e293b",
-    promptKeywords: "clean white light background minimal, three step instruction cards white floating shadow, clean numbered blue circle badges, simple line icons each step, clear short instruction text, product photo side, minimal clean typography dark blue, simple clean how to use product advertisement",
-  },
-  {
-    id: "uso-orange-sports",
-    name: "Sports Protocol",
-    desc: "Naranja · Deportivo · Protocolo pre-workout",
-    gradient: "linear-gradient(160deg, #7c2d12 0%, #c2410c 50%, #ea580c 100%)",
-    accentColor: "#FED7AA",
-    textColor: "#fff",
-    promptKeywords: "bold orange energy gradient, sports protocol timeline layout, numbered step circles orange with sports icons, morning workout night timing labels, athlete product photo, bold white orange typography Protocolo de Uso, clock timing icon, serving size scoop visible, sports supplement usage protocol advertisement energetic",
-  },
-  {
-    id: "uso-purple-ritual",
-    name: "Beauty Ritual",
-    desc: "Púrpura · Ritual · Skincare routine",
-    gradient: "radial-gradient(ellipse at 50% 70%, #4c1d95 0%, #2d0a6b 40%, #0f0118 100%)",
-    accentColor: "#A78BFA",
-    textColor: "#fff",
-    promptKeywords: "deep purple atmospheric gradient, skincare ritual morning night routine layout, three or four steps with moon sun icons timing labels, beauty product center glowing, step icons makeup brush serum cream, elegant purple glow circle badges numbered, bold white typography Tu Ritual Perfecto, beauty skincare routine how to use advertisement elegant",
-  },
-  {
-    id: "uso-teal-health",
-    name: "Health Protocol",
-    desc: "Turquesa · Salud · Protocolo diario",
-    gradient: "linear-gradient(160deg, #0f766e 0%, #0d9488 40%, #134e4a 100%)",
-    accentColor: "#5EEAD4",
-    textColor: "#fff",
-    promptKeywords: "teal clinical health gradient, daily health protocol layout, four step cards horizontal with teal numbered badges, clock or calendar timing icons, glass of water icon, meal timing labels, product positioned right, bold white teal typography Protocolo Diario, health supplement how to use advertisement clinical",
-  },
-  {
-    id: "uso-pink-beauty",
-    name: "Pink Routine",
-    desc: "Rosa · Femenino · Rutina fácil",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fdf2f8 0%, #fce7f3 40%, #ec4899 100%)",
-    accentColor: "#BE185D",
-    textColor: "#831843",
-    promptKeywords: "soft pink rose gradient, feminine beauty routine how-to layout, three steps with romantic feminine icons, step numbers pink circles with heart, beauty product center with glow, rose petals floating, elegant typography Tu Rutina de Belleza, simple steps instruction, beauty feminine product routine advertisement warm elegant",
-  },
-  {
-    id: "uso-warm-simple",
-    name: "Warm & Simple",
-    desc: "Beige · Cálido · Fácil de usar",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #fde68a 30%, #d97706 100%)",
-    accentColor: "#92400E",
-    textColor: "#1a1a1a",
-    promptKeywords: "warm golden beige background, simple three step layout warm icons, numbered warm amber circle badges, friendly instruction text short and clear, product displayed, warm dark typography Así de Fácil headline, friendly approachable how to use product advertisement warm",
-  },
-  {
-    id: "uso-navy-gold",
-    name: "Premium Steps",
-    desc: "Marino oscuro · Dorado · Premium paso a paso",
-    gradient: "radial-gradient(ellipse at 50% 30%, #1e3a5f 0%, #0f1f3a 50%, #060d1a 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "deep dark navy gradient with gold particle effects, three premium gold numbered step badges, step icons gold line art style, connecting golden dotted path between steps, product illuminated right side, bold white and gold typography Instrucciones de Uso, premium elegant how to use advertisement luxury",
-  },
-  {
-    id: "uso-sky-kids",
-    name: "Easy Steps Kids",
-    desc: "Azul cielo · Infantil · Pasos simples",
-    gradient: "linear-gradient(180deg, #bfdbfe 0%, #eff6ff 50%, #dbeafe 100%)",
-    accentColor: "#F97316",
-    textColor: "#1e3a8a",
-    promptKeywords: "bright sky blue cheerful background, three large simple step bubbles numbered orange bold circles, simple fun icons each step, short easy instruction text bold dark blue, product displayed, clouds decorative, friendly family product how to use advertisement cheerful simple kid-friendly",
-  },
-  {
-    id: "uso-dark-timeline",
-    name: "Dark Timeline",
-    desc: "Oscuro · Timeline · Día a día",
-    gradient: "radial-gradient(ellipse at 50% 50%, #312e81 0%, #1e1b4b 40%, #030712 100%)",
-    accentColor: "#818CF8",
-    textColor: "#fff",
-    promptKeywords: "deep indigo dark gradient, timeline horizontal layout with glowing nodes, morning midday night time labels with sun moon icons, instruction card at each node, product center above timeline, bold white indigo typography Tus Resultados Día a Día, cosmic glow timeline how to use schedule advertisement",
-  },
-];
-
-const LOGISTICA_STYLES: BannerStyle[] = [
-  {
-    id: "log-dark-shipping",
-    name: "Dark Shipping",
-    desc: "Negro · Envío rápido · Premium logística",
-    gradient: "radial-gradient(ellipse at 50% 50%, #18181b 0%, #09090b 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "dark black background, four floating logistics icon cards delivery truck box shield credit card, bold icons white each card with benefit title and short description, bold white blue typography Envío Gratis headline, product visible background, bottom payment logos strip, premium dark logistics shipping advertisement",
-  },
-  {
-    id: "log-blue-trust",
-    name: "Blue Delivery",
-    desc: "Azul · Envío seguro · Confianza",
-    gradient: "linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #1d4ed8 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "navy blue professional gradient, delivery timeline horizontal strip showing order confirmed packed shipped delivered with icons, delivery truck hero graphic, bold white typography Envío Express headline days count, three trust badge icons below guarantee returns shipping, payment logos strip bottom, professional logistics shipping advertisement navy blue",
-  },
-  {
-    id: "log-green-safe",
-    name: "Green Safe Delivery",
-    desc: "Verde · Seguro · Devolución garantizada",
-    gradient: "radial-gradient(ellipse at 50% 30%, #d1fae5 0%, #6ee7b7 30%, #065f46 100%)",
-    accentColor: "#10B981",
-    textColor: "#fff",
-    promptKeywords: "green gradient background, large green shield icon center with checkmark guarantee, four logistics benefit icons below shipping returns secure payment fast delivery, product displayed, bold white typography Garantía Total 30 días headline, natural fresh green logistics guarantee advertisement",
-  },
-  {
-    id: "log-white-clean",
-    name: "Clean Logistics",
-    desc: "Blanco · Limpio · Confianza simple",
-    gradient: "linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e293b",
-    promptKeywords: "clean white light background minimal, five benefit icon strips horizontal or grid layout truck box shield return credit card, each with icon title and short text, clean minimal typography, product right side, simple clean logistics trust advertisement minimal corporate",
-  },
-  {
-    id: "log-orange-fast",
-    name: "Fast Delivery",
-    desc: "Naranja · Rápido · Urgencia positiva",
-    gradient: "linear-gradient(160deg, #7c2d12 0%, #c2410c 50%, #ea580c 100%)",
-    accentColor: "#FED7AA",
-    textColor: "#fff",
-    promptKeywords: "bold orange gradient, large delivery truck graphic with speed motion lines, bold headline Entrega en 24-48 Horas with clock icon, four benefit badges below express envio gratis pago seguro devolucion, bold white orange typography, urgency positive fast shipping advertisement",
-  },
-  {
-    id: "log-purple-premium",
-    name: "Purple Premium Shipping",
-    desc: "Púrpura · Premium · Logística VIP",
-    gradient: "radial-gradient(ellipse at 50% 70%, #4c1d95 0%, #2d0a6b 40%, #0f0118 100%)",
-    accentColor: "#A78BFA",
-    textColor: "#fff",
-    promptKeywords: "deep purple gradient luxury, VIP premium shipping box with purple glow, four luxury delivery benefit cards floating (envio express garantia 30 dias atencion vip pago seguro), purple shimmer effects, bold white purple typography Experiencia Premium, premium VIP logistics advertisement luxury",
-  },
-  {
-    id: "log-teal-fresh",
-    name: "Teal Logistics",
-    desc: "Turquesa · Fresco · Proceso de pedido",
-    gradient: "linear-gradient(160deg, #0f766e 0%, #0d9488 40%, #ccfbf1 100%)",
-    accentColor: "#14B8A6",
-    textColor: "#fff",
-    promptKeywords: "teal fresh gradient, order process timeline from purchase to delivery, five icon steps order confirmed payment processing packing shipped delivered, teal glow circle nodes connecting path, delivery days counter bold, bold white typography Seguimiento en Tiempo Real, clean teal logistics process advertisement",
-  },
-  {
-    id: "log-dark-payment",
-    name: "Payment Logos",
-    desc: "Oscuro · Medios de pago · Contraentrega",
-    gradient: "radial-gradient(ellipse at 50% 50%, #18181b 0%, #09090b 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "dark charcoal background, large payment methods logos strip centered white (mercadopago mastercard visa contra entrega nequi), security shield icon prominent, padlock SSL badge, bold white typography Pago 100% Seguro headline, product visible top, logistics payment security advertisement dark professional",
-  },
-  {
-    id: "log-warm-family",
-    name: "Warm Delivery",
-    desc: "Beige · Familiar · Fácil y seguro",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #fde68a 30%, #d97706 100%)",
-    accentColor: "#92400E",
-    textColor: "#1a1a1a",
-    promptKeywords: "warm golden beige background, happy family receiving delivery box illustration, four trust icon benefits below warm icons truck shield star return, bold dark warm typography Llega a Tu Puerta headline, warm friendly logistics delivery advertisement approachable family",
-  },
-  {
-    id: "log-sky-simple",
-    name: "Sky Simple Shipping",
-    desc: "Azul cielo · Simple · Envío gratis",
-    gradient: "linear-gradient(180deg, #bfdbfe 0%, #eff6ff 50%, #dbeafe 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e3a8a",
-    promptKeywords: "bright sky blue clean gradient, large cheerful delivery truck graphic, bold headline Envío GRATIS a Todo el País, five simple benefit icons below free shipping returns guarantee, clean dark blue typography, product right side, simple friendly shipping advertisement clean bright",
-  },
-  {
-    id: "log-red-urgent",
-    name: "Urgent Shipping",
-    desc: "Rojo · Urgente · Hoy pedí mañana llega",
-    gradient: "radial-gradient(ellipse at 50% 100%, #7f1d1d 0%, #450a0a 50%, #0a0000 100%)",
-    accentColor: "#FCA5A5",
-    textColor: "#fff",
-    promptKeywords: "dark deep red urgency background, large clock countdown timer graphic, bold red and white typography Pídelo HOY y Recíbelo MAÑANA, delivery truck with speed lines, three urgency benefit cards express delivery guaranteed returns secure payment, urgency positive shipping advertisement dramatic",
-  },
-  {
-    id: "log-gold-trust",
-    name: "Gold Trust Strip",
-    desc: "Dorado · Confianza completa · Sellos",
-    gradient: "radial-gradient(ellipse at 50% 30%, #1c1407 0%, #0a0a0a 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "ultra dark luxury black with gold shimmer, five gold seal badge icons horizontal strip (envio seguro pago protegido garantia devolucion entrega rapida atencion 24h), product center illuminated above strip, bold white and gold typography Compra con Total Confianza, premium trust logistics advertisement luxury prestigious",
-  },
-];
-
-const FAQS_STYLES: BannerStyle[] = [
-  {
-    id: "faq-dark-clean",
-    name: "Dark FAQ",
-    desc: "Negro · Limpio · Preguntas claras",
-    gradient: "radial-gradient(ellipse at 50% 50%, #18181b 0%, #09090b 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "dark black clean background, three or four floating FAQ accordion cards with question mark icon blue, question text and short answer below, subtle card border dark gray, product image right side, bold white typography Preguntas Frecuentes headline, clean dark FAQ advertisement simple professional",
-  },
-  {
-    id: "faq-blue-pro",
-    name: "Blue Professional FAQ",
-    desc: "Azul · Profesional · Soporte claro",
-    gradient: "linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #1d4ed8 100%)",
-    accentColor: "#60A5FA",
-    textColor: "#fff",
-    promptKeywords: "navy blue gradient, four FAQ question and answer cards floating white cards with blue question mark badge, plus accordion expand icon, bold question text and short answer, customer support chat icon top right, bold white typography FAQ Resolvemos tus Dudas headline, professional customer support FAQ advertisement navy",
-  },
-  {
-    id: "faq-white-minimal",
-    name: "Clean FAQ",
-    desc: "Blanco · Minimalista · Moderno",
-    gradient: "linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e293b",
-    promptKeywords: "clean white minimal background, four FAQ accordion rows with subtle divider lines, blue question mark icon each row, bold question text dark and short answer text gray, plus minus toggle icon, product right side, minimal clean typography, modern FAQ advertisement clean minimal",
-  },
-  {
-    id: "faq-green-natural",
-    name: "Green FAQ",
-    desc: "Verde · Natural · Dudas resueltas",
-    gradient: "radial-gradient(ellipse at 50% 30%, #d1fae5 0%, #6ee7b7 30%, #065f46 100%)",
-    accentColor: "#10B981",
-    textColor: "#fff",
-    promptKeywords: "green natural gradient, four FAQ question cards with green leaf question mark badges, natural ingredient related questions answered, product prominently displayed, bold white typography Tus Dudas Resueltas headline, friendly informative natural health FAQ advertisement",
-  },
-  {
-    id: "faq-warm-friendly",
-    name: "Warm FAQ",
-    desc: "Beige · Cálido · Amigable y cercano",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #fde68a 30%, #d97706 100%)",
-    accentColor: "#92400E",
-    textColor: "#1a1a1a",
-    promptKeywords: "warm golden beige background, four FAQ cards warm rounded style with speech bubble question mark icon, question and short answer warm dark typography, friendly customer service representative illustration, product displayed, bold warm dark typography ¿Tienes Dudas? headline, friendly warm FAQ advertisement approachable",
-  },
-  {
-    id: "faq-purple-tech",
-    name: "Tech FAQ",
-    desc: "Púrpura · Tech · Preguntas técnicas",
-    gradient: "radial-gradient(ellipse at 50% 70%, #4c1d95 0%, #2d0a6b 40%, #0f0118 100%)",
-    accentColor: "#A78BFA",
-    textColor: "#fff",
-    promptKeywords: "deep purple tech gradient, four FAQ cards with glowing purple border and question mark icon, technical product questions answered, code bracket or tech icons decorative, product visible, bold white purple typography Preguntas Frecuentes headline, tech product FAQ advertisement premium purple",
-  },
-  {
-    id: "faq-teal-health",
-    name: "Health FAQ",
-    desc: "Turquesa · Salud · Dudas de suplemento",
-    gradient: "linear-gradient(160deg, #0f766e 0%, #0d9488 40%, #134e4a 100%)",
-    accentColor: "#5EEAD4",
-    textColor: "#fff",
-    promptKeywords: "teal clinical gradient, four health supplement FAQ cards with medical cross or question mark icon teal, ingredient safety dosage usage questions answered, product bottle right side, bold white teal typography Tus Dudas de Salud Resueltas, clinical FAQ health supplement advertisement",
-  },
-  {
-    id: "faq-pink-beauty",
-    name: "Beauty FAQ",
-    desc: "Rosa · Belleza · Preguntas de skincare",
-    gradient: "radial-gradient(ellipse at 50% 30%, #fdf2f8 0%, #fce7f3 40%, #ec4899 100%)",
-    accentColor: "#BE185D",
-    textColor: "#831843",
-    promptKeywords: "soft pink rose gradient, four beauty FAQ cards feminine style with pink question mark heart icon, skincare questions answered elegantly, rose petal decorative floating, beauty product displayed, elegant feminine typography ¿Tienes Preguntas? headline, beauty skincare feminine FAQ advertisement warm rose",
-  },
-  {
-    id: "faq-orange-bold",
-    name: "Bold FAQ",
-    desc: "Naranja · Audaz · Respuestas directas",
-    gradient: "linear-gradient(160deg, #7c2d12 0%, #c2410c 50%, #ea580c 100%)",
-    accentColor: "#FED7AA",
-    textColor: "#fff",
-    promptKeywords: "bold orange gradient, four direct FAQ cards bold style with large orange question mark, bold direct short answers typography, product visible, customer avatar happy testimonial small, bold white orange typography ¡Respuestas Directas! headline, energetic bold FAQ advertisement direct no-nonsense",
-  },
-  {
-    id: "faq-navy-gold",
-    name: "Premium FAQ",
-    desc: "Marino · Dorado · Soporte premium",
-    gradient: "radial-gradient(ellipse at 50% 30%, #1e3a5f 0%, #0f1f3a 50%, #060d1a 100%)",
-    accentColor: "#D97706",
-    textColor: "#fff",
-    promptKeywords: "dark navy background with gold particle effects, four FAQ cards gold border premium style, gold question mark badge each card, premium customer support chat icon, product illuminated right side, bold white gold typography Soporte Premium 24/7 headline, premium luxury FAQ customer support advertisement",
-  },
-  {
-    id: "faq-sky-simple",
-    name: "Sky FAQ",
-    desc: "Azul cielo · Simple · Para todos",
-    gradient: "linear-gradient(180deg, #bfdbfe 0%, #eff6ff 50%, #dbeafe 100%)",
-    accentColor: "#2563EB",
-    textColor: "#1e3a8a",
-    promptKeywords: "bright sky blue clean gradient, four simple FAQ question bubbles rounded white cards with blue question mark, simple short answers dark blue text, product right side, cheerful helpful customer service icon, bold dark blue typography Preguntas y Respuestas headline, friendly simple FAQ advertisement approachable clean",
-  },
-  {
-    id: "faq-dark-premium",
-    name: "Dark Premium FAQ",
-    desc: "Oscuro premium · Respuestas con autoridad",
-    gradient: "radial-gradient(ellipse at 50% 50%, #312e81 0%, #1e1b4b 40%, #030712 100%)",
-    accentColor: "#818CF8",
-    textColor: "#fff",
-    promptKeywords: "deep indigo dark gradient background, four floating FAQ cards glowing indigo border, cosmic question mark badge, concise authoritative answers, product center glowing, star rating confidence element, bold white indigo typography Todo lo que Necesitas Saber headline, premium authoritative FAQ advertisement dark cosmic",
-  },
-];
-
-function getStylesForSection(sectionId: string): BannerStyle[] {
-  if (sectionId === "oferta") return OFERTA_STYLES;
-  if (sectionId === "antes_despues") return ANTES_DESPUES_STYLES;
-  if (sectionId === "beneficios") return BENEFICIOS_STYLES;
-  if (sectionId === "comparativa") return COMPARATIVA_STYLES;
-  if (sectionId === "autoridad") return AUTORIDAD_STYLES;
-  if (sectionId === "testimonios") return TESTIMONIOS_STYLES;
-  if (sectionId === "ingredientes") return INGREDIENTES_STYLES;
-  if (sectionId === "modo_uso") return MODO_USO_STYLES;
-  if (sectionId === "logistica") return LOGISTICA_STYLES;
-  if (sectionId === "faqs") return FAQS_STYLES;
-  return HERO_STYLES;
-}
 
 // ─── Banner Mode: DesignGalleryModal ──────────────────────────────────────────
 
-function GalleryThumbnail({ sectionId, styleId, gradient }: { sectionId: string; styleId: string; gradient: string }) {
-  const [error, setError] = useState(false);
-  const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/banner-templates/${sectionId}/${styleId}.jpg`;
-  if (error) {
-    return <div className="w-full h-full" style={{ background: gradient }} />;
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt="" className="w-full h-full object-cover" onError={() => setError(true)} />
-  );
-}
-
-function DesignGalleryModal({ initialSectionId, currentStyleId, onSelect, onClose }: {
+function DesignGalleryModal({ initialSectionId, templates, loadingSections, currentTemplateId, onSelect, onClose }: {
   initialSectionId: string;
-  currentStyleId: string | null;
-  onSelect: (sectionId: string, styleId: string) => void;
+  templates: Record<string, BannerTemplate[]>;
+  loadingSections: Set<string>;
+  currentTemplateId: string | null;
+  onSelect: (sectionId: string, templateId: string) => void;
   onClose: () => void;
 }) {
   const [activeTab, setActiveTab] = useState(initialSectionId);
-  const [pending, setPending] = useState<string | null>(currentStyleId);
+  const [pending, setPending] = useState<string | null>(currentTemplateId);
 
-  const styles = getStylesForSection(activeTab);
+  const list = templates[activeTab] ?? [];
+  const isLoading = loadingSections.has(activeTab);
   const activeSection = BANNER_SECTIONS.find((s) => s.id === activeTab);
 
   function handleConfirm() {
-    if (pending !== null) {
-      onSelect(activeTab, pending);
-    }
+    if (pending !== null) onSelect(activeTab, pending);
     onClose();
   }
 
@@ -1813,7 +581,6 @@ function DesignGalleryModal({ initialSectionId, currentStyleId, onSelect, onClos
         style={{ width: "min(92vw, 900px)", maxHeight: "88vh" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#2A2A3A] flex-shrink-0">
           <div>
             <p className="text-[#F0F0F5] font-bold text-sm">Galería de Diseños</p>
@@ -1824,83 +591,108 @@ function DesignGalleryModal({ initialSectionId, currentStyleId, onSelect, onClos
           </button>
         </div>
 
-        {/* Section tabs — horizontal scroll */}
         <div className="flex gap-1 px-4 py-3 overflow-x-auto flex-shrink-0 border-b border-[#1C1C26]" style={{ scrollbarWidth: "none" }}>
-          {BANNER_SECTIONS.map((sec) => (
-            <button
-              key={sec.id}
-              onClick={() => { setActiveTab(sec.id); setPending(null); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all flex-shrink-0"
-              style={activeTab === sec.id
-                ? { background: "#7C3AED", color: "#fff" }
-                : { background: "#1C1C26", color: "#8888A0" }}>
-              <span>{sec.icon}</span>
-              <span>{sec.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Grid */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {/* "Sin estilo" option */}
-            <button
-              onClick={() => setPending("")}
-              className="rounded-xl border overflow-hidden text-left flex flex-col transition-all"
-              style={pending === ""
-                ? { border: "2px solid #7C3AED", background: "rgba(124,58,237,0.08)" }
-                : { border: "1px solid #2A2A3A", background: "#13131A" }}>
-              <div className="w-full overflow-hidden relative" style={{ aspectRatio: "9/16" }}>
-                <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-[#1C1C26]">
-                  <span className="text-3xl">✨</span>
-                  <span className="text-[#555568] text-[10px] text-center px-2">IA libre</span>
-                </div>
-                {pending === "" && (
-                  <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#7C3AED] flex items-center justify-center">
-                    <Check size={10} color="#fff" />
-                  </div>
+          {BANNER_SECTIONS.map((sec) => {
+            const count = templates[sec.id]?.length ?? 0;
+            return (
+              <button
+                key={sec.id}
+                onClick={() => { setActiveTab(sec.id); setPending(null); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all flex-shrink-0"
+                style={activeTab === sec.id
+                  ? { background: "#7C3AED", color: "#fff" }
+                  : { background: "#1C1C26", color: "#8888A0" }}>
+                <span>{sec.icon}</span>
+                <span>{sec.label}</span>
+                {count > 0 && (
+                  <span className="text-[9px] px-1 py-0.5 rounded-full"
+                    style={activeTab === sec.id ? { background: "rgba(255,255,255,0.2)" } : { background: "#2A2A3A" }}>
+                    {count}
+                  </span>
                 )}
-              </div>
-              <div className="px-2 py-1.5">
-                <p className="text-[#8888A0] font-semibold text-[10px]">Sin estilo</p>
-                <p className="text-[#3A3A4A] text-[9px] mt-0.5">La IA genera libremente</p>
-              </div>
-            </button>
-
-            {styles.map((style) => {
-              const selected = pending === style.id;
-              return (
-                <button
-                  key={style.id}
-                  onClick={() => setPending(style.id)}
-                  className="rounded-xl border overflow-hidden text-left flex flex-col transition-all"
-                  style={selected
-                    ? { border: `2px solid ${style.accentColor}`, background: `${style.accentColor}12` }
-                    : { border: "1px solid #2A2A3A", background: "#13131A" }}>
-                  <div className="w-full overflow-hidden relative" style={{ aspectRatio: "9/16" }}>
-                    <GalleryThumbnail sectionId={activeTab} styleId={style.id} gradient={style.gradient} />
-                    {selected && (
-                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
-                        style={{ background: style.accentColor }}>
-                        <Check size={10} color="#fff" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="px-2 py-1.5">
-                    <p className="text-[#F0F0F5] font-semibold text-[10px] leading-tight truncate">{style.name}</p>
-                    <p className="text-[#555568] text-[9px] mt-0.5 leading-tight line-clamp-1">{style.desc}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Footer */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <Loader2 size={20} className="animate-spin text-[#7C3AED]" />
+              <p className="text-[#555568] text-xs">Cargando plantillas…</p>
+            </div>
+          ) : list.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
+              <span className="text-3xl">📭</span>
+              <p className="text-[#8888A0] text-xs font-medium">No hay plantillas para {activeSection?.label}</p>
+              <p className="text-[#555568] text-[10px] max-w-xs">
+                Sube imágenes al bucket <code className="text-[#7C3AED]">banner-templates/{activeTab}/</code> en Supabase Storage.
+                Aparecerán aquí automáticamente.
+              </p>
+              <button
+                onClick={() => { setPending(""); }}
+                className="mt-3 px-3 py-1.5 rounded-lg border border-[#2A2A3A] text-[#8888A0] text-[10px] hover:text-[#F0F0F5] hover:border-[#3A3A4A] transition-colors">
+                Generar sin plantilla (IA libre)
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <button
+                onClick={() => setPending("")}
+                className="rounded-xl border overflow-hidden text-left flex flex-col transition-all"
+                style={pending === ""
+                  ? { border: "2px solid #7C3AED", background: "rgba(124,58,237,0.08)" }
+                  : { border: "1px solid #2A2A3A", background: "#13131A" }}>
+                <div className="w-full overflow-hidden relative" style={{ aspectRatio: "9/16" }}>
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-[#1C1C26]">
+                    <span className="text-3xl">✨</span>
+                    <span className="text-[#555568] text-[10px] text-center px-2">IA libre</span>
+                  </div>
+                  {pending === "" && (
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#7C3AED] flex items-center justify-center">
+                      <Check size={10} color="#fff" />
+                    </div>
+                  )}
+                </div>
+                <div className="px-2 py-1.5">
+                  <p className="text-[#8888A0] font-semibold text-[10px]">Sin plantilla</p>
+                  <p className="text-[#3A3A4A] text-[9px] mt-0.5">La IA genera libremente</p>
+                </div>
+              </button>
+
+              {list.map((tpl) => {
+                const selected = pending === tpl.id;
+                return (
+                  <button
+                    key={tpl.id}
+                    onClick={() => setPending(tpl.id)}
+                    className="rounded-xl border overflow-hidden text-left flex flex-col transition-all"
+                    style={selected
+                      ? { border: "2px solid #7C3AED", background: "rgba(124,58,237,0.10)" }
+                      : { border: "1px solid #2A2A3A", background: "#13131A" }}>
+                    <div className="w-full overflow-hidden relative bg-[#0A0A0F]" style={{ aspectRatio: "9/16" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={tpl.imageUrl} alt={tpl.name} className="w-full h-full object-cover" />
+                      {selected && (
+                        <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#7C3AED] flex items-center justify-center">
+                          <Check size={10} color="#fff" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-2 py-1.5">
+                      <p className="text-[#F0F0F5] font-semibold text-[10px] leading-tight truncate">{tpl.name}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         <div className="px-5 py-3 border-t border-[#2A2A3A] flex items-center justify-between flex-shrink-0">
           <p className="text-[#555568] text-[11px]">
-            {pending
-              ? `Seleccionado: ${styles.find((s) => s.id === pending)?.name ?? "Sin estilo"} · ${activeSection?.label}`
+            {pending !== null
+              ? `Seleccionado: ${pending === "" ? "Sin plantilla" : list.find((t) => t.id === pending)?.name ?? pending} · ${activeSection?.label}`
               : "Ninguno seleccionado"}
           </p>
           <div className="flex gap-2">
@@ -1922,22 +714,26 @@ function DesignGalleryModal({ initialSectionId, currentStyleId, onSelect, onClos
 
 // ─── Banner Mode: BannerImageCard ─────────────────────────────────────────────
 
-function BannerImageCard({ section, config, images, externalGenerating, onImageGenerated, onStyleChange }: {
+function BannerImageCard({ section, config, images, externalGenerating, templates, loadingSections, onImageGenerated, onStyleChange, onOpenGallery }: {
   section: { id: string; label: string; icon: string };
   config: BannerConfig;
   images: string[];
   externalGenerating?: boolean;
+  templates: Record<string, BannerTemplate[]>;
+  loadingSections: Set<string>;
   onImageGenerated: (url: string) => void;
   onStyleChange: (styleId: string) => void;
+  onOpenGallery: () => void;
 }) {
   const [localGenerating, setLocalGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showStylePicker, setShowStylePicker] = useState(false);
   const [previewIdx, setPreviewIdx] = useState(0);
   const generating = localGenerating || !!externalGenerating;
-  const selectedStyleId = config.sectionStyles[section.id] ?? null;
-  const allStyles = getStylesForSection(section.id);
-  const selectedStyle = allStyles.find((s) => s.id === selectedStyleId) ?? null;
+  const selectedTemplateId = config.sectionStyles[section.id] ?? null;
+  const sectionTemplates = templates[section.id] ?? [];
+  const selectedTemplate = selectedTemplateId
+    ? sectionTemplates.find((t) => t.id === selectedTemplateId) ?? null
+    : null;
 
   async function handleGenerate() {
     setLocalGenerating(true);
@@ -1954,7 +750,7 @@ function BannerImageCard({ section, config, images, externalGenerating, onImageG
           font: config.font,
           country: config.country,
           aiModel: config.aiModel,
-          styleKeywords: selectedStyle?.promptKeywords ?? "",
+          styleKeywords: selectedTemplateId ? templateKeywords(selectedTemplateId) : "",
           priceSale: config.priceSale,
           priceOriginal: config.priceOriginal,
         }),
@@ -1974,18 +770,8 @@ function BannerImageCard({ section, config, images, externalGenerating, onImageG
   }
 
   const currentImage = images[previewIdx] ?? null;
-
   return (
     <>
-      {showStylePicker && (
-        <DesignGalleryModal
-          initialSectionId={section.id}
-          currentStyleId={selectedStyleId}
-          onSelect={(_sectionId, styleId) => onStyleChange(styleId)}
-          onClose={() => setShowStylePicker(false)}
-        />
-      )}
-
       <div className="bg-[#13131A] border border-[#2A2A3A] rounded-xl overflow-hidden hover:border-[#3A3A4A] transition-colors">
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#1C1C26]">
@@ -1999,14 +785,18 @@ function BannerImageCard({ section, config, images, externalGenerating, onImageG
             )}
           </div>
           <div className="flex items-center gap-1.5">
-            <button onClick={() => setShowStylePicker(true)}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-medium transition-all"
-              style={selectedStyle
-                ? { border: `1px solid ${selectedStyle.accentColor}40`, background: `${selectedStyle.accentColor}15`, color: selectedStyle.accentColor }
+            <button onClick={onOpenGallery}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-medium transition-all max-w-[140px]"
+              style={selectedTemplate
+                ? { border: "1px solid rgba(124,58,237,0.4)", background: "rgba(124,58,237,0.12)", color: "#A78BFA" }
                 : { border: "1px solid #2A2A3A", background: "#1C1C26", color: "#555568" }}>
-              <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
-                style={{ background: selectedStyle?.gradient ?? "#3A3A4A" }} />
-              {selectedStyle ? selectedStyle.name : "Sin estilo"}
+              {selectedTemplate ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={selectedTemplate.imageUrl} alt="" className="w-3 h-3 rounded-sm object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0 bg-[#3A3A4A]" />
+              )}
+              <span className="truncate">{selectedTemplate ? selectedTemplate.name : "Elegir plantilla"}</span>
             </button>
             <button onClick={handleGenerate} disabled={generating}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-white text-[10px] font-semibold transition-colors disabled:opacity-60"
@@ -2066,7 +856,7 @@ function BannerImageCard({ section, config, images, externalGenerating, onImageG
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-[#2A2A3A] flex flex-col items-center justify-center gap-2 py-8"
-              style={selectedStyle ? { background: `${selectedStyle.gradient}`, opacity: 0.6 } : {}}>
+              style={selectedTemplate ? { background: `url(${selectedTemplate.imageUrl}) center/cover`, opacity: 0.4 } : {}}>
               {generating ? (
                 <>
                   <Loader2 size={16} className="animate-spin text-[#555568]" />
@@ -2076,7 +866,7 @@ function BannerImageCard({ section, config, images, externalGenerating, onImageG
                 <>
                   <span className="text-2xl">{section.icon}</span>
                   <span className="text-[#3A3A4A] text-[10px]">
-                    {selectedStyle ? `Estilo: ${selectedStyle.name} · ` : ""}Haz clic en Generar
+                    {selectedTemplate ? `Plantilla: ${selectedTemplate.name} · ` : ""}Haz clic en Generar
                   </span>
                 </>
               )}
@@ -2104,8 +894,24 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
   const [anglesError, setAnglesError] = useState<string | null>(null);
   const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
   const [pendingSections, setPendingSections] = useState<Set<string>>(new Set());
+  const [templates, setTemplates] = useState<Record<string, BannerTemplate[]>>({});
+  const [loadingSections, setLoadingSections] = useState<Set<string>>(new Set());
+  const [galleryForSection, setGalleryForSection] = useState<string | null>(null);
 
   function upd(patch: Partial<BannerConfig>) { setConfig((p) => ({ ...p, ...patch })); }
+
+  // Pre-fetch templates for all sections once on mount
+  useEffect(() => {
+    const sections = BANNER_SECTIONS.map((s) => s.id);
+    setLoadingSections(new Set(sections));
+    Promise.all(
+      sections.map(async (id) => {
+        const list = await fetchTemplatesForSection(id);
+        setTemplates((p) => ({ ...p, [id]: list }));
+        setLoadingSections((p) => { const n = new Set(p); n.delete(id); return n; });
+      })
+    );
+  }, []);
 
   async function generateAllBanners(angle: string) {
     const total = BANNER_SECTIONS.length;
@@ -2120,9 +926,7 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
       const batch = queue.splice(0, BATCH);
       await Promise.all(batch.map(async (section) => {
         const styleId = config.sectionStyles[section.id];
-        const styleKeywords = styleId
-          ? getStylesForSection(section.id).find((s) => s.id === styleId)?.promptKeywords ?? ""
-          : "";
+        const styleKeywords = styleId ? templateKeywords(styleId) : "";
         try {
           const res = await fetch("/api/landing/generate-banner-image", {
             method: "POST",
@@ -2483,6 +1287,19 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
           </div>
         )}
 
+        {galleryForSection && (
+          <DesignGalleryModal
+            initialSectionId={galleryForSection}
+            templates={templates}
+            loadingSections={loadingSections}
+            currentTemplateId={config.sectionStyles[galleryForSection] ?? null}
+            onSelect={(sectionId, templateId) => {
+              upd({ sectionStyles: { ...config.sectionStyles, [sectionId]: templateId } });
+            }}
+            onClose={() => setGalleryForSection(null)}
+          />
+        )}
+
         <div className="space-y-2">
           {BANNER_SECTIONS.map((section) => (
             <BannerImageCard
@@ -2491,6 +1308,8 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
               config={config}
               images={generatedImages[section.id] ?? []}
               externalGenerating={pendingSections.has(section.id)}
+              templates={templates}
+              loadingSections={loadingSections}
               onImageGenerated={(url) => {
                 setGeneratedImages((p) => ({
                   ...p,
@@ -2498,13 +1317,9 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
                 }));
               }}
               onStyleChange={(styleId) => {
-                upd({
-                  sectionStyles: {
-                    ...config.sectionStyles,
-                    [section.id]: styleId,
-                  },
-                });
+                upd({ sectionStyles: { ...config.sectionStyles, [section.id]: styleId } });
               }}
+              onOpenGallery={() => setGalleryForSection(section.id)}
             />
           ))}
         </div>
