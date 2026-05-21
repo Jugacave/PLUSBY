@@ -273,6 +273,35 @@ async function callRecraftV3(params: {
   }
 }
 
+// gpt-image-1: OpenAI's latest and best model — excellent text rendering
+async function callGptImage1(params: {
+  apiKey: string;
+  prompt: string;
+}): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  try {
+    const res = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${params.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-image-1",
+        prompt: params.prompt,
+        n: 1,
+        size: "1024x1792",
+        quality: "high",
+        output_format: "webp",
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok: false, error: data.error?.message ?? "Error gpt-image-1" };
+    // gpt-image-1 returns base64
+    const b64 = data.data?.[0]?.b64_json;
+    if (!b64) return { ok: false, error: "gpt-image-1 no devolvió imagen" };
+    return { ok: true, url: `data:image/webp;base64,${b64}` };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Error" };
+  }
+}
+
 async function callDalle3HD(params: {
   apiKey: string;
   prompt: string;
@@ -291,9 +320,9 @@ async function callDalle3HD(params: {
       }),
     });
     const data = await res.json();
-    if (!res.ok) return { ok: false, error: data.error?.message ?? "Error OpenAI" };
+    if (!res.ok) return { ok: false, error: data.error?.message ?? "Error DALL-E 3" };
     const url = data.data?.[0]?.url;
-    if (!url) return { ok: false, error: "DALL-E no devolvió imagen" };
+    if (!url) return { ok: false, error: "DALL-E 3 no devolvió imagen" };
     return { ok: true, url };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Error" };
@@ -323,23 +352,39 @@ export async function POST(req: NextRequest) {
 
   const falKey = user.user_metadata?.ai_key_fal;
   const openaiKey = user.user_metadata?.ai_key_openai;
-  const userChoseDalle = body.aiModel === "openai-dalle3";
+  const aiModel = body.aiModel ?? "";
 
-  // ── Stage 2: Image generation — Ideogram v3 by default (best text) ────────
-  // Use template + product images as STYLE REFERENCES (Ideogram v3 supports this)
+  // ── Stage 2: Image generation ─────────────────────────────────────────────
+  //
+  // Priority for best text quality:
+  //   1. gpt-image-1  (OpenAI) — best text, photorealistic, 1024×1792
+  //   2. Ideogram v3  (Fal.ai) — best text among open-weight models
+  //   3. Recraft v3   (Fal.ai) — strong text, poster/banner specialist
+  //   4. DALL-E 3 hd  (OpenAI) — good text fallback
+  //
+  // User can override by explicitly selecting a model in the editor.
+
+  // ── OpenAI path ───────────────────────────────────────────────────────────
+  const isOpenAIModel = aiModel === "openai-gpt-image-1" || aiModel === "openai-dalle3";
+  if (openaiKey && (isOpenAIModel || !falKey)) {
+    if (aiModel === "openai-dalle3") {
+      const out = await callDalle3HD({ apiKey: openaiKey, prompt });
+      if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "dalle3-hd" });
+      return NextResponse.json({ error: out.error }, { status: 500 });
+    }
+    // gpt-image-1 (default OpenAI)
+    const out = await callGptImage1({ apiKey: openaiKey, prompt });
+    if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "gpt-image-1" });
+    // Failed → fall through to Fal.ai if available
+    if (!falKey) return NextResponse.json({ error: out.error }, { status: 500 });
+  }
+
+  // ── Fal.ai path: Ideogram v3 → Recraft v3 ────────────────────────────────
   if (falKey) {
     const styleRefs: string[] = [];
     if (hasTemplate) styleRefs.push(body.templateUrl!);
     if (productImages.length > 0) styleRefs.push(...productImages.slice(0, 2));
 
-    // Allow user to force DALL-E 3 if they explicitly selected it AND have the key
-    if (userChoseDalle && openaiKey) {
-      const out = await callDalle3HD({ apiKey: openaiKey, prompt });
-      if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "dalle3-hd" });
-      return NextResponse.json({ error: out.error }, { status: 500 });
-    }
-
-    // Try Ideogram v3 first
     const ideogram = await callIdeogramV3({
       apiKey: falKey,
       prompt,
@@ -349,20 +394,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, imageUrl: ideogram.url, mode: "ideogram-v3" });
     }
 
-    // Fallback to Recraft v3 (also excellent at text)
     const recraft = await callRecraftV3({ apiKey: falKey, prompt });
     if (recraft.ok) {
       return NextResponse.json({ ok: true, imageUrl: recraft.url, mode: "recraft-v3" });
     }
 
     return NextResponse.json({ error: ideogram.error }, { status: 500 });
-  }
-
-  // ── OpenAI-only path ───────────────────────────────────────────────────────
-  if (openaiKey) {
-    const out = await callDalle3HD({ apiKey: openaiKey, prompt });
-    if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "dalle3-hd" });
-    return NextResponse.json({ error: out.error }, { status: 500 });
   }
 
   return NextResponse.json(
