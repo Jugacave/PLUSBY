@@ -12,6 +12,9 @@ export interface BannerData {
   priceSale?: string;
   priceOriginal?: string;
   saleLabel?: string;
+  // Comparativa
+  ourLabel?: string;
+  othersLabel?: string;
   // Style
   primaryColor: string;    // e.g. "#FF6B35"
   secondaryColor: string;  // e.g. "#1C1C26"

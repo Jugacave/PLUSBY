@@ -6,6 +6,13 @@ import { HeroTemplateA, HeroTemplateB } from "./templates/HeroTemplate";
 import { BeneficiosTemplateA, BeneficiosTemplateB } from "./templates/BeneficiosTemplate";
 import { OfertaTemplateA } from "./templates/OfertaTemplate";
 import { AntesDespuesTemplateA } from "./templates/AntesDespuesTemplate";
+import { ComparativaTemplateA } from "./templates/ComparativaTemplate";
+import { AutoridadTemplateA } from "./templates/AutoridadTemplate";
+import { IngredientesTemplateA } from "./templates/IngredientesTemplate";
+import { ModoUsoTemplateA } from "./templates/ModoUsoTemplate";
+import { LogisticaTemplateA } from "./templates/LogisticaTemplate";
+import { TestimoniosTemplateA } from "./templates/TestimoniosTemplate";
+import { FaqsTemplateA } from "./templates/FaqsTemplate";
 import type { BannerData } from "./types";
 
 // ─── Template registry ────────────────────────────────────────────────────────
@@ -27,6 +34,13 @@ const TEMPLATE_REGISTRY: Record<string, TemplateEntry[]> = {
   ],
   oferta:        [{ id: "ofe-a", label: "Precio grande", component: OfertaTemplateA }],
   antes_despues: [{ id: "ant-a", label: "Split vertical", component: AntesDespuesTemplateA }],
+  comparativa:   [{ id: "cmp-a", label: "Dos columnas", component: ComparativaTemplateA }],
+  autoridad:     [{ id: "aut-a", label: "Certificado",  component: AutoridadTemplateA }],
+  ingredientes:  [{ id: "ing-a", label: "Natural",      component: IngredientesTemplateA }],
+  modo_uso:      [{ id: "mod-a", label: "3 pasos",      component: ModoUsoTemplateA }],
+  logistica:     [{ id: "log-a", label: "3 íconos",     component: LogisticaTemplateA }],
+  testimonios:   [{ id: "tes-a", label: "5 estrellas",  component: TestimoniosTemplateA }],
+  faqs:          [{ id: "faq-a", label: "Q&A cards",    component: FaqsTemplateA }],
 };
 
 // ─── Main BannerCanvas component ──────────────────────────────────────────────
