@@ -15,7 +15,11 @@ import { createClient } from "@/lib/supabase/client";
 const BannerCanvas = dynamic(() => import("@/components/banner-canvas/BannerCanvas"), { ssr: false });
 
 // Sections that have HTML templates (perfect text + real product photo)
-const HTML_TEMPLATE_SECTIONS = new Set(["hero", "beneficios", "oferta", "antes_despues"]);
+const HTML_TEMPLATE_SECTIONS = new Set([
+  "hero", "beneficios", "oferta", "antes_despues",
+  "comparativa", "autoridad", "ingredientes", "modo_uso",
+  "logistica", "testimonios", "faqs",
+]);
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -800,6 +804,8 @@ function BannerHTMLCard({ section, config, productName }: {
     bullets: section.id === "modo_uso" ? copy.steps : section.id === "logistica" || section.id === "autoridad" ? copy.badges : copy.bullets,
     priceSale: config.priceSale,
     priceOriginal: config.priceOriginal,
+    ourLabel: copy.ourLabel,
+    othersLabel: copy.othersLabel,
     primaryColor: copy.primaryColor,
     secondaryColor: copy.secondaryColor,
     bgColor: copy.bgColor,
