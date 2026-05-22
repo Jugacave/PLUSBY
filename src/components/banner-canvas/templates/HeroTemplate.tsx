@@ -35,11 +35,12 @@ export function HeroTemplateA({ data }: { data: BannerData }) {
           color: data.accentColor, fontSize: 112, fontWeight: 900,
           lineHeight: 1.05, margin: 0, textTransform: "uppercase",
           letterSpacing: -2, textShadow: "0 4px 24px rgba(0,0,0,0.3)",
+          overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
         }}>
           {data.headline}
         </h1>
         {data.subheadline && (
-          <p style={{ color: `${data.accentColor}CC`, fontSize: 46, fontWeight: 400, margin: "24px 0 0", lineHeight: 1.3 }}>
+          <p style={{ color: `${data.accentColor}CC`, fontSize: 46, fontWeight: 400, margin: "24px 0 0", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
             {data.subheadline}
           </p>
         )}
@@ -113,11 +114,11 @@ export function HeroTemplateB({ data }: { data: BannerData }) {
       {/* Text area */}
       <div style={{ flex: 1, padding: "60px 80px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         <div>
-          <h1 style={{ color: data.secondaryColor, fontSize: 100, fontWeight: 900, lineHeight: 1.05, margin: 0, textTransform: "uppercase" }}>
+          <h1 style={{ color: data.secondaryColor, fontSize: 100, fontWeight: 900, lineHeight: 1.05, margin: 0, textTransform: "uppercase", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
             {data.headline}
           </h1>
           {data.subheadline && (
-            <p style={{ color: "#666", fontSize: 44, margin: "20px 0 0", fontWeight: 400 }}>{data.subheadline}</p>
+            <p style={{ color: "#666", fontSize: 44, margin: "20px 0 0", fontWeight: 400, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{data.subheadline}</p>
           )}
         </div>
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>

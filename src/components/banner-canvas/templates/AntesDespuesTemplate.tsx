@@ -69,7 +69,7 @@ export function AntesDespuesTemplateA({ data }: { data: BannerData }) {
         </div>
         <div style={{ textAlign: "center", zIndex: 1 }}>
           <div style={{ fontSize: 160, marginBottom: 30 }}>✨</div>
-          <h2 style={{ color: data.secondaryColor, fontSize: 72, fontWeight: 900, margin: "0 0 30px", lineHeight: 1.1, textTransform: "uppercase" }}>
+          <h2 style={{ color: data.secondaryColor, fontSize: 72, fontWeight: 900, margin: "0 0 30px", lineHeight: 1.1, textTransform: "uppercase", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
             {data.headline}
           </h2>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>

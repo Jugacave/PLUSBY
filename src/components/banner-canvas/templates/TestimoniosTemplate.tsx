@@ -23,7 +23,7 @@ export function TestimoniosTemplateA({ data }: { data: BannerData }) {
 
       {/* Headline */}
       <div style={{ padding: "40px 80px 20px", textAlign: "center" }}>
-        <h1 style={{ color: data.accentColor, fontSize: 92, fontWeight: 900, lineHeight: 1, margin: 0, textTransform: "uppercase", letterSpacing: -2 }}>
+        <h1 style={{ color: data.accentColor, fontSize: 92, fontWeight: 900, lineHeight: 1, margin: 0, textTransform: "uppercase", letterSpacing: -2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
           {data.headline}
         </h1>
       </div>
@@ -38,7 +38,7 @@ export function TestimoniosTemplateA({ data }: { data: BannerData }) {
       {/* Quote card */}
       <div style={{ margin: "0 60px", padding: "50px 50px", background: `${data.accentColor}F5`, borderRadius: 32, position: "relative", boxShadow: "0 30px 60px rgba(0,0,0,0.4)" }}>
         <span style={{ position: "absolute", top: -10, left: 30, fontSize: 200, color: data.primaryColor, fontFamily: "Georgia, serif", lineHeight: 1, opacity: 0.3 }}>&ldquo;</span>
-        <p style={{ color: data.secondaryColor, fontSize: 44, fontWeight: 500, lineHeight: 1.35, margin: 0, fontStyle: "italic", position: "relative", zIndex: 1 }}>
+        <p style={{ color: data.secondaryColor, fontSize: 44, fontWeight: 500, lineHeight: 1.35, margin: 0, fontStyle: "italic", position: "relative", zIndex: 1, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }}>
           {quote}
         </p>
         <div style={{ marginTop: 30, display: "flex", alignItems: "center", gap: 16 }}>

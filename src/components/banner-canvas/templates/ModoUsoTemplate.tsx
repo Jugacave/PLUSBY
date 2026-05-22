@@ -18,7 +18,7 @@ export function ModoUsoTemplateA({ data }: { data: BannerData }) {
         <div style={{ display: "inline-block", background: `${data.primaryColor}33`, color: data.primaryColor, fontSize: 28, fontWeight: 800, padding: "12px 32px", borderRadius: 100, letterSpacing: 4, textTransform: "uppercase", marginBottom: 24, border: `2px solid ${data.primaryColor}66` }}>
           ¿Cómo usar?
         </div>
-        <h1 style={{ color: data.accentColor, fontSize: 96, fontWeight: 900, lineHeight: 1, margin: 0, textTransform: "uppercase", letterSpacing: -2 }}>
+        <h1 style={{ color: data.accentColor, fontSize: 96, fontWeight: 900, lineHeight: 1, margin: 0, textTransform: "uppercase", letterSpacing: -2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
           {data.headline}
         </h1>
         {data.subheadline && (
@@ -52,7 +52,7 @@ export function ModoUsoTemplateA({ data }: { data: BannerData }) {
             <div style={{ flexShrink: 0, width: 110, height: 110, borderRadius: "50%", background: `linear-gradient(135deg, ${data.primaryColor}, ${data.primaryColor}CC)`, color: data.accentColor, fontSize: 64, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 12px 24px ${data.primaryColor}55` }}>
               {i + 1}
             </div>
-            <p style={{ color: data.accentColor, fontSize: 38, fontWeight: 700, margin: 0, lineHeight: 1.2, flex: 1 }}>{s}</p>
+            <p style={{ color: data.accentColor, fontSize: 38, fontWeight: 700, margin: 0, lineHeight: 1.2, flex: 1, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{s}</p>
           </div>
         ))}
       </div>

@@ -60,13 +60,27 @@ export async function POST(req: NextRequest) {
 
   const guide = sectionGuides[sectionType] ?? sectionGuides.hero;
 
+  // Hard character limits — prevents any field from overflowing the 1080×1920 canvas
+  const t = (v: unknown, max: number): string => String(v ?? "").trim().slice(0, max);
+  const tArr = (v: unknown, itemMax: number, count: number): string[] =>
+    (Array.isArray(v) ? v : []).filter(Boolean).slice(0, count).map((s: unknown) => t(s, itemMax));
+
   try {
     const message = await anthropic.messages.create({
       model: "claude-opus-4-7",
       max_tokens: 600,
+      system: `Eres un copywriter de ecommerce para banners publicitarios visuales de 1080×1920 px.
+LÍMITES ABSOLUTOS DE CARACTERES (el espacio físico del banner es fijo):
+- headline: máx 25 caracteres  (ej: "HIDRATA TU PIEL")
+- subheadline: máx 45 caracteres
+- cta: máx 18 caracteres  (ej: "COMPRAR AHORA")
+- bullets / steps / badges (cada uno): máx 20 caracteres  (ej: "100% Natural")
+- saleLabel: máx 14 caracteres  (ej: "50% OFF")
+- ourLabel / othersLabel: máx 10 caracteres
+Si el texto supera el límite, recórtalo. Brevedad = buen diseño.`,
       messages: [{
         role: "user",
-        content: `Eres un copywriter de ecommerce para ${market}. Genera copy publicitario en ESPAÑOL CORRECTO.
+        content: `Genera copy publicitario en ESPAÑOL CORRECTO para ${market}.
 
 TIPO DE BANNER: ${sectionType}
 GUÍA DE TEXTOS: ${guide}
@@ -74,17 +88,16 @@ GUÍA DE TEXTOS: ${guide}
 PRODUCTO:
 ${productInfo}
 
-REGLAS CRÍTICAS:
+REGLAS:
 - Todo en español de ${market}, palabras REALES correctamente escritas
-- Brevísimo: cumple los límites de palabras al pie de la letra
+- Brevísimo: cumple los límites de caracteres al pie de la letra
 - NO inventes palabras. NO mezcles inglés.
-- Usa mayúsculas para TITULARES (headline, saleLabel)
-- saleLabel SIEMPRE en mayúsculas
+- Mayúsculas para TITULARES (headline, saleLabel)
 
 Responde ÚNICAMENTE con este JSON sin markdown:
 {"headline":"...","subheadline":"...","cta":"...","saleLabel":"...","bullets":["...","...","..."],"steps":["...","...","..."],"badges":["...","...","..."],"ourLabel":"...","othersLabel":"...","primaryColor":"#RRGGBB","secondaryColor":"#RRGGBB","bgColor":"#RRGGBB","accentColor":"#RRGGBB"}
 
-Para los colores: elige una paleta coherente con el producto y el tipo de banner. primaryColor = color principal del producto o del estado de ánimo de la categoría. accentColor = color del texto principal sobre el fondo (usualmente blanco #FFFFFF o negro oscuro #0A0A0F).`,
+Para los colores: paleta coherente con el producto. primaryColor = color principal. accentColor = color del texto principal sobre el fondo (blanco #FFFFFF o negro #0A0A0F).`,
       }],
     });
 
@@ -95,19 +108,19 @@ Para los colores: elige una paleta coherente con el producto y el tipo de banner
     const parsed = JSON.parse(jsonMatch[0]);
     return NextResponse.json({
       ok: true,
-      headline:      parsed.headline ?? "",
-      subheadline:   parsed.subheadline ?? "",
-      cta:           parsed.cta ?? "Comprar Ahora",
-      saleLabel:     parsed.saleLabel ?? "",
-      bullets:       Array.isArray(parsed.bullets) ? parsed.bullets.filter(Boolean) : [],
-      steps:         Array.isArray(parsed.steps) ? parsed.steps.filter(Boolean) : [],
-      badges:        Array.isArray(parsed.badges) ? parsed.badges.filter(Boolean) : [],
-      ourLabel:      parsed.ourLabel ?? "",
-      othersLabel:   parsed.othersLabel ?? "",
-      primaryColor:  parsed.primaryColor ?? "#7C3AED",
-      secondaryColor: parsed.secondaryColor ?? "#1C1C26",
-      bgColor:       parsed.bgColor ?? "#0A0A0F",
-      accentColor:   parsed.accentColor ?? "#FFFFFF",
+      headline:       t(parsed.headline, 30),
+      subheadline:    t(parsed.subheadline, 55),
+      cta:            t(parsed.cta ?? "Comprar Ahora", 22),
+      saleLabel:      t(parsed.saleLabel, 16),
+      bullets:        tArr(parsed.bullets, 24, 6),
+      steps:          tArr(parsed.steps, 24, 3),
+      badges:         tArr(parsed.badges, 24, 3),
+      ourLabel:       t(parsed.ourLabel, 12),
+      othersLabel:    t(parsed.othersLabel, 12),
+      primaryColor:   /^#[0-9A-Fa-f]{6}$/.test(parsed.primaryColor) ? parsed.primaryColor : "#7C3AED",
+      secondaryColor: /^#[0-9A-Fa-f]{6}$/.test(parsed.secondaryColor) ? parsed.secondaryColor : "#1C1C26",
+      bgColor:        /^#[0-9A-Fa-f]{6}$/.test(parsed.bgColor) ? parsed.bgColor : "#0A0A0F",
+      accentColor:    /^#[0-9A-Fa-f]{6}$/.test(parsed.accentColor) ? parsed.accentColor : "#FFFFFF",
     });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Error" }, { status: 500 });
