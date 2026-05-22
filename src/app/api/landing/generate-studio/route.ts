@@ -276,7 +276,10 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const openaiKey = user.user_metadata?.ai_key_openai ?? process.env.OPENAI_API_KEY;
+  const openaiKey =
+    user.user_metadata?.ai_key_gpt_image ??
+    user.user_metadata?.ai_key_openai ??
+    process.env.OPENAI_API_KEY;
   if (!openaiKey) {
     return NextResponse.json({ error: "Falta API key de OpenAI. Configúrala en tu perfil." }, { status: 400 });
   }
