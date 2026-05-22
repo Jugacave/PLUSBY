@@ -22,7 +22,7 @@ export function AutoridadTemplateA({ data }: { data: BannerData }) {
 
       {/* Headline */}
       <div style={{ padding: "50px 80px 30px", textAlign: "center" }}>
-        <h1 style={{ color: data.accentColor, fontSize: 100, fontWeight: 900, lineHeight: 1, margin: 0, textTransform: "uppercase", letterSpacing: -2 }}>
+        <h1 style={{ color: data.accentColor, fontSize: 100, fontWeight: 900, lineHeight: 1, margin: 0, textTransform: "uppercase", letterSpacing: -2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
           {data.headline}
         </h1>
         {data.subheadline && (

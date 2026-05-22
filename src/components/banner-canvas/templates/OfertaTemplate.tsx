@@ -29,7 +29,7 @@ export function OfertaTemplateA({ data }: { data: BannerData }) {
       )}
 
       {/* Headline */}
-      <h1 style={{ color: "#FFF", fontSize: 96, fontWeight: 900, margin: "0 0 20px", textAlign: "center", lineHeight: 1.05, textTransform: "uppercase" }}>
+      <h1 style={{ color: "#FFF", fontSize: 96, fontWeight: 900, margin: "0 0 20px", textAlign: "center", lineHeight: 1.05, textTransform: "uppercase", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
         {data.headline}
       </h1>
 

@@ -12,14 +12,14 @@ export function BeneficiosTemplateA({ data }: { data: BannerData }) {
       display: "flex", flexDirection: "column", alignItems: "center",
       fontFamily: "'Poppins', 'Segoe UI', Arial, sans-serif",
       padding: "80px 80px",
-      gap: 0,
+      gap: 0, overflow: "hidden",
     }}>
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 60 }}>
         <div style={{ display: "inline-block", background: `${data.primaryColor}22`, border: `2px solid ${data.primaryColor}55`, borderRadius: 50, padding: "14px 48px", marginBottom: 32 }}>
           <span style={{ color: data.primaryColor, fontSize: 32, fontWeight: 700, letterSpacing: 4, textTransform: "uppercase" }}>Beneficios</span>
         </div>
-        <h1 style={{ color: "#FFF", fontSize: 100, fontWeight: 900, margin: 0, lineHeight: 1.05, textTransform: "uppercase" }}>
+        <h1 style={{ color: "#FFF", fontSize: 100, fontWeight: 900, margin: 0, lineHeight: 1.05, textTransform: "uppercase", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
           {data.headline}
         </h1>
       </div>
@@ -53,8 +53,8 @@ export function BeneficiosTemplateA({ data }: { data: BannerData }) {
             }}>
               {ICONS[i] ?? "✅"}
             </div>
-            <div>
-              <p style={{ color: "#FFF", fontSize: 48, fontWeight: 800, margin: 0, lineHeight: 1.1 }}>{b}</p>
+            <div style={{ overflow: "hidden", minWidth: 0 }}>
+              <p style={{ color: "#FFF", fontSize: 44, fontWeight: 800, margin: 0, lineHeight: 1.1, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{b}</p>
             </div>
           </div>
         ))}
@@ -91,7 +91,7 @@ export function BeneficiosTemplateB({ data }: { data: BannerData }) {
 
       {/* Header */}
       <div style={{ background: `linear-gradient(135deg, ${data.primaryColor} 0%, ${data.secondaryColor} 100%)`, padding: "80px 80px 100px", position: "relative" }}>
-        <h1 style={{ color: "#FFF", fontSize: 96, fontWeight: 900, margin: 0, lineHeight: 1.05, textTransform: "uppercase" }}>
+        <h1 style={{ color: "#FFF", fontSize: 96, fontWeight: 900, margin: 0, lineHeight: 1.05, textTransform: "uppercase", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
           {data.headline}
         </h1>
         {data.subheadline && (
@@ -121,7 +121,7 @@ export function BeneficiosTemplateB({ data }: { data: BannerData }) {
               borderRadius: 24, padding: "40px 36px", textAlign: "center",
             }}>
               <div style={{ fontSize: 56, marginBottom: 16 }}>{ICONS[i] ?? "✅"}</div>
-              <p style={{ color: data.secondaryColor, fontSize: 40, fontWeight: 800, margin: 0, lineHeight: 1.2 }}>{b}</p>
+              <p style={{ color: data.secondaryColor, fontSize: 38, fontWeight: 800, margin: 0, lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{b}</p>
             </div>
           ))}
         </div>

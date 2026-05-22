@@ -10,7 +10,7 @@ export function IngredientesTemplateA({ data }: { data: BannerData }) {
       width: 1080, height: 1920,
       background: `linear-gradient(180deg, #F0FDF4 0%, ${data.primaryColor}22 100%)`,
       fontFamily: "'Poppins', 'Segoe UI', Arial, sans-serif",
-      display: "flex", flexDirection: "column", overflow: "hidden", position: "relative",
+      display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", maxHeight: 1920,
     }}>
       {/* Decorative leaves */}
       <div style={{ position: "absolute", top: -100, left: -100, width: 500, height: 500, borderRadius: "50%", background: `${leafColors[0]}22`, filter: "blur(40px)" }} />
@@ -21,7 +21,7 @@ export function IngredientesTemplateA({ data }: { data: BannerData }) {
         <div style={{ display: "inline-block", background: data.primaryColor, color: "#FFFFFF", fontSize: 30, fontWeight: 800, padding: "12px 32px", borderRadius: 100, letterSpacing: 4, textTransform: "uppercase", marginBottom: 30 }}>
           100% Natural
         </div>
-        <h1 style={{ color: data.secondaryColor, fontSize: 96, fontWeight: 900, lineHeight: 1, margin: 0, textTransform: "uppercase", letterSpacing: -2 }}>
+        <h1 style={{ color: data.secondaryColor, fontSize: 96, fontWeight: 900, lineHeight: 1, margin: 0, textTransform: "uppercase", letterSpacing: -2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
           {data.headline}
         </h1>
         {data.subheadline && (

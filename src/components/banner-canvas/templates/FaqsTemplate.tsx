@@ -24,7 +24,7 @@ export function FaqsTemplateA({ data }: { data: BannerData }) {
         <div style={{ display: "inline-block", background: `${data.primaryColor}33`, color: data.primaryColor, fontSize: 30, fontWeight: 800, padding: "12px 32px", borderRadius: 100, letterSpacing: 4, textTransform: "uppercase", marginBottom: 24, border: `2px solid ${data.primaryColor}66` }}>
           Preguntas frecuentes
         </div>
-        <h1 style={{ color: data.accentColor, fontSize: 92, fontWeight: 900, lineHeight: 1, margin: 0, textTransform: "uppercase", letterSpacing: -2 }}>
+        <h1 style={{ color: data.accentColor, fontSize: 92, fontWeight: 900, lineHeight: 1, margin: 0, textTransform: "uppercase", letterSpacing: -2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
           {data.headline}
         </h1>
       </div>
@@ -52,9 +52,9 @@ export function FaqsTemplateA({ data }: { data: BannerData }) {
                 ?
               </div>
               <div style={{ flex: 1 }}>
-                <p style={{ color: data.secondaryColor, fontSize: 34, fontWeight: 900, margin: 0, lineHeight: 1.2 }}>{p.q}</p>
+                <p style={{ color: data.secondaryColor, fontSize: 34, fontWeight: 900, margin: 0, lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{p.q}</p>
                 {p.a && (
-                  <p style={{ color: "#475569", fontSize: 28, fontWeight: 500, margin: "12px 0 0", lineHeight: 1.3 }}>{p.a}</p>
+                  <p style={{ color: "#475569", fontSize: 28, fontWeight: 500, margin: "12px 0 0", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{p.a}</p>
                 )}
               </div>
             </div>
