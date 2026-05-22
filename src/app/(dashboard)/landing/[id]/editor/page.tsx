@@ -15,9 +15,13 @@ import { createClient } from "@/lib/supabase/client";
 const BannerCanvas = dynamic(() => import("@/components/banner-canvas/BannerCanvas"), { ssr: false });
 
 // Sections that have HTML templates (perfect text + real product photo)
-const HTML_TEMPLATE_SECTIONS = new Set(["hero", "beneficios", "oferta", "antes_despues"]);
+const HTML_TEMPLATE_SECTIONS = new Set([
+  "hero", "beneficios", "oferta", "antes_despues",
+  "comparativa", "autoridad", "ingredientes", "modo_uso",
+  "logistica", "testimonios", "faqs",
+]);
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 type LandingMode = "page" | "banners";
 
@@ -800,6 +804,8 @@ function BannerHTMLCard({ section, config, productName }: {
     bullets: section.id === "modo_uso" ? copy.steps : section.id === "logistica" || section.id === "autoridad" ? copy.badges : copy.bullets,
     priceSale: config.priceSale,
     priceOriginal: config.priceOriginal,
+    ourLabel: copy.ourLabel,
+    othersLabel: copy.othersLabel,
     primaryColor: copy.primaryColor,
     secondaryColor: copy.secondaryColor,
     bgColor: copy.bgColor,
@@ -870,7 +876,7 @@ function BannerHTMLCard({ section, config, productName }: {
   );
 }
 
-// ─── Banner Mode: BannerImageCard ───────────────────────────────────────────────
+// ─── Banner Mode: BannerImageCard ─────────────────────────────────────────────
 
 function BannerImageCard({ section, config, images, externalGenerating, templates, loadingSections, productName, onImageGenerated, onStyleChange, onOpenGallery }: {
   section: { id: string; label: string; icon: string };
@@ -1071,7 +1077,7 @@ function BannerImageCard({ section, config, images, externalGenerating, template
   );
 }
 
-// ─── Banner Mode: BannerEditorContent (two-column redesign) ─────────────────────
+// ─── Banner Mode: BannerEditorContent (two-column redesign) ───────────────────
 
 function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedImages, product: initialProduct, landingId }: {
   config: BannerConfig;
@@ -1548,7 +1554,7 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
   );
 }
 
-// ─── Main: LandingEditorPage ───────────────────────────────────────────────────
+// ─── Main: LandingEditorPage ──────────────────────────────────────────────────
 
 export default function LandingEditorPage() {
   const params = useParams();
