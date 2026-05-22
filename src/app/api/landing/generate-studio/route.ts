@@ -21,10 +21,10 @@ interface StudioRequest {
   priceOriginal?: string;
   // Studio fields
   bgColor?: string;
-  outputSize?: string;
+  outputSize?: string;     // "original" | "1080x1920" | "1080x1080" | "1200x628" | "1920x1080" | "300x250" | "728x90" | "160x600" | "custom"
   customWidth?: number;
   customHeight?: number;
-  language?: string;
+  language?: string;       // "es" | "pt" | "en"
   aiModel?: "gpt-image-1" | "gemini" | "dalle3";
   // Personalization
   personalization?: boolean;
@@ -50,6 +50,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
   en: "inglés",
 };
 
+// ─── Output size → OpenAI size mapping ───────────────────────────────────────
 // gpt-image-1 only supports: 1024x1024, 1024x1536, 1536x1024
 function mapOutputSize(s: string | undefined): "1024x1024" | "1024x1536" | "1536x1024" {
   switch (s) {
@@ -67,17 +68,22 @@ function mapOutputSize(s: string | undefined): "1024x1024" | "1024x1536" | "1536
   }
 }
 
+// ─── Stage 1: Build the section prompt (text-only, no copy translation needed
+// because gpt-image-1 handles multilingual text rendering natively) ──────────
+
 function buildStudioPrompt(req: StudioRequest): string {
   const market = COUNTRY_NAMES[req.country ?? "CO"] ?? "Latinoamérica";
   const lang = LANGUAGE_NAMES[req.language ?? "es"] ?? "español";
 
   const sections: string[] = [];
 
+  // Header
   sections.push(
     `Create a high-end e-commerce advertising banner for the ${market} market.`,
     `All text on the image MUST be in ${lang}, properly spelled, no nonsense words.`,
   );
 
+  // Visual reference instructions (most important — this is what guides composition)
   if (req.templateUrl) {
     sections.push(
       `STYLE REFERENCE: I am providing a reference template image. Follow its EXACT visual style, layout, typography style, color treatment, background composition, and overall mood. Replicate the design language faithfully.`
@@ -89,6 +95,7 @@ function buildStudioPrompt(req: StudioRequest): string {
     );
   }
 
+  // Section-specific layout
   const sectionGuide: Record<string, string> = {
     hero:          "Layout: powerful hero banner. Big bold headline (max 5 words), product hero shot dominant, single CTA button.",
     oferta:        "Layout: offer/sale banner. Large discounted price dominant, struck-through original price, SALE badge, product visible, urgent CTA.",
@@ -104,6 +111,7 @@ function buildStudioPrompt(req: StudioRequest): string {
   };
   sections.push(sectionGuide[req.sectionType] ?? sectionGuide.hero);
 
+  // Product info
   const productInfo: string[] = [];
   if (req.productName) productInfo.push(`Product name: ${req.productName}`);
   if (req.productDescription) productInfo.push(`Description: ${req.productDescription}`);
@@ -119,6 +127,7 @@ function buildStudioPrompt(req: StudioRequest): string {
     sections.push(`PRODUCT INFORMATION:\n${productInfo.join("\n")}`);
   }
 
+  // Personalization
   if (req.personalization) {
     const persona: string[] = [];
     if (req.characterNationality) persona.push(`nationality: ${req.characterNationality}`);
@@ -134,10 +143,12 @@ function buildStudioPrompt(req: StudioRequest): string {
     if (req.additionalInstructions) sections.push(`ADDITIONAL INSTRUCTIONS: ${req.additionalInstructions}`);
   }
 
+  // Background color
   if (req.bgColor) {
     sections.push(`DOMINANT BACKGROUND COLOR: ${req.bgColor}. Use this color as the main background tone or accent in the composition.`);
   }
 
+  // Quality directives
   sections.push(
     `QUALITY: Photography-grade composition, sharp focus, professional lighting, vibrant but harmonious colors, modern advertising aesthetic. The banner must look like it was made by a top Meta-ads agency in ${market}.`,
     `TEXT REQUIREMENTS: All text must be in ${lang}, real words, perfect spelling, NO gibberish. Keep text minimal — preferably ≤8 total words on the entire banner. Use bold, condensed display fonts.`,
@@ -147,12 +158,15 @@ function buildStudioPrompt(req: StudioRequest): string {
   return sections.join("\n\n");
 }
 
+// ─── Stage 2: Fetch URLs as buffers and POST to OpenAI /v1/images/edits ──────
+
 async function fetchAsBlob(url: string): Promise<{ blob: Blob; filename: string } | null> {
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
     const buf = await res.arrayBuffer();
     const contentType = res.headers.get("content-type") ?? "image/png";
+    // OpenAI accepts png, jpeg, webp. Convert mime → ext.
     let ext = "png";
     if (contentType.includes("jpeg") || contentType.includes("jpg")) ext = "jpg";
     else if (contentType.includes("webp")) ext = "webp";
@@ -166,7 +180,7 @@ async function fetchAsBlob(url: string): Promise<{ blob: Blob; filename: string 
 async function callGptImage1Edit(params: {
   apiKey: string;
   prompt: string;
-  imageUrls: string[];
+  imageUrls: string[];          // first url should be the template, rest are product photos
   size: "1024x1024" | "1024x1536" | "1536x1024";
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
@@ -177,6 +191,7 @@ async function callGptImage1Edit(params: {
     form.append("size", params.size);
     form.append("quality", "high");
 
+    // gpt-image-1 accepts up to 16 images via repeated "image[]" field
     for (const url of params.imageUrls.slice(0, 8)) {
       const fetched = await fetchAsBlob(url);
       if (!fetched) continue;
@@ -225,6 +240,7 @@ async function callGptImage1Generate(params: {
   }
 }
 
+// ─── Optional Claude vision pass to enrich the prompt with template analysis
 async function enrichPromptWithVision(req: StudioRequest, basePrompt: string): Promise<string> {
   if (!req.templateUrl) return basePrompt;
   try {
@@ -248,6 +264,8 @@ async function enrichPromptWithVision(req: StudioRequest, basePrompt: string): P
   }
 }
 
+// ─── Handler ──────────────────────────────────────────────────────────────────
+
 export async function POST(req: NextRequest) {
   let body: StudioRequest;
   try { body = await req.json(); } catch {
@@ -258,7 +276,10 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const openaiKey = user.user_metadata?.ai_key_openai ?? process.env.OPENAI_API_KEY;
+  const openaiKey =
+    user.user_metadata?.ai_key_gpt_image ??
+    user.user_metadata?.ai_key_openai ??
+    process.env.OPENAI_API_KEY;
   if (!openaiKey) {
     return NextResponse.json({ error: "Falta API key de OpenAI. Configúrala en tu perfil." }, { status: 400 });
   }
@@ -266,9 +287,11 @@ export async function POST(req: NextRequest) {
   const productImages = (body.productImages ?? []).filter((u): u is string => !!u && u.startsWith("http"));
   const size = mapOutputSize(body.outputSize);
 
+  // Stage 1: build prompt
   let prompt = buildStudioPrompt(body);
   prompt = await enrichPromptWithVision(body, prompt);
 
+  // Stage 2: generate
   const imageUrls = [
     ...(body.templateUrl ? [body.templateUrl] : []),
     ...productImages,
@@ -276,8 +299,10 @@ export async function POST(req: NextRequest) {
 
   let result;
   if (imageUrls.length > 0) {
+    // Edit mode — use template + product photos as visual reference
     result = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls, size });
   } else {
+    // Pure text-to-image fallback
     result = await callGptImage1Generate({ apiKey: openaiKey, prompt, size });
   }
 
