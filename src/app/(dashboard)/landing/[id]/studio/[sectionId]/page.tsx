@@ -128,6 +128,10 @@ export default function StudioPage() {
   const [error, setError] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
 
+  // Save to landing
+  const [savingToLanding, setSavingToLanding] = useState(false);
+  const [savedToLanding, setSavedToLanding] = useState(false);
+
   // ── Load landing config ───────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
@@ -153,9 +157,12 @@ export default function StudioPage() {
         angles: cfg.angles ?? [],
         selectedAngle: cfg.selectedAngle ?? "",
       });
+      // Seed product photos from the landing's saved refImages
       const seed = (cfg.refImages ?? [null, null, null]) as (string | null)[];
       setProductImages([seed[0] ?? null, seed[1] ?? null, seed[2] ?? null]);
+      // Seed selling angle if exists
       if (cfg.selectedAngle) setSellingAngle(cfg.selectedAngle);
+      // Seed product details from saved description
       if (cfg.description) setProductDetails(cfg.description);
       setLoading(false);
     })();
@@ -296,6 +303,39 @@ export default function StudioPage() {
     a.click();
   }
 
+  async function handleSaveToLanding() {
+    const imageUrl = generatedImages[0];
+    if (!imageUrl || !landingId || savingToLanding) return;
+    setSavingToLanding(true);
+    try {
+      // Convert base64 data URL to Blob
+      const fetchRes = await fetch(imageUrl);
+      const blob = await fetchRes.blob();
+      const ext = blob.type.includes("webp") ? "webp" : "png";
+      const path = `sections/${landingId}/${sectionId}-${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("landing-assets")
+        .upload(path, blob, { contentType: blob.type, upsert: false });
+      if (uploadErr) throw uploadErr;
+      const { data: { publicUrl } } = supabase.storage.from("landing-assets").getPublicUrl(path);
+      // Merge into banner_images
+      const { data: landing } = await supabase.from("landings")
+        .select("banner_images").eq("id", landingId).single();
+      const current: Record<string, string[]> = landing?.banner_images ?? {};
+      const sectionImages = current[sectionId] ?? [];
+      await supabase.from("landings").update({
+        banner_images: { ...current, [sectionId]: [publicUrl, ...sectionImages] },
+        updated_at: new Date().toISOString(),
+      }).eq("id", landingId);
+      setSavedToLanding(true);
+      setTimeout(() => setSavedToLanding(false), 3000);
+    } catch (e) {
+      console.error("Error saving to landing:", e);
+    } finally {
+      setSavingToLanding(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -306,6 +346,7 @@ export default function StudioPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
+      {/* ─── Header ──────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-20 bg-[var(--bg-surface)]/80 backdrop-blur-md border-b border-[var(--border-color)]">
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -328,9 +369,11 @@ export default function StudioPage() {
 
       <div className="max-w-[1600px] mx-auto px-6 py-6 grid grid-cols-12 gap-6">
 
+        {/* ─── LEFT: Setup panel ─────────────────────────────────────────── */}
         <section className="col-span-12 lg:col-span-5 space-y-4">
           <div className="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-5 space-y-5">
 
+            {/* Header */}
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] flex items-center justify-center">
                 <Sparkles size={14} className="text-white" />
@@ -341,7 +384,9 @@ export default function StudioPage() {
               </div>
             </div>
 
+            {/* Template + product photos row */}
             <div className="grid grid-cols-2 gap-4">
+              {/* Template */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <p className="text-[11px] font-semibold text-[var(--text-primary)]">Plantilla</p>
@@ -373,6 +418,7 @@ export default function StudioPage() {
                 )}
               </div>
 
+              {/* Product photos */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <p className="text-[11px] font-semibold text-[var(--text-primary)]">Fotos del Producto</p>
@@ -410,6 +456,7 @@ export default function StudioPage() {
               </div>
             </div>
 
+            {/* Background color + Size + Language */}
             <div className="grid grid-cols-3 gap-3 pt-2 border-t border-[var(--border-color)]">
               <div>
                 <label className="flex items-center gap-1 text-[10px] font-semibold mb-1.5 text-[var(--text-primary)]">
@@ -468,6 +515,7 @@ export default function StudioPage() {
               </div>
             </div>
 
+            {/* Model selector + personalization toggle */}
             <div className="flex items-center justify-between bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-color)] px-3 py-2 gap-3">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-[11px] font-semibold text-[var(--text-primary)] shrink-0">Modelo</span>
@@ -502,8 +550,10 @@ export default function StudioPage() {
               </button>
             </div>
 
+            {/* Personalization panel */}
             {personalization && (
               <div className="space-y-3 pt-2 border-t border-[var(--border-color)] animate-in fade-in">
+                {/* AI angle generator + saved angles */}
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={handleGenerateAngle}
@@ -541,6 +591,7 @@ export default function StudioPage() {
                   </div>
                 </div>
 
+                {/* Character */}
                 <div>
                   <p className="text-[10px] font-semibold text-[#A78BFA] uppercase tracking-wide mb-2">
                     Personalizar Personajes <span className="text-[var(--text-muted)] font-normal normal-case">(opcional)</span>
@@ -573,6 +624,7 @@ export default function StudioPage() {
               </div>
             )}
 
+            {/* Generate button */}
             <button
               onClick={handleGenerate}
               disabled={generating || !templateUrl}
@@ -597,6 +649,7 @@ export default function StudioPage() {
           </div>
         </section>
 
+        {/* ─── RIGHT: Preview panel ──────────────────────────────────────── */}
         <section className="col-span-12 lg:col-span-7">
           <div className="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-5 sticky top-20">
             <div className="flex items-center justify-between mb-4">
@@ -635,28 +688,47 @@ export default function StudioPage() {
 
             {generatedImages.length > 0 && (
               <div className="space-y-4">
+                {/* Main preview */}
                 <div className="relative rounded-2xl overflow-hidden bg-[var(--bg-base)] border border-[var(--border-color)]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={generatedImages[0]} alt="Resultado" className="w-full h-auto" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                {/* Actions */}
+                <div className="space-y-2">
                   <button
-                    onClick={() => handleDownload(generatedImages[0])}
-                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] text-white font-semibold text-xs hover:opacity-90 transition-all"
+                    onClick={handleSaveToLanding}
+                    disabled={savingToLanding}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-xs transition-all disabled:opacity-60"
+                    style={savedToLanding
+                      ? { background: "rgba(74,222,128,0.15)", border: "1px solid rgba(74,222,128,0.4)", color: "#4ADE80" }
+                      : { background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)", color: "#4ADE80" }}
                   >
-                    <Download size={13} />Descargar Sección
+                    {savingToLanding
+                      ? <><Loader2 size={13} className="animate-spin" />Guardando...</>
+                      : savedToLanding
+                        ? <><Check size={13} />¡Guardado en Landing!</>
+                        : <><Bookmark size={13} />Guardar en Landing</>}
                   </button>
-                  <button
-                    onClick={handleGenerate}
-                    disabled={generating}
-                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-[var(--border-color)] hover:border-[#7C3AED] hover:bg-[#7C3AED]/10 text-[var(--text-primary)] font-semibold text-xs disabled:opacity-50 transition-all"
-                  >
-                    {generating ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-                    Generar Otra
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleDownload(generatedImages[0])}
+                      className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] text-white font-semibold text-xs hover:opacity-90 transition-all"
+                    >
+                      <Download size={13} />Descargar
+                    </button>
+                    <button
+                      onClick={handleGenerate}
+                      disabled={generating}
+                      className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-[var(--border-color)] hover:border-[#7C3AED] hover:bg-[#7C3AED]/10 text-[var(--text-primary)] font-semibold text-xs disabled:opacity-50 transition-all"
+                    >
+                      {generating ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                      Generar Otra
+                    </button>
+                  </div>
                 </div>
 
+                {/* History thumbnails */}
                 {generatedImages.length > 1 && (
                   <div>
                     <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">Historial</p>
@@ -677,9 +749,11 @@ export default function StudioPage() {
         </section>
       </div>
 
+      {/* ─── Gallery modal ──────────────────────────────────────────────── */}
       {galleryOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex flex-col" onClick={() => setGalleryOpen(false)}>
           <div className="flex-1 flex flex-col max-w-[1400px] mx-auto w-full p-6" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-bold text-white">Plantillas de Secciones</h3>
@@ -690,6 +764,7 @@ export default function StudioPage() {
               </button>
             </div>
 
+            {/* Tabs */}
             <div className="flex gap-1 overflow-x-auto pb-3 mb-3 border-b border-[var(--border-color)]">
               {Object.entries(SECTION_META).map(([id, m]) => (
                 <button key={id} onClick={() => setActiveSectionTab(id)}
@@ -699,6 +774,7 @@ export default function StudioPage() {
               ))}
             </div>
 
+            {/* Grid */}
             <div className="flex-1 overflow-y-auto">
               {galleryLoading ? (
                 <div className="flex items-center justify-center py-20">
@@ -740,6 +816,8 @@ export default function StudioPage() {
     </div>
   );
 }
+
+// ─── PersonalizationField subcomponent ────────────────────────────────────────
 
 function PersonalizationField({ label, value, onChange, placeholder }: {
   label: string; value: string; onChange: (v: string) => void; placeholder: string;
