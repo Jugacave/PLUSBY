@@ -128,6 +128,10 @@ export default function StudioPage() {
   const [error, setError] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
 
+  // Save to landing
+  const [savingToLanding, setSavingToLanding] = useState(false);
+  const [savedToLanding, setSavedToLanding] = useState(false);
+
   // ── Load landing config ───────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
@@ -297,6 +301,39 @@ export default function StudioPage() {
     a.href = url;
     a.download = `${sectionId}-${Date.now()}.png`;
     a.click();
+  }
+
+  async function handleSaveToLanding() {
+    const imageUrl = generatedImages[0];
+    if (!imageUrl || !landingId || savingToLanding) return;
+    setSavingToLanding(true);
+    try {
+      // Convert base64 data URL to Blob
+      const fetchRes = await fetch(imageUrl);
+      const blob = await fetchRes.blob();
+      const ext = blob.type.includes("webp") ? "webp" : "png";
+      const path = `sections/${landingId}/${sectionId}-${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("landing-assets")
+        .upload(path, blob, { contentType: blob.type, upsert: false });
+      if (uploadErr) throw uploadErr;
+      const { data: { publicUrl } } = supabase.storage.from("landing-assets").getPublicUrl(path);
+      // Merge into banner_images
+      const { data: landing } = await supabase.from("landings")
+        .select("banner_images").eq("id", landingId).single();
+      const current: Record<string, string[]> = landing?.banner_images ?? {};
+      const sectionImages = current[sectionId] ?? [];
+      await supabase.from("landings").update({
+        banner_images: { ...current, [sectionId]: [publicUrl, ...sectionImages] },
+        updated_at: new Date().toISOString(),
+      }).eq("id", landingId);
+      setSavedToLanding(true);
+      setTimeout(() => setSavedToLanding(false), 3000);
+    } catch (e) {
+      console.error("Error saving to landing:", e);
+    } finally {
+      setSavingToLanding(false);
+    }
   }
 
   if (loading) {
@@ -658,21 +695,37 @@ export default function StudioPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
                   <button
-                    onClick={() => handleDownload(generatedImages[0])}
-                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] text-white font-semibold text-xs hover:opacity-90 transition-all"
+                    onClick={handleSaveToLanding}
+                    disabled={savingToLanding}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-xs transition-all disabled:opacity-60"
+                    style={savedToLanding
+                      ? { background: "rgba(74,222,128,0.15)", border: "1px solid rgba(74,222,128,0.4)", color: "#4ADE80" }
+                      : { background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)", color: "#4ADE80" }}
                   >
-                    <Download size={13} />Descargar Sección
+                    {savingToLanding
+                      ? <><Loader2 size={13} className="animate-spin" />Guardando...</>
+                      : savedToLanding
+                        ? <><Check size={13} />¡Guardado en Landing!</>
+                        : <><Bookmark size={13} />Guardar en Landing</>}
                   </button>
-                  <button
-                    onClick={handleGenerate}
-                    disabled={generating}
-                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-[var(--border-color)] hover:border-[#7C3AED] hover:bg-[#7C3AED]/10 text-[var(--text-primary)] font-semibold text-xs disabled:opacity-50 transition-all"
-                  >
-                    {generating ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-                    Generar Otra
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleDownload(generatedImages[0])}
+                      className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] text-white font-semibold text-xs hover:opacity-90 transition-all"
+                    >
+                      <Download size={13} />Descargar
+                    </button>
+                    <button
+                      onClick={handleGenerate}
+                      disabled={generating}
+                      className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-[var(--border-color)] hover:border-[#7C3AED] hover:bg-[#7C3AED]/10 text-[var(--text-primary)] font-semibold text-xs disabled:opacity-50 transition-all"
+                    >
+                      {generating ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                      Generar Otra
+                    </button>
+                  </div>
                 </div>
 
                 {/* History thumbnails */}
