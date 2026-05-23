@@ -50,6 +50,9 @@ const LANGUAGE_NAMES: Record<string, string> = {
   en: "inglés",
 };
 
+// ─── Section types that benefit from lifestyle photography ────────────────────
+const LIFESTYLE_SECTIONS = new Set(["hero", "beneficios", "testimonios", "antes_despues", "modo_uso", "oferta"]);
+
 // ─── Output size → OpenAI size mapping ───────────────────────────────────────
 // gpt-image-1 only supports: 1024x1024, 1024x1536, 1536x1024
 function mapOutputSize(s: string | undefined): "1024x1024" | "1024x1536" | "1536x1024" {
@@ -127,8 +130,30 @@ function buildStudioPrompt(req: StudioRequest): string {
     sections.push(`PRODUCT INFORMATION:\n${productInfo.join("\n")}`);
   }
 
-  // Personalization
-  if (req.personalization) {
+  // Lifestyle photography — always enabled for sections that benefit from it
+  if (LIFESTYLE_SECTIONS.has(req.sectionType)) {
+    const lifestyleScenes: Record<string, string> = {
+      hero:          "A confident Latin American woman or man in their 30s using the product in a real-life aspirational setting (e.g., modern gym, bright home bathroom, outdoor park). The person is the hero — product in hand or actively being used. Cinematic lighting, shallow depth of field, fashion-editorial quality.",
+      beneficios:    "A Latin American model demonstrating the product naturally in an everyday scene (home, gym, outdoors). The model looks happy and vibrant, product clearly visible.",
+      testimonios:   "A real-looking Latin American person (not obviously stock), approx 25-45 years old, smiling authentically while holding or showing the product. Warm, trust-building environment.",
+      antes_despues: "Photo-realistic before/after composition. The 'before' half: person looking tired, skin dull, problem visible. The 'after' half: same person glowing, energetic, transformed. Latin American features.",
+      modo_uso:      "Step-by-step lifestyle imagery: a Latin American model in a clean, bright setting showing how to use the product — apply, use, enjoy. Natural hands-on feel.",
+      oferta:        "Exciting, high-energy lifestyle image: Latin American model excitedly discovering the product deal, vibrant colors, sale atmosphere.",
+    };
+    const scene = lifestyleScenes[req.sectionType] ?? "";
+    if (scene) sections.push(`LIFESTYLE SCENE: ${scene}`);
+
+    // Personalization overrides
+    if (req.personalization) {
+      const persona: string[] = [];
+      if (req.characterNationality) persona.push(`nationality: ${req.characterNationality}`);
+      if (req.characterSex) persona.push(`sex: ${req.characterSex}`);
+      if (req.characterAgeRange) persona.push(`age range: ${req.characterAgeRange}`);
+      if (persona.length) {
+        sections.push(`CHARACTER OVERRIDE: The person in the banner must match this exact profile: ${persona.join(", ")}. Authentic Latin-American appearance.`);
+      }
+    }
+  } else if (req.personalization) {
     const persona: string[] = [];
     if (req.characterNationality) persona.push(`nationality: ${req.characterNationality}`);
     if (req.characterSex) persona.push(`sex: ${req.characterSex}`);
@@ -136,6 +161,9 @@ function buildStudioPrompt(req: StudioRequest): string {
     if (persona.length) {
       sections.push(`CHARACTER: If a person appears in the banner, they must match this profile: ${persona.join(", ")}. Latin-American appearance. Authentic, relatable.`);
     }
+  }
+
+  if (req.personalization) {
     if (req.sellingAngle) sections.push(`SELLING ANGLE: ${req.sellingAngle}`);
     if (req.specificProblem) sections.push(`SPECIFIC PROBLEM TO ADDRESS: ${req.specificProblem}`);
     if (req.targetAudience) sections.push(`TARGET AUDIENCE: ${req.targetAudience}`);
@@ -240,6 +268,71 @@ async function callGptImage1Generate(params: {
   }
 }
 
+// ─── Gemini 2.5 Flash Image Generation ───────────────────────────────────────
+
+async function fetchAsBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    const contentType = res.headers.get("content-type") ?? "image/png";
+    const mimeType = contentType.split(";")[0].trim();
+    const data = Buffer.from(buf).toString("base64");
+    return { data, mimeType };
+  } catch {
+    return null;
+  }
+}
+
+async function callGeminiFlashImage(params: {
+  apiKey: string;
+  prompt: string;
+  imageUrls: string[];
+}): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  try {
+    // Build parts: text first, then images
+    const parts: unknown[] = [{ text: params.prompt }];
+
+    for (const url of params.imageUrls.slice(0, 8)) {
+      const img = await fetchAsBase64(url);
+      if (!img) continue;
+      parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
+    }
+
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${params.apiKey}`;
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data.error?.message ?? JSON.stringify(data);
+      return { ok: false, error: `Gemini error: ${msg}` };
+    }
+
+    // Find the image part in the response
+    const candidates = data.candidates ?? [];
+    for (const candidate of candidates) {
+      for (const part of candidate.content?.parts ?? []) {
+        if (part.inlineData?.data) {
+          const mime = part.inlineData.mimeType ?? "image/png";
+          return { ok: true, url: `data:${mime};base64,${part.inlineData.data}` };
+        }
+      }
+    }
+
+    return { ok: false, error: "Gemini no devolvió imagen" };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Error" };
+  }
+}
+
 // ─── Optional Claude vision pass to enrich the prompt with template analysis
 async function enrichPromptWithVision(req: StudioRequest, basePrompt: string): Promise<string> {
   if (!req.templateUrl) return basePrompt;
@@ -276,12 +369,16 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const openaiKey =
+  const geminiKey: string | undefined = user.user_metadata?.ai_key_gemini;
+  const openaiKey: string | undefined =
     user.user_metadata?.ai_key_gpt_image ??
     user.user_metadata?.ai_key_openai ??
     process.env.OPENAI_API_KEY;
-  if (!openaiKey) {
-    return NextResponse.json({ error: "Falta API key de OpenAI. Configúrala en tu perfil." }, { status: 400 });
+
+  const useGemini = body.aiModel === "gemini" && !!geminiKey;
+
+  if (!useGemini && !openaiKey) {
+    return NextResponse.json({ error: "Falta API key. Configura OpenAI o Gemini en Ajustes." }, { status: 400 });
   }
 
   const productImages = (body.productImages ?? []).filter((u): u is string => !!u && u.startsWith("http"));
@@ -298,16 +395,17 @@ export async function POST(req: NextRequest) {
   ];
 
   let result;
-  if (imageUrls.length > 0) {
-    // Edit mode — use template + product photos as visual reference
-    result = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls, size });
+  if (useGemini) {
+    result = await callGeminiFlashImage({ apiKey: geminiKey!, prompt, imageUrls });
+  } else if (imageUrls.length > 0) {
+    result = await callGptImage1Edit({ apiKey: openaiKey!, prompt, imageUrls, size });
   } else {
-    // Pure text-to-image fallback
-    result = await callGptImage1Generate({ apiKey: openaiKey, prompt, size });
+    result = await callGptImage1Generate({ apiKey: openaiKey!, prompt, size });
   }
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, imageUrl: result.url, mode: imageUrls.length > 0 ? "gpt-image-1-edit" : "gpt-image-1-gen" });
+  const mode = useGemini ? "gemini-flash" : imageUrls.length > 0 ? "gpt-image-1-edit" : "gpt-image-1-gen";
+  return NextResponse.json({ ok: true, imageUrl: result.url, mode });
 }
