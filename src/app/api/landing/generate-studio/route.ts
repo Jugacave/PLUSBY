@@ -25,7 +25,8 @@ interface StudioRequest {
   customWidth?: number;
   customHeight?: number;
   language?: string;       // "es" | "pt" | "en"
-  aiModel?: "gpt-image-1" | "gemini" | "dalle3";
+  aiModel?: "gpt-image-1" | "gpt-image-2" | "gemini" | "dalle3";
+  productDetails?: string; // optional user-provided override of productDescription
   // Personalization
   personalization?: boolean;
   characterNationality?: string;
@@ -68,6 +69,21 @@ function mapOutputSize(s: string | undefined): "1024x1024" | "1024x1536" | "1536
     case "original":
     default:
       return "1024x1536";
+  }
+}
+
+// gpt-image-2 supports any WxH where both edges are multiples of 16, aspect <= 3:1
+function mapOutputSizeGpt2(s: string | undefined): string {
+  switch (s) {
+    case "1080x1080": return "1088x1088";
+    case "1200x628":  return "1200x624";
+    case "1920x1080": return "1920x1088";
+    case "728x90":    return "736x96";
+    case "300x250":   return "304x256";
+    case "160x600":   return "160x608";
+    case "1080x1920":
+    case "original":
+    default:          return "1088x1920";
   }
 }
 
@@ -117,7 +133,8 @@ function buildStudioPrompt(req: StudioRequest): string {
   // Product info
   const productInfo: string[] = [];
   if (req.productName) productInfo.push(`Product name: ${req.productName}`);
-  if (req.productDescription) productInfo.push(`Description: ${req.productDescription}`);
+  const description = req.productDetails?.trim() || req.productDescription;
+  if (description) productInfo.push(`Description: ${description}`);
   const benefits = (req.productBenefits ?? []).filter(Boolean);
   if (benefits.length) productInfo.push(`Benefits: ${benefits.join(", ")}`);
   const problems = (req.productProblems ?? []).filter(Boolean);
@@ -209,11 +226,12 @@ async function callGptImage1Edit(params: {
   apiKey: string;
   prompt: string;
   imageUrls: string[];          // first url should be the template, rest are product photos
-  size: "1024x1024" | "1024x1536" | "1536x1024";
+  size: string;
+  model?: "gpt-image-1" | "gpt-image-2";
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
     const form = new FormData();
-    form.append("model", "gpt-image-1");
+    form.append("model", params.model ?? "gpt-image-1");
     form.append("prompt", params.prompt);
     form.append("n", "1");
     form.append("size", params.size);
@@ -244,14 +262,15 @@ async function callGptImage1Edit(params: {
 async function callGptImage1Generate(params: {
   apiKey: string;
   prompt: string;
-  size: "1024x1024" | "1024x1536" | "1536x1024";
+  size: string;
+  model?: "gpt-image-1" | "gpt-image-2";
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { Authorization: `Bearer ${params.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-image-1",
+        model: params.model ?? "gpt-image-1",
         prompt: params.prompt,
         n: 1,
         size: params.size,
@@ -376,13 +395,14 @@ export async function POST(req: NextRequest) {
     process.env.OPENAI_API_KEY;
 
   const useGemini = body.aiModel === "gemini" && !!geminiKey;
+  const useGpt2 = body.aiModel === "gpt-image-2";
 
   if (!useGemini && !openaiKey) {
     return NextResponse.json({ error: "Falta API key. Configura OpenAI o Gemini en Ajustes." }, { status: 400 });
   }
 
   const productImages = (body.productImages ?? []).filter((u): u is string => !!u && u.startsWith("http"));
-  const size = mapOutputSize(body.outputSize);
+  const size = useGpt2 ? mapOutputSizeGpt2(body.outputSize) : mapOutputSize(body.outputSize);
 
   // Stage 1: build prompt
   let prompt = buildStudioPrompt(body);
@@ -394,18 +414,22 @@ export async function POST(req: NextRequest) {
     ...productImages,
   ];
 
+  const openaiModel: "gpt-image-1" | "gpt-image-2" = useGpt2 ? "gpt-image-2" : "gpt-image-1";
+
   let result;
   if (useGemini) {
     result = await callGeminiFlashImage({ apiKey: geminiKey!, prompt, imageUrls });
   } else if (imageUrls.length > 0) {
-    result = await callGptImage1Edit({ apiKey: openaiKey!, prompt, imageUrls, size });
+    result = await callGptImage1Edit({ apiKey: openaiKey!, prompt, imageUrls, size, model: openaiModel });
   } else {
-    result = await callGptImage1Generate({ apiKey: openaiKey!, prompt, size });
+    result = await callGptImage1Generate({ apiKey: openaiKey!, prompt, size, model: openaiModel });
   }
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 500 });
   }
-  const mode = useGemini ? "gemini-flash" : imageUrls.length > 0 ? "gpt-image-1-edit" : "gpt-image-1-gen";
+  const mode = useGemini
+    ? "gemini-flash"
+    : `${openaiModel}-${imageUrls.length > 0 ? "edit" : "gen"}`;
   return NextResponse.json({ ok: true, imageUrl: result.url, mode });
 }
