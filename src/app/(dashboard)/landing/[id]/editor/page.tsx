@@ -283,9 +283,9 @@ function EditPanel({ section, onSave, onClose, product }: {
 
 // ─── Shared: EditorTopbar ─────────────────────────────────────────────────────
 
-function EditorTopbar({ landingName, slug, published, saving, saved, mode, onTogglePublish, onSave }: {
+function EditorTopbar({ landingName, slug, published, saving, saved, mode, landingId, onTogglePublish, onSave }: {
   landingName: string; slug: string; published: boolean; saving: boolean; saved: boolean;
-  mode: LandingMode; onTogglePublish: () => Promise<void>; onSave: () => Promise<void>;
+  mode: LandingMode; landingId: string; onTogglePublish: () => Promise<void>; onSave: () => Promise<void>;
 }) {
   return (
     <div className="sticky top-0 z-40 bg-[#13131A] border-b border-[#2A2A3A] px-4 py-3 flex items-center gap-3">
@@ -307,6 +307,12 @@ function EditorTopbar({ landingName, slug, published, saving, saved, mode, onTog
         {slug && mode === "page" && (
           <Link href={`/l/${slug}`} target="_blank" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] text-xs font-medium transition-colors">
             <Eye size={13} /><span className="hidden sm:inline">Vista previa</span>
+          </Link>
+        )}
+        {mode === "banners" && (
+          <Link href={`/landing/${landingId}/assembler`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[rgba(124,58,237,0.4)] bg-[rgba(124,58,237,0.10)] text-[#A78BFA] hover:bg-[rgba(124,58,237,0.18)] text-xs font-semibold transition-colors">
+            <ChevronRight size={13} />Ensamblar
           </Link>
         )}
         {mode === "page" && (
@@ -1663,7 +1669,7 @@ export default function LandingEditorPage() {
     <div className="min-h-screen bg-[#0A0A0F]">
       <EditorTopbar
         landingName={landingName} slug={slug} published={published}
-        saving={saving} saved={saved} mode={mode}
+        saving={saving} saved={saved} mode={mode} landingId={id}
         onTogglePublish={handleTogglePublish} onSave={handleSaveLanding}
       />
       {mode === "banners" ? (
