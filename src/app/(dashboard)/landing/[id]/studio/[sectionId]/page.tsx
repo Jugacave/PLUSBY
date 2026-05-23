@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
-  ArrowLeft, Sparkles, Loader2, Upload, X, ChevronDown, ChevronUp,
+  ArrowLeft, Sparkles, Loader2, Upload, X,
   Image as ImageIcon, Download, RefreshCw, Wand2, Palette, Globe,
-  Maximize, AlertCircle, Check, Plus,
+  Maximize, AlertCircle, Check, Plus, Bookmark,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const SECTION_META: Record<string, { label: string; icon: string }> = {
   hero:          { label: "Hero / Portada",          icon: "🎯" },
@@ -73,6 +75,8 @@ interface BannerConfig {
   selectedAngle: string;
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function StudioPage() {
   const params = useParams();
   const router = useRouter();
@@ -82,18 +86,22 @@ export default function StudioPage() {
 
   const supabase = useMemo(() => createClient(), []);
 
+  // ── Loaded state ──────────────────────────────────────────────────────────
   const [productName, setProductName] = useState("");
   const [bannerConfig, setBannerConfig] = useState<BannerConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // ── Form state ────────────────────────────────────────────────────────────
   const [templateUrl, setTemplateUrl] = useState<string | null>(null);
   const [productImages, setProductImages] = useState<(string | null)[]>([null, null, null]);
   const [bgColor, setBgColor] = useState<string>("");
   const [outputSize, setOutputSize] = useState("1080x1920");
   const [language, setLanguage] = useState("es");
-  const [aiModel, setAiModel] = useState<"gpt-image-1" | "gemini">("gpt-image-1");
+  const [aiModel, setAiModel] = useState<"gpt-image-1" | "gpt-image-2" | "gemini">("gpt-image-1");
 
-  const [personalization, setPersonalization] = useState(false);
+  // Personalization
+  const [personalization, setPersonalization] = useState(true);
+  const [productDetails, setProductDetails] = useState("");
   const [characterNationality, setCharNat] = useState("");
   const [characterSex, setCharSex] = useState("");
   const [characterAge, setCharAge] = useState("");
@@ -102,19 +110,25 @@ export default function StudioPage() {
   const [targetAudience, setTargetAudience] = useState("");
   const [solutionMechanism, setSolutionMechanism] = useState("");
   const [additionalInstructions, setAdditional] = useState("");
+  const [generatingAngle, setGeneratingAngle] = useState(false);
+  const [savedAnglesOpen, setSavedAnglesOpen] = useState(false);
 
+  // Gallery modal
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryTemplates, setGalleryTemplates] = useState<BannerTemplate[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [activeSectionTab, setActiveSectionTab] = useState(sectionId);
 
+  // Upload tracking
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState<number | null>(null);
 
+  // Generation
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
 
+  // ── Load landing config ───────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -142,10 +156,12 @@ export default function StudioPage() {
       const seed = (cfg.refImages ?? [null, null, null]) as (string | null)[];
       setProductImages([seed[0] ?? null, seed[1] ?? null, seed[2] ?? null]);
       if (cfg.selectedAngle) setSellingAngle(cfg.selectedAngle);
+      if (cfg.description) setProductDetails(cfg.description);
       setLoading(false);
     })();
   }, [landingId, supabase, router]);
 
+  // ── Load gallery for active section tab ───────────────────────────────────
   useEffect(() => {
     if (!galleryOpen) return;
     (async () => {
@@ -165,6 +181,7 @@ export default function StudioPage() {
     })();
   }, [galleryOpen, activeSectionTab, supabase]);
 
+  // ── Upload helpers ────────────────────────────────────────────────────────
   async function uploadFile(file: File, prefix: string): Promise<string | null> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
@@ -196,6 +213,32 @@ export default function StudioPage() {
     }
   }
 
+  // ── Generate selling angle with AI ────────────────────────────────────────
+  async function handleGenerateAngle() {
+    if (!bannerConfig || generatingAngle) return;
+    setGeneratingAngle(true);
+    try {
+      const res = await fetch("/api/landing/generate-angles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: productDetails || bannerConfig.description,
+          benefits: bannerConfig.benefits,
+          problems: bannerConfig.problems,
+          ingredients: bannerConfig.ingredients,
+          differentiator: bannerConfig.differentiator,
+          country: bannerConfig.country,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok && Array.isArray(data.angles) && data.angles.length > 0) {
+        setSellingAngle(data.angles[0]);
+      }
+    } catch { /* silent */ }
+    finally { setGeneratingAngle(false); }
+  }
+
+  // ── Generate ──────────────────────────────────────────────────────────────
   async function handleGenerate() {
     if (!bannerConfig) return;
     if (!templateUrl) { setError("Selecciona una plantilla de referencia primero."); return; }
@@ -220,6 +263,7 @@ export default function StudioPage() {
           outputSize,
           language,
           aiModel,
+          productDetails: personalization ? productDetails : undefined,
           personalization,
           characterNationality: personalization ? characterNationality : undefined,
           characterSex:         personalization ? characterSex         : undefined,
@@ -276,13 +320,17 @@ export default function StudioPage() {
               </div>
             </div>
           </div>
-          <div className="text-[11px] text-[var(--text-muted)]">Modo Studio · Calidad GPT Image 1</div>
+          <div className="text-[11px] text-[var(--text-muted)]">
+            Modo Studio · {aiModel === "gpt-image-2" ? "GPT Image 2" : aiModel === "gemini" ? "Gemini Flash" : "GPT Image 1"}
+          </div>
         </div>
       </header>
 
       <div className="max-w-[1600px] mx-auto px-6 py-6 grid grid-cols-12 gap-6">
+
         <section className="col-span-12 lg:col-span-5 space-y-4">
           <div className="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-5 space-y-5">
+
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] flex items-center justify-center">
                 <Sparkles size={14} className="text-white" />
@@ -337,7 +385,9 @@ export default function StudioPage() {
                         <div className="relative w-full h-full rounded-lg overflow-hidden border border-[var(--border-color)] group">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={productImages[idx]!} alt="" className="w-full h-full object-cover" />
-                          <button onClick={() => setProductImages((p) => p.map((u, i) => (i === idx ? null : u)))} className="absolute top-0.5 right-0.5 w-4 h-4 flex items-center justify-center rounded-full bg-black/70 hover:bg-black text-white opacity-0 group-hover:opacity-100">
+                          <button
+                            onClick={() => setProductImages((p) => p.map((u, i) => (i === idx ? null : u)))}
+                            className="absolute top-0.5 right-0.5 w-4 h-4 flex items-center justify-center rounded-full bg-black/70 hover:bg-black text-white opacity-0 group-hover:opacity-100">
                             <X size={9} />
                           </button>
                         </div>
@@ -366,10 +416,23 @@ export default function StudioPage() {
                   <Palette size={10} /> Color de Fondo <span className="text-[var(--text-muted)] font-normal">(opcional)</span>
                 </label>
                 <div className="flex items-center gap-1.5 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-color)] px-2 py-1.5">
-                  <input type="color" value={bgColor || "#7C3AED"} onChange={(e) => setBgColor(e.target.value)} className="w-5 h-5 rounded cursor-pointer bg-transparent border-0" />
-                  <input type="text" value={bgColor} onChange={(e) => setBgColor(e.target.value)} placeholder="#000000" className="flex-1 bg-transparent text-[11px] outline-none text-[var(--text-primary)] min-w-0" />
+                  <input
+                    type="color"
+                    value={bgColor || "#7C3AED"}
+                    onChange={(e) => setBgColor(e.target.value)}
+                    className="w-5 h-5 rounded cursor-pointer bg-transparent border-0"
+                  />
+                  <input
+                    type="text"
+                    value={bgColor}
+                    onChange={(e) => setBgColor(e.target.value)}
+                    placeholder="#000000"
+                    className="flex-1 bg-transparent text-[11px] outline-none text-[var(--text-primary)] min-w-0"
+                  />
                   {bgColor && (
-                    <button onClick={() => setBgColor("")} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"><X size={10} /></button>
+                    <button onClick={() => setBgColor("")} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+                      <X size={10} />
+                    </button>
                   )}
                 </div>
               </div>
@@ -378,8 +441,14 @@ export default function StudioPage() {
                 <label className="flex items-center gap-1 text-[10px] font-semibold mb-1.5 text-[var(--text-primary)]">
                   <Maximize size={10} /> Tamaño
                 </label>
-                <select value={outputSize} onChange={(e) => setOutputSize(e.target.value)} className="w-full bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-[11px] outline-none text-[var(--text-primary)]">
-                  {OUTPUT_SIZES.map((s) => (<option key={s.id} value={s.id}>{s.label} ({s.dims})</option>))}
+                <select
+                  value={outputSize}
+                  onChange={(e) => setOutputSize(e.target.value)}
+                  className="w-full bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-[11px] outline-none text-[var(--text-primary)]"
+                >
+                  {OUTPUT_SIZES.map((s) => (
+                    <option key={s.id} value={s.id}>{s.label} ({s.dims})</option>
+                  ))}
                 </select>
               </div>
 
@@ -387,23 +456,44 @@ export default function StudioPage() {
                 <label className="flex items-center gap-1 text-[10px] font-semibold mb-1.5 text-[var(--text-primary)]">
                   <Globe size={10} /> Idioma
                 </label>
-                <select value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-[11px] outline-none text-[var(--text-primary)]">
-                  {LANGUAGES.map((l) => (<option key={l.id} value={l.id}>{l.label}</option>))}
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="w-full bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-[11px] outline-none text-[var(--text-primary)]"
+                >
+                  {LANGUAGES.map((l) => (
+                    <option key={l.id} value={l.id}>{l.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
 
-            <div className="flex items-center justify-between bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-color)] px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold text-[var(--text-primary)]">Modelo</span>
-                <span className={`text-[10px] font-medium ${aiModel === "gemini" ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>Gemini</span>
-                <button onClick={() => setAiModel(aiModel === "gpt-image-1" ? "gemini" : "gpt-image-1")} className={`relative w-10 h-5 rounded-full transition-colors ${aiModel === "gpt-image-1" ? "bg-[#7C3AED]" : "bg-[var(--border-color)]"}`}>
-                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${aiModel === "gpt-image-1" ? "translate-x-5" : "translate-x-0.5"}`} />
-                </button>
-                <span className={`text-[10px] font-medium ${aiModel === "gpt-image-1" ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>GPT Image 1</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#7C3AED]/20 text-[#A78BFA] font-medium">Premium</span>
+            <div className="flex items-center justify-between bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-color)] px-3 py-2 gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[11px] font-semibold text-[var(--text-primary)] shrink-0">Modelo</span>
+                <div className="flex items-center gap-0.5 bg-[var(--bg-base)] rounded-md p-0.5 border border-[var(--border-color)]">
+                  {([
+                    { id: "gemini",       label: "Gemini", badge: undefined as string | undefined },
+                    { id: "gpt-image-1",  label: "GPT-1",  badge: undefined as string | undefined },
+                    { id: "gpt-image-2",  label: "GPT-2",  badge: "Nuevo" as string | undefined },
+                  ] as const).map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setAiModel(m.id)}
+                      className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${aiModel === m.id ? "bg-[#7C3AED] text-white" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
+                    >
+                      {m.label}
+                      {m.badge && aiModel !== m.id && (
+                        <span className="text-[8px] px-1 py-0 rounded bg-[#7C3AED]/20 text-[#A78BFA]">{m.badge}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <button onClick={() => setPersonalization(!personalization)} className="flex items-center gap-1.5 text-[11px]">
+              <button
+                onClick={() => setPersonalization(!personalization)}
+                className="flex items-center gap-1.5 text-[11px] shrink-0"
+              >
                 <Wand2 size={11} className={personalization ? "text-[#7C3AED]" : "text-[var(--text-muted)]"} />
                 <span className={`font-medium ${personalization ? "text-[#A78BFA]" : "text-[var(--text-muted)]"}`}>Personalización</span>
                 <span className={`relative w-8 h-4 rounded-full transition-colors ${personalization ? "bg-[#7C3AED]" : "bg-[var(--border-color)]"}`}>
@@ -414,26 +504,67 @@ export default function StudioPage() {
 
             {personalization && (
               <div className="space-y-3 pt-2 border-t border-[var(--border-color)] animate-in fade-in">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleGenerateAngle}
+                    disabled={generatingAngle}
+                    className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gradient-to-r from-[#7C3AED]/90 to-[#5B21B6]/90 hover:from-[#7C3AED] hover:to-[#5B21B6] text-white text-[11px] font-semibold disabled:opacity-60 transition-all"
+                  >
+                    {generatingAngle ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                    Desarrollar Ángulo con IA
+                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setSavedAnglesOpen(!savedAnglesOpen)}
+                      disabled={!bannerConfig?.angles?.length}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-color)] hover:border-[#7C3AED] text-[var(--text-primary)] text-[11px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      <Bookmark size={11} />
+                      Seleccionar Ángulo Guardado
+                      {bannerConfig?.angles?.length ? (
+                        <span className="text-[9px] px-1.5 py-0 rounded-full bg-[#7C3AED]/20 text-[#A78BFA]">{bannerConfig.angles.length}</span>
+                      ) : null}
+                    </button>
+                    {savedAnglesOpen && bannerConfig?.angles?.length ? (
+                      <div className="absolute z-10 top-full mt-1 left-0 right-0 max-h-64 overflow-y-auto bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-lg shadow-2xl p-1">
+                        {bannerConfig.angles.map((a, i) => (
+                          <button
+                            key={i}
+                            onClick={() => { setSellingAngle(a); setSavedAnglesOpen(false); }}
+                            className="w-full text-left px-2 py-1.5 rounded text-[11px] text-[var(--text-primary)] hover:bg-[#7C3AED]/10 transition-colors"
+                          >
+                            {a}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
                 <div>
                   <p className="text-[10px] font-semibold text-[#A78BFA] uppercase tracking-wide mb-2">
                     Personalizar Personajes <span className="text-[var(--text-muted)] font-normal normal-case">(opcional)</span>
                   </p>
                   <div className="grid grid-cols-3 gap-2">
-                    <select value={characterNationality} onChange={(e) => setCharNat(e.target.value)} className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-[11px] outline-none">
+                    <select value={characterNationality} onChange={(e) => setCharNat(e.target.value)}
+                      className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-[11px] outline-none">
                       <option value="">Nacionalidad</option>
                       {NATIONALITIES.map((n) => <option key={n} value={n}>{n}</option>)}
                     </select>
-                    <select value={characterSex} onChange={(e) => setCharSex(e.target.value)} className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-[11px] outline-none">
+                    <select value={characterSex} onChange={(e) => setCharSex(e.target.value)}
+                      className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-[11px] outline-none">
                       <option value="">Sexo</option>
                       {SEXES.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
-                    <select value={characterAge} onChange={(e) => setCharAge(e.target.value)} className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-[11px] outline-none">
+                    <select value={characterAge} onChange={(e) => setCharAge(e.target.value)}
+                      className="bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-[11px] outline-none">
                       <option value="">Edad</option>
                       {AGE_RANGES.map((a) => <option key={a} value={a}>{a}</option>)}
                     </select>
                   </div>
                 </div>
 
+                <PersonalizationField label="Detalles del Producto" value={productDetails} onChange={setProductDetails} placeholder="Describe el producto en detalle: qué es, cómo funciona, beneficios principales..." />
                 <PersonalizationField label="Ángulo de Venta" value={sellingAngle} onChange={setSellingAngle} placeholder="Ejemplo: Mujeres en la transición a la menopausia que buscan alivio natural." />
                 <PersonalizationField label="Problema específico que aborda el ángulo de venta" value={specificProblem} onChange={setSpecificProblem} placeholder="Ejemplo: La situación actual del consumidor, qué dolor o frustración experimenta..." />
                 <PersonalizationField label="Avatar o público objetivo" value={targetAudience} onChange={setTargetAudience} placeholder="Ejemplo: Mujeres de +55 años, que sienten los primeros síntomas de la menopausia..." />
@@ -442,8 +573,16 @@ export default function StudioPage() {
               </div>
             )}
 
-            <button onClick={handleGenerate} disabled={generating || !templateUrl} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] text-white font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-lg shadow-[#7C3AED]/30">
-              {generating ? (<><Loader2 size={15} className="animate-spin" />Generando sección...</>) : (<><Sparkles size={15} />Generar Sección</>)}
+            <button
+              onClick={handleGenerate}
+              disabled={generating || !templateUrl}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] text-white font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-lg shadow-[#7C3AED]/30"
+            >
+              {generating ? (
+                <><Loader2 size={15} className="animate-spin" />Generando sección...</>
+              ) : (
+                <><Sparkles size={15} />Generar Sección</>
+              )}
             </button>
             <p className="text-center text-[10px] text-[var(--text-muted)] -mt-2">
               Esta generación consumirá <span className="text-[#A78BFA] font-semibold">1 crédito</span>
@@ -462,7 +601,9 @@ export default function StudioPage() {
           <div className="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-5 sticky top-20">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold">Resultado</h2>
-              {generatedImages.length > 0 && (<p className="text-[11px] text-[var(--text-muted)]">{generatedImages.length} generación{generatedImages.length === 1 ? "" : "es"}</p>)}
+              {generatedImages.length > 0 && (
+                <p className="text-[11px] text-[var(--text-muted)]">{generatedImages.length} generación{generatedImages.length === 1 ? "" : "es"}</p>
+              )}
             </div>
 
             {generating && generatedImages.length === 0 && (
@@ -500,10 +641,17 @@ export default function StudioPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => handleDownload(generatedImages[0])} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] text-white font-semibold text-xs hover:opacity-90 transition-all">
+                  <button
+                    onClick={() => handleDownload(generatedImages[0])}
+                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] text-white font-semibold text-xs hover:opacity-90 transition-all"
+                  >
                     <Download size={13} />Descargar Sección
                   </button>
-                  <button onClick={handleGenerate} disabled={generating} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-[var(--border-color)] hover:border-[#7C3AED] hover:bg-[#7C3AED]/10 text-[var(--text-primary)] font-semibold text-xs disabled:opacity-50 transition-all">
+                  <button
+                    onClick={handleGenerate}
+                    disabled={generating}
+                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-[var(--border-color)] hover:border-[#7C3AED] hover:bg-[#7C3AED]/10 text-[var(--text-primary)] font-semibold text-xs disabled:opacity-50 transition-all"
+                  >
                     {generating ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                     Generar Otra
                   </button>
@@ -514,7 +662,8 @@ export default function StudioPage() {
                     <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">Historial</p>
                     <div className="grid grid-cols-4 gap-2">
                       {generatedImages.slice(1).map((url, i) => (
-                        <button key={i} onClick={() => setGeneratedImages([url, ...generatedImages.filter((u) => u !== url)])} className="aspect-[3/4] rounded-lg overflow-hidden border border-[var(--border-color)] hover:border-[#7C3AED] transition-colors">
+                        <button key={i} onClick={() => setGeneratedImages([url, ...generatedImages.filter((u) => u !== url)])}
+                          className="aspect-[3/4] rounded-lg overflow-hidden border border-[var(--border-color)] hover:border-[#7C3AED] transition-colors">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={url} alt="" className="w-full h-full object-cover" />
                         </button>
@@ -536,12 +685,15 @@ export default function StudioPage() {
                 <h3 className="text-lg font-bold text-white">Plantillas de Secciones</h3>
                 <span className="text-xs text-[var(--text-muted)]">{galleryTemplates.length}</span>
               </div>
-              <button onClick={() => setGalleryOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10"><X size={16} className="text-white" /></button>
+              <button onClick={() => setGalleryOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
+                <X size={16} className="text-white" />
+              </button>
             </div>
 
             <div className="flex gap-1 overflow-x-auto pb-3 mb-3 border-b border-[var(--border-color)]">
               {Object.entries(SECTION_META).map(([id, m]) => (
-                <button key={id} onClick={() => setActiveSectionTab(id)} className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${activeSectionTab === id ? "bg-[#7C3AED] text-white" : "bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}>
+                <button key={id} onClick={() => setActiveSectionTab(id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${activeSectionTab === id ? "bg-[#7C3AED] text-white" : "bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}>
                   {m.label}
                 </button>
               ))}
@@ -549,7 +701,9 @@ export default function StudioPage() {
 
             <div className="flex-1 overflow-y-auto">
               {galleryLoading ? (
-                <div className="flex items-center justify-center py-20"><Loader2 size={20} className="animate-spin text-[#7C3AED]" /></div>
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 size={20} className="animate-spin text-[#7C3AED]" />
+                </div>
               ) : galleryTemplates.length === 0 ? (
                 <div className="text-center py-20">
                   <p className="text-sm text-[var(--text-muted)]">No hay plantillas en esta sección aún.</p>
@@ -558,7 +712,9 @@ export default function StudioPage() {
               ) : (
                 <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {galleryTemplates.map((t) => (
-                    <button key={t.id} onClick={() => { setTemplateUrl(t.imageUrl); setGalleryOpen(false); }} className={`group relative aspect-[3/4] rounded-xl overflow-hidden border-2 transition-all ${templateUrl === t.imageUrl ? "border-[#7C3AED]" : "border-transparent hover:border-[#7C3AED]/50"}`}>
+                    <button key={t.id}
+                      onClick={() => { setTemplateUrl(t.imageUrl); setGalleryOpen(false); }}
+                      className={`group relative aspect-[3/4] rounded-xl overflow-hidden border-2 transition-all ${templateUrl === t.imageUrl ? "border-[#7C3AED]" : "border-transparent hover:border-[#7C3AED]/50"}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={t.imageUrl} alt={t.name} className="w-full h-full object-cover" />
                       {templateUrl === t.imageUrl && (
@@ -574,7 +730,9 @@ export default function StudioPage() {
 
             <div className="pt-3 mt-3 border-t border-[var(--border-color)] flex items-center justify-between">
               <p className="text-[11px] text-[var(--text-muted)]">Haz clic en un template para seleccionarlo</p>
-              <button onClick={() => setGalleryOpen(false)} className="px-4 py-1.5 rounded-lg bg-[var(--bg-elevated)] hover:bg-[var(--border-color)] text-[var(--text-primary)] text-xs font-medium">Cancelar</button>
+              <button onClick={() => setGalleryOpen(false)} className="px-4 py-1.5 rounded-lg bg-[var(--bg-elevated)] hover:bg-[var(--border-color)] text-[var(--text-primary)] text-xs font-medium">
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
@@ -593,7 +751,13 @@ function PersonalizationField({ label, value, onChange, placeholder }: {
         <label className="text-[10px] font-semibold text-[#A78BFA] uppercase tracking-wide">{label}</label>
         <span className="text-[9px] text-[var(--text-muted)]">Máx. {MAX} caracteres</span>
       </div>
-      <textarea value={value} onChange={(e) => onChange(e.target.value.slice(0, MAX))} placeholder={placeholder} rows={3} className="w-full bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[11px] outline-none focus:border-[#7C3AED] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] resize-none" />
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value.slice(0, MAX))}
+        placeholder={placeholder}
+        rows={3}
+        className="w-full bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[11px] outline-none focus:border-[#7C3AED] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] resize-none"
+      />
     </div>
   );
 }
