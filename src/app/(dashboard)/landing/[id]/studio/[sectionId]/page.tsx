@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
-  ArrowLeft, Sparkles, Loader2, Upload, X, ChevronDown, ChevronUp,
+  ArrowLeft, Sparkles, Loader2, Upload, X,
   Image as ImageIcon, Download, RefreshCw, Wand2, Palette, Globe,
-  Maximize, AlertCircle, Check, Plus,
+  Maximize, AlertCircle, Check, Plus, Bookmark,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -97,10 +97,11 @@ export default function StudioPage() {
   const [bgColor, setBgColor] = useState<string>("");
   const [outputSize, setOutputSize] = useState("1080x1920");
   const [language, setLanguage] = useState("es");
-  const [aiModel, setAiModel] = useState<"gpt-image-1" | "gemini">("gpt-image-1");
+  const [aiModel, setAiModel] = useState<"gpt-image-1" | "gpt-image-2" | "gemini">("gpt-image-1");
 
   // Personalization
-  const [personalization, setPersonalization] = useState(false);
+  const [personalization, setPersonalization] = useState(true);
+  const [productDetails, setProductDetails] = useState("");
   const [characterNationality, setCharNat] = useState("");
   const [characterSex, setCharSex] = useState("");
   const [characterAge, setCharAge] = useState("");
@@ -109,6 +110,8 @@ export default function StudioPage() {
   const [targetAudience, setTargetAudience] = useState("");
   const [solutionMechanism, setSolutionMechanism] = useState("");
   const [additionalInstructions, setAdditional] = useState("");
+  const [generatingAngle, setGeneratingAngle] = useState(false);
+  const [savedAnglesOpen, setSavedAnglesOpen] = useState(false);
 
   // Gallery modal
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -155,6 +158,8 @@ export default function StudioPage() {
       setProductImages([seed[0] ?? null, seed[1] ?? null, seed[2] ?? null]);
       // Seed selling angle if exists
       if (cfg.selectedAngle) setSellingAngle(cfg.selectedAngle);
+      // Seed product details from saved description
+      if (cfg.description) setProductDetails(cfg.description);
       setLoading(false);
     })();
   }, [landingId, supabase, router]);
@@ -211,6 +216,31 @@ export default function StudioPage() {
     }
   }
 
+  // ── Generate selling angle with AI ────────────────────────────────────────
+  async function handleGenerateAngle() {
+    if (!bannerConfig || generatingAngle) return;
+    setGeneratingAngle(true);
+    try {
+      const res = await fetch("/api/landing/generate-angles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: productDetails || bannerConfig.description,
+          benefits: bannerConfig.benefits,
+          problems: bannerConfig.problems,
+          ingredients: bannerConfig.ingredients,
+          differentiator: bannerConfig.differentiator,
+          country: bannerConfig.country,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok && Array.isArray(data.angles) && data.angles.length > 0) {
+        setSellingAngle(data.angles[0]);
+      }
+    } catch { /* silent */ }
+    finally { setGeneratingAngle(false); }
+  }
+
   // ── Generate ──────────────────────────────────────────────────────────────
   async function handleGenerate() {
     if (!bannerConfig) return;
@@ -236,6 +266,7 @@ export default function StudioPage() {
           outputSize,
           language,
           aiModel,
+          productDetails: personalization ? productDetails : undefined,
           personalization,
           characterNationality: personalization ? characterNationality : undefined,
           characterSex:         personalization ? characterSex         : undefined,
@@ -294,7 +325,7 @@ export default function StudioPage() {
             </div>
           </div>
           <div className="text-[11px] text-[var(--text-muted)]">
-            Modo Studio · Calidad GPT Image 1
+            Modo Studio · {aiModel === "gpt-image-2" ? "GPT Image 2" : aiModel === "gemini" ? "Gemini Flash" : "GPT Image 1"}
           </div>
         </div>
       </header>
@@ -447,23 +478,32 @@ export default function StudioPage() {
               </div>
             </div>
 
-            {/* Model toggle */}
-            <div className="flex items-center justify-between bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-color)] px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold text-[var(--text-primary)]">Modelo</span>
-                <span className={`text-[10px] font-medium ${aiModel === "gemini" ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>Gemini</span>
-                <button
-                  onClick={() => setAiModel(aiModel === "gpt-image-1" ? "gemini" : "gpt-image-1")}
-                  className={`relative w-10 h-5 rounded-full transition-colors ${aiModel === "gpt-image-1" ? "bg-[#7C3AED]" : "bg-[var(--border-color)]"}`}
-                >
-                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${aiModel === "gpt-image-1" ? "translate-x-5" : "translate-x-0.5"}`} />
-                </button>
-                <span className={`text-[10px] font-medium ${aiModel === "gpt-image-1" ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>GPT Image 1</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#7C3AED]/20 text-[#A78BFA] font-medium">Premium</span>
+            {/* Model selector + personalization toggle */}
+            <div className="flex items-center justify-between bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-color)] px-3 py-2 gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[11px] font-semibold text-[var(--text-primary)] shrink-0">Modelo</span>
+                <div className="flex items-center gap-0.5 bg-[var(--bg-base)] rounded-md p-0.5 border border-[var(--border-color)]">
+                  {([
+                    { id: "gemini",       label: "Gemini", badge: undefined as string | undefined },
+                    { id: "gpt-image-1",  label: "GPT-1",  badge: undefined as string | undefined },
+                    { id: "gpt-image-2",  label: "GPT-2",  badge: "Nuevo" as string | undefined },
+                  ] as const).map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setAiModel(m.id)}
+                      className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${aiModel === m.id ? "bg-[#7C3AED] text-white" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
+                    >
+                      {m.label}
+                      {m.badge && aiModel !== m.id && (
+                        <span className="text-[8px] px-1 py-0 rounded bg-[#7C3AED]/20 text-[#A78BFA]">{m.badge}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
               <button
                 onClick={() => setPersonalization(!personalization)}
-                className="flex items-center gap-1.5 text-[11px]"
+                className="flex items-center gap-1.5 text-[11px] shrink-0"
               >
                 <Wand2 size={11} className={personalization ? "text-[#7C3AED]" : "text-[var(--text-muted)]"} />
                 <span className={`font-medium ${personalization ? "text-[#A78BFA]" : "text-[var(--text-muted)]"}`}>Personalización</span>
@@ -476,6 +516,44 @@ export default function StudioPage() {
             {/* Personalization panel */}
             {personalization && (
               <div className="space-y-3 pt-2 border-t border-[var(--border-color)] animate-in fade-in">
+                {/* AI angle generator + saved angles */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleGenerateAngle}
+                    disabled={generatingAngle}
+                    className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gradient-to-r from-[#7C3AED]/90 to-[#5B21B6]/90 hover:from-[#7C3AED] hover:to-[#5B21B6] text-white text-[11px] font-semibold disabled:opacity-60 transition-all"
+                  >
+                    {generatingAngle ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                    Desarrollar Ángulo con IA
+                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setSavedAnglesOpen(!savedAnglesOpen)}
+                      disabled={!bannerConfig?.angles?.length}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-color)] hover:border-[#7C3AED] text-[var(--text-primary)] text-[11px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      <Bookmark size={11} />
+                      Seleccionar Ángulo Guardado
+                      {bannerConfig?.angles?.length ? (
+                        <span className="text-[9px] px-1.5 py-0 rounded-full bg-[#7C3AED]/20 text-[#A78BFA]">{bannerConfig.angles.length}</span>
+                      ) : null}
+                    </button>
+                    {savedAnglesOpen && bannerConfig?.angles?.length ? (
+                      <div className="absolute z-10 top-full mt-1 left-0 right-0 max-h-64 overflow-y-auto bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-lg shadow-2xl p-1">
+                        {bannerConfig.angles.map((a, i) => (
+                          <button
+                            key={i}
+                            onClick={() => { setSellingAngle(a); setSavedAnglesOpen(false); }}
+                            className="w-full text-left px-2 py-1.5 rounded text-[11px] text-[var(--text-primary)] hover:bg-[#7C3AED]/10 transition-colors"
+                          >
+                            {a}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
                 {/* Character */}
                 <div>
                   <p className="text-[10px] font-semibold text-[#A78BFA] uppercase tracking-wide mb-2">
@@ -500,6 +578,7 @@ export default function StudioPage() {
                   </div>
                 </div>
 
+                <PersonalizationField label="Detalles del Producto" value={productDetails} onChange={setProductDetails} placeholder="Describe el producto en detalle: qué es, cómo funciona, beneficios principales..." />
                 <PersonalizationField label="Ángulo de Venta" value={sellingAngle} onChange={setSellingAngle} placeholder="Ejemplo: Mujeres en la transición a la menopausia que buscan alivio natural." />
                 <PersonalizationField label="Problema específico que aborda el ángulo de venta" value={specificProblem} onChange={setSpecificProblem} placeholder="Ejemplo: La situación actual del consumidor, qué dolor o frustración experimenta..." />
                 <PersonalizationField label="Avatar o público objetivo" value={targetAudience} onChange={setTargetAudience} placeholder="Ejemplo: Mujeres de +55 años, que sienten los primeros síntomas de la menopausia..." />

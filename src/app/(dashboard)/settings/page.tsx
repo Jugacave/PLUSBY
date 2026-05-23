@@ -79,7 +79,7 @@ const AI_MODELS: AIModel[] = [
   },
   {
     key: "gpt_image", label: "OpenAI", sublabel: "GPT Image",
-    specificModel: "GPT Image 1", costNote: "~$0.04/img", costDetail: "Alta calidad fotorealista",
+    specificModel: "GPT Image 1 + GPT Image 2", costNote: "~$0.04/img", costDetail: "Misma key activa GPT-1 y el nuevo GPT-2",
     domain: "openai.com", color: "#10A37F", placeholder: "sk-...", apiUrl: "https://platform.openai.com/api-keys",
   },
   {
