@@ -145,6 +145,20 @@ const BANNER_SECTIONS = [
   { id: "faqs",          label: "Preguntas Frecuentes",      icon: "❓" },
 ];
 
+const SECTION_COLORS: Record<string, string> = {
+  hero:          "#FF6B35",
+  oferta:        "#4ADE80",
+  antes_despues: "#06B6D4",
+  beneficios:    "#22D3EE",
+  comparativa:   "#3B82F6",
+  autoridad:     "#F59E0B",
+  testimonios:   "#EAB308",
+  ingredientes:  "#14B8A6",
+  modo_uso:      "#8B5CF6",
+  logistica:     "#6366F1",
+  faqs:          "#EC4899",
+};
+
 const COUNTRIES = [
   { code: "CO", flag: "🇨🇴", currency: "$" },
   { code: "MX", flag: "🇲🇽", currency: "$" },
@@ -730,6 +744,157 @@ function DesignGalleryModal({ initialSectionId, templates, loadingSections, curr
   );
 }
 
+// ─── Banner Mode: SectionTile ─────────────────────────────────────────────────
+
+function SectionTile({ section, images, isGenerating, isSelected, isHTMLTemplate, onClick }: {
+  section: { id: string; label: string; icon: string };
+  images: string[];
+  isGenerating: boolean;
+  isSelected: boolean;
+  isHTMLTemplate: boolean;
+  onClick: () => void;
+}) {
+  const color = SECTION_COLORS[section.id] ?? "#7C3AED";
+  const firstImage = images[0] ?? null;
+
+  return (
+    <button
+      onClick={onClick}
+      className="relative rounded-xl overflow-hidden text-left transition-all group w-full"
+      style={{
+        border: isSelected ? `2px solid ${color}` : "1px solid #2A2A3A",
+        background: "#13131A",
+        boxShadow: isSelected ? `0 0 16px ${color}25` : undefined,
+      }}
+    >
+      {/* Top accent stripe */}
+      <div className="h-0.5 w-full flex-shrink-0" style={{ background: color }} />
+
+      {/* Thumbnail */}
+      <div className="relative overflow-hidden bg-[#0A0A0F]" style={{ aspectRatio: "3/4" }}>
+        {isGenerating ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <Loader2 size={22} className="animate-spin" style={{ color }} />
+            <p className="text-[10px] text-[#555568]">Generando...</p>
+          </div>
+        ) : firstImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={firstImage} alt={section.label} className="w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+            style={{ background: `${color}12` }}>
+            <span className="text-3xl">{section.icon}</span>
+            <p className="text-[10px] font-medium" style={{ color: `${color}BB` }}>Sin generar</p>
+          </div>
+        )}
+
+        {/* Image count badge */}
+        {images.length > 0 && !isGenerating && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/70 backdrop-blur-sm">
+            <Check size={9} style={{ color }} />
+            <span className="text-[9px] font-bold" style={{ color }}>{images.length}</span>
+          </div>
+        )}
+
+        {/* Hover overlay */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ background: "rgba(0,0,0,0.45)" }}>
+          <span className="text-white text-[11px] font-semibold px-3 py-1.5 rounded-full"
+            style={{ background: color }}>
+            Abrir
+          </span>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-3 py-2.5 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[#F0F0F5] font-semibold text-[11px] leading-tight truncate">{section.label}</p>
+          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+            {isHTMLTemplate && (
+              <span className="text-[8px] px-1 py-0.5 rounded bg-[rgba(124,58,237,0.2)] text-[#A78BFA] font-medium">Template</span>
+            )}
+            {images.length > 0 ? (
+              <span className="text-[8px] text-[#555568]">{images.length} versión{images.length > 1 ? "es" : ""}</span>
+            ) : (
+              <span className="text-[8px] text-[#3A3A4A]">Vacía</span>
+            )}
+          </div>
+        </div>
+        <ChevronRight size={13} className="text-[#3A3A4A] group-hover:text-[#8888A0] transition-colors flex-shrink-0" />
+      </div>
+    </button>
+  );
+}
+
+// ─── Banner Mode: SectionDrawer ────────────────────────────────────────────────
+
+function SectionDrawer({ section, config, images, isGenerating, isHTMLTemplate, templates, loadingSections, productName, onImageGenerated, onStyleChange, onOpenGallery, onClose }: {
+  section: { id: string; label: string; icon: string };
+  config: BannerConfig;
+  images: string[];
+  isGenerating: boolean;
+  isHTMLTemplate: boolean;
+  templates: Record<string, BannerTemplate[]>;
+  loadingSections: Set<string>;
+  productName: string;
+  onImageGenerated: (url: string) => void;
+  onStyleChange: (styleId: string) => void;
+  onOpenGallery: () => void;
+  onClose: () => void;
+}) {
+  const color = SECTION_COLORS[section.id] ?? "#7C3AED";
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-30 bg-black/50"
+        onClick={onClose}
+      />
+      {/* Drawer */}
+      <div className="fixed right-0 top-0 h-full w-[460px] z-40 bg-[#0D0D14] border-l border-[#2A2A3A] flex flex-col overflow-hidden shadow-2xl"
+        style={{ animation: "slideInRight 0.2s ease-out" }}>
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#2A2A3A] flex-shrink-0">
+          <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ background: color }} />
+          <span className="text-xl leading-none">{section.icon}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[#F0F0F5] font-bold text-sm">{section.label}</p>
+            <p className="text-[#555568] text-[10px]">
+              {isHTMLTemplate ? "Template HTML + copy IA" : "Generación imagen IA"}
+            </p>
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[#555568] hover:text-[#F0F0F5] hover:bg-[#1C1C26] transition-colors flex-shrink-0">
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {isHTMLTemplate ? (
+            <BannerHTMLCard section={section} config={config} productName={productName} />
+          ) : (
+            <BannerImageCard
+              section={section}
+              config={config}
+              images={images}
+              externalGenerating={isGenerating}
+              templates={templates}
+              loadingSections={loadingSections}
+              productName={productName}
+              onImageGenerated={onImageGenerated}
+              onStyleChange={onStyleChange}
+              onOpenGallery={onOpenGallery}
+            />
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Banner Mode: BannerHTMLCard (HTML template system — perfect text) ────────
 
 interface BannerCopyData {
@@ -1102,6 +1267,7 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
   const [templates, setTemplates] = useState<Record<string, BannerTemplate[]>>({});
   const [loadingSections, setLoadingSections] = useState<Set<string>>(new Set());
   const [galleryForSection, setGalleryForSection] = useState<string | null>(null);
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
 
   function upd(patch: Partial<BannerConfig>) { setConfig((p) => ({ ...p, ...patch })); }
 
@@ -1472,20 +1638,27 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
         </div>
       </aside>
 
-      {/* ── RIGHT PANEL: Banner Sections ── */}
+      {/* ── RIGHT PANEL: Banner Grid ── */}
       <main className="flex-1 overflow-y-auto p-4 lg:p-5 bg-[#0A0A0F]">
+
+        {/* Header row */}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-[#F0F0F5] font-bold text-sm">Secciones de Banners</h2>
-            <p className="text-[#555568] text-[10px] mt-0.5">Formato 1080×1920 · Se generan al crear ángulos · Regenera cualquiera individualmente</p>
+            <p className="text-[#555568] text-[10px] mt-0.5">
+              {BANNER_SECTIONS.filter(s => (generatedImages[s.id]?.length ?? 0) > 0).length} / {BANNER_SECTIONS.length} generadas · Haz clic en una sección para editarla
+            </p>
           </div>
-          {config.selectedAngle && (
-            <div className="max-w-[200px] px-2.5 py-1.5 rounded-lg border border-[rgba(255,107,53,0.3)] bg-[rgba(255,107,53,0.08)]">
-              <p className="text-[9px] text-[#FF6B35] font-medium truncate">{config.selectedAngle}</p>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {config.selectedAngle && (
+              <div className="max-w-[180px] px-2.5 py-1.5 rounded-lg border border-[rgba(255,107,53,0.3)] bg-[rgba(255,107,53,0.08)]">
+                <p className="text-[9px] text-[#FF6B35] font-medium truncate">{config.selectedAngle}</p>
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Bulk progress */}
         {bulkProgress && (
           <div className="mb-4 p-3 rounded-xl border border-[rgba(124,58,237,0.3)] bg-[rgba(124,58,237,0.08)]">
             <div className="flex items-center justify-between mb-2">
@@ -1502,6 +1675,7 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
           </div>
         )}
 
+        {/* Design gallery modal */}
         {galleryForSection && (
           <DesignGalleryModal
             initialSectionId={galleryForSection}
@@ -1515,38 +1689,19 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
           />
         )}
 
-        <div className="space-y-2">
-          {BANNER_SECTIONS.map((section) =>
-            HTML_TEMPLATE_SECTIONS.has(section.id) ? (
-              <BannerHTMLCard
-                key={section.id}
-                section={section}
-                config={config}
-                productName={initialProduct}
-              />
-            ) : (
-              <BannerImageCard
-                key={section.id}
-                section={section}
-                config={config}
-                images={generatedImages[section.id] ?? []}
-                externalGenerating={pendingSections.has(section.id)}
-                templates={templates}
-                loadingSections={loadingSections}
-                productName={initialProduct}
-                onImageGenerated={(url) => {
-                  setGeneratedImages((p) => ({
-                    ...p,
-                    [section.id]: [url, ...(p[section.id] ?? [])],
-                  }));
-                }}
-                onStyleChange={(styleId) => {
-                  upd({ sectionStyles: { ...config.sectionStyles, [section.id]: styleId } });
-                }}
-                onOpenGallery={() => setGalleryForSection(section.id)}
-              />
-            )
-          )}
+        {/* Section storyboard grid */}
+        <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+          {BANNER_SECTIONS.map((section) => (
+            <SectionTile
+              key={section.id}
+              section={section}
+              images={generatedImages[section.id] ?? []}
+              isGenerating={pendingSections.has(section.id)}
+              isSelected={selectedSection === section.id}
+              isHTMLTemplate={HTML_TEMPLATE_SECTIONS.has(section.id)}
+              onClick={() => setSelectedSection((prev) => prev === section.id ? null : section.id)}
+            />
+          ))}
         </div>
 
         <div className="flex items-center justify-center gap-2 py-6 mt-2">
@@ -1555,6 +1710,34 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
             Haz clic en <strong className="text-[#555568]">Guardar</strong> en la barra superior para conservar la configuración
           </p>
         </div>
+
+        {/* Section drawer */}
+        {selectedSection && (() => {
+          const sec = BANNER_SECTIONS.find((s) => s.id === selectedSection)!;
+          return (
+            <SectionDrawer
+              section={sec}
+              config={config}
+              images={generatedImages[selectedSection] ?? []}
+              isGenerating={pendingSections.has(selectedSection)}
+              isHTMLTemplate={HTML_TEMPLATE_SECTIONS.has(selectedSection)}
+              templates={templates}
+              loadingSections={loadingSections}
+              productName={initialProduct}
+              onImageGenerated={(url) => {
+                setGeneratedImages((p) => ({
+                  ...p,
+                  [selectedSection]: [url, ...(p[selectedSection] ?? [])],
+                }));
+              }}
+              onStyleChange={(styleId) => {
+                upd({ sectionStyles: { ...config.sectionStyles, [selectedSection]: styleId } });
+              }}
+              onOpenGallery={() => { setGalleryForSection(selectedSection); }}
+              onClose={() => setSelectedSection(null)}
+            />
+          );
+        })()}
       </main>
     </div>
   );
