@@ -108,24 +108,30 @@ function buildStudioPrompt(req: StudioRequest): string {
 - IMAGE 2${photoCount > 1 ? ` through ${photoCount + 1}` : ""} ${photoCount > 1 ? "are" : "is"} ${photoCount > 1 ? "photos" : "a photo"} of the ACTUAL product to advertise ("${req.productName}"). THIS is the product that must be the star of the banner. Render it faithfully — exact same shape, proportions, color, materials, label and branding as shown in ${photoCount > 1 ? "these photos" : "this photo"}.`
       : `IMAGE 1 is the DESIGN TEMPLATE. Replicate its layout, colors, typography, graphic elements and composition. Replace the template's product with "${req.productName}" as described below.`;
 
+    const brandColorBlock = req.bgColor
+      ? `BRAND COLOR (mandatory): ${req.bgColor}. Use this as the dominant background/accent color throughout the entire banner. Apply it consistently to all sections — background, badges, buttons, highlights. Do NOT use the template's original colors.`
+      : `COLORS: Adapt the template's color palette to look premium and modern. Keep the general color distribution but enhance vibrancy.`;
+
     sections.push(
-      `CRITICAL INSTRUCTION — READ THIS FIRST: I am providing a REFERENCE BANNER DESIGN. Produce an almost identical copy of its DESIGN, but advertising a DIFFERENT product.
+      `CRITICAL INSTRUCTION — READ THIS FIRST: I am providing a REFERENCE BANNER DESIGN. Produce an almost identical copy of its STRUCTURE and LAYOUT, but advertising a DIFFERENT product and using the BRAND COLOR specified below.
 
 ${imageRoles}
 
-MANDATORY replication of the template's DESIGN:
+MANDATORY replication of the template's DESIGN STRUCTURE (not its colors):
 - LAYOUT: same spatial structure — headline position, product position, badges/price/CTA positions.
-- COLORS: same background color(s), accent colors, gradient treatment, color distribution.
+- COLORS: IGNORE the template's original colors. Instead, use the BRAND COLOR specified below for the entire banner.
 - TYPOGRAPHY: same font weight style (bold/condensed/thin), same size hierarchy, same text block positions.
-- GRAPHIC ELEMENTS: replicate all badges, circles, geometric shapes, dividers, overlays, textures, icons, stickers.
+- GRAPHIC ELEMENTS: replicate all badges, circles, geometric shapes, dividers, overlays, textures, icons, stickers — but recolor them with the brand palette.
 - COMPOSITION: same visual balance, negative space and focal points.
+
+${brandColorBlock}
 
 PRODUCT SWAP — this is what changes versus the template:
 - Place the product from the PRODUCT PHOTOS (NOT the template's product) where the template's product sits, at a similar size, angle and prominence.
 - The featured product MUST look exactly like the product photos. Do NOT invent, redesign, or substitute a different-looking product. Do NOT keep the template's original product or its brand.
 - Replace the product name with "${req.productName}" and all claims/statistics/text with the product info below. Use the provided prices.
 
-DO NOT create a new layout. DO NOT change the color scheme. Keep ~95% of the design identical to the template; only the product itself, its name, claims and prices change.`
+DO NOT create a new layout. Keep ~95% of the STRUCTURE identical to the template. RECOLOR the entire banner with the brand color above — the template's colors are just reference for distribution, not the actual palette to use.`
     );
   } else if (hasPhotos) {
     sections.push(
@@ -211,11 +217,6 @@ DO NOT create a new layout. DO NOT change the color scheme. Keep ~95% of the des
     if (req.targetAudience) sections.push(`TARGET AUDIENCE: ${req.targetAudience}`);
     if (req.solutionMechanism) sections.push(`HOW THE PRODUCT BECOMES THE SOLUTION: ${req.solutionMechanism}`);
     if (req.additionalInstructions) sections.push(`ADDITIONAL INSTRUCTIONS: ${req.additionalInstructions}`);
-  }
-
-  // Background color
-  if (req.bgColor) {
-    sections.push(`DOMINANT BACKGROUND COLOR: ${req.bgColor}. Use this color as the main background tone or accent in the composition.`);
   }
 
   // Quality directives
