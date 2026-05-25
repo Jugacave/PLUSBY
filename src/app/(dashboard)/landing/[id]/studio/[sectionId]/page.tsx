@@ -195,9 +195,9 @@ export default function StudioPage() {
     if (!user) return null;
     const ext = file.name.split(".").pop() ?? "png";
     const path = `${user.id}/${prefix}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("landing-assets").upload(path, file, { upsert: true });
+    const { error } = await supabase.storage.from("store-logos").upload(path, file, { upsert: true });
     if (error) return null;
-    const { data } = supabase.storage.from("landing-assets").getPublicUrl(path);
+    const { data } = supabase.storage.from("store-logos").getPublicUrl(path);
     return data.publicUrl;
   }
 
@@ -226,7 +226,7 @@ export default function StudioPage() {
     } else {
       setPhotoUploadErrors((p) => ({
         ...p,
-        [idx]: "Error al subir. Crea el bucket 'landing-assets' público en Supabase → Storage.",
+        [idx]: "Error al subir la imagen. Revisa el bucket 'store-logos' en Supabase → Storage.",
       }));
     }
   }
@@ -325,10 +325,10 @@ export default function StudioPage() {
       const ext = blob.type.includes("webp") ? "webp" : "png";
       const path = `sections/${landingId}/${sectionId}-${Date.now()}.${ext}`;
       const { error: uploadErr } = await supabase.storage
-        .from("landing-assets")
+        .from("store-logos")
         .upload(path, blob, { contentType: blob.type, upsert: false });
       if (uploadErr) throw uploadErr;
-      const { data: { publicUrl } } = supabase.storage.from("landing-assets").getPublicUrl(path);
+      const { data: { publicUrl } } = supabase.storage.from("store-logos").getPublicUrl(path);
       // Merge into banner_images
       const { data: landing } = await supabase.from("landings")
         .select("banner_images").eq("id", landingId).single();
