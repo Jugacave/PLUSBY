@@ -998,6 +998,7 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
   const [templates, setTemplates] = useState<Record<string, BannerTemplate[]>>({});
   const [loadingSections, setLoadingSections] = useState<Set<string>>(new Set());
   const [galleryForSection, setGalleryForSection] = useState<string | null>(null);
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
 
   function upd(patch: Partial<BannerConfig>) { setConfig((p) => ({ ...p, ...patch })); }
 
@@ -1226,26 +1227,50 @@ function BannerEditorContent({ config, setConfig, generatedImages, setGeneratedI
         <div className="p-4 border-b border-[#1C1C26] space-y-3">
           <p className="text-xs font-bold text-[#F0F0F5]">🎨 Estilo Visual</p>
 
-          {/* AI Model */}
+          {/* AI Model — collapsible dropdown */}
           <div>
             <p className="text-[10px] text-[#555568] mb-1.5">Modelo de IA para imágenes</p>
-            <div className="space-y-1">
-              {AI_MODELS.map((m) => (
-                <button key={m.id} onClick={() => upd({ aiModel: m.id })}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all"
-                  style={config.aiModel === m.id
-                    ? { border: "1px solid #7C3AED", background: "rgba(124,58,237,0.1)" }
-                    : { border: "1px solid #1C1C26", background: "#13131A" }}>
-                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ background: config.aiModel === m.id ? "#7C3AED" : "#3A3A4A" }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium" style={{ color: config.aiModel === m.id ? "#F0F0F5" : "#8888A0" }}>{m.label}</p>
-                    <p className="text-[9px] text-[#555568] truncate">{m.desc}</p>
-                  </div>
-                  <span className="text-[9px] font-mono text-[#555568] flex-shrink-0">{m.price}</span>
-                </button>
-              ))}
-            </div>
+            {(() => {
+              const selected = AI_MODELS.find((m) => m.id === config.aiModel) ?? AI_MODELS[0];
+              return (
+                <div className="rounded-lg border border-[#7C3AED] overflow-hidden" style={{ background: "rgba(124,58,237,0.08)" }}>
+                  {/* Selected / toggle header */}
+                  <button onClick={() => setModelDropdownOpen((o) => !o)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-all hover:bg-[rgba(124,58,237,0.06)]">
+                    <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "#7C3AED" }}>
+                      <Sparkles size={14} className="text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[#F0F0F5] truncate">{selected.label}</p>
+                      <p className="text-[10px] font-mono text-[#A78BFA]">{selected.price} por imagen</p>
+                    </div>
+                    {modelDropdownOpen
+                      ? <ChevronUp size={15} className="text-[#8888A0] flex-shrink-0" />
+                      : <ChevronDown size={15} className="text-[#8888A0] flex-shrink-0" />}
+                  </button>
+
+                  {/* Expanded list */}
+                  {modelDropdownOpen && (
+                    <div className="border-t border-[#2A2A3A] max-h-72 overflow-y-auto">
+                      {AI_MODELS.map((m) => {
+                        const active = config.aiModel === m.id;
+                        return (
+                          <button key={m.id} onClick={() => { upd({ aiModel: m.id }); setModelDropdownOpen(false); }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all hover:bg-[rgba(124,58,237,0.08)]"
+                            style={{ background: active ? "rgba(124,58,237,0.15)" : "transparent", borderLeft: active ? "2px solid #7C3AED" : "2px solid transparent" }}>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium" style={{ color: active ? "#F0F0F5" : "#8888A0" }}>{m.label}</p>
+                              <p className="text-[9px] text-[#555568] truncate">{m.desc}</p>
+                            </div>
+                            <span className="text-[9px] font-mono text-[#555568] flex-shrink-0">{m.price}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Font */}
