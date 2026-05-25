@@ -256,36 +256,50 @@ function buildImagePrompt(body: RequestBody, copy: GeneratedCopy | null): string
     ].join(" ");
   }
 
+  // ── Brand palette — overrides the template's colors for set consistency ───
+  const brandColors = (body.colors ?? []).filter(Boolean);
+  const brandPaletteBlock = brandColors.length
+    ? `PALETA DE MARCA OBLIGATORIA (usa SOLO estos colores, NO los de la plantilla):
+- Color principal / acento (fondos dominantes, badges, botón CTA): ${brandColors[0] ?? "#FF6B35"}
+- Color secundario / oscuro (contraste, bloques, sombras): ${brandColors[1] ?? "#1C1C26"}
+- Color de texto / claro (titulares y texto sobre fondo oscuro): ${brandColors[2] ?? "#F0F0F5"}
+Recolorea TODO el banner con esta paleta de marca de forma coherente. Esta paleta debe ser idéntica en todas las secciones de la landing.`
+    : "";
+
   // ── IMAGE ROLES (critical when using edit mode with reference images) ─────
   const imageRolesParts: string[] = [];
   if (hasTemplate) {
     if (hasPhotos) {
       imageRolesParts.push(
         `ROLES DE IMAGEN — LEE ESTO PRIMERO (es lo más importante):
-- IMAGEN 1 es la PLANTILLA DE DISEÑO. Úsala SOLO como referencia de layout, colores, tipografía, elementos gráficos y composición. El producto que aparece dentro de IMAGEN 1 es un producto COMPLETAMENTE DIFERENTE y sin relación — debes ignorarlo y eliminarlo por completo. NO renderices el producto de la plantilla en el resultado.
+- IMAGEN 1 es la PLANTILLA DE DISEÑO. Úsala SOLO como referencia de LAYOUT, ESTRUCTURA, tipografía, elementos gráficos y composición — NO copies sus colores. El producto que aparece dentro de IMAGEN 1 es un producto COMPLETAMENTE DIFERENTE y sin relación — debes ignorarlo y eliminarlo por completo. NO renderices el producto de la plantilla en el resultado.
 - IMAGEN 2${photoCount > 1 ? ` hasta ${photoCount + 1}` : ""} ${photoCount > 1 ? "son fotos" : "es una foto"} del PRODUCTO REAL a publicitar ("${body.productName ?? "el producto"}"). ESTE es el producto que debe ser la estrella del banner. Renderízalo fielmente — exacta misma forma, proporciones, color, materiales, etiqueta y branding que se aprecia en ${photoCount > 1 ? "estas fotos" : "esta foto"}.`
       );
     } else {
       imageRolesParts.push(
-        `PLANTILLA DE DISEÑO: La imagen adjunta es una PLANTILLA DE REFERENCIA. Replica su layout, colores, tipografía, elementos gráficos y composición. Sustituye el producto de la plantilla por "${body.productName ?? "el producto"}" descrito abajo.`
+        `PLANTILLA DE DISEÑO: La imagen adjunta es una PLANTILLA DE REFERENCIA de LAYOUT y ESTRUCTURA (NO de colores). Replica su layout, tipografía, elementos gráficos y composición, pero recolorea con la paleta de marca. Sustituye el producto de la plantilla por "${body.productName ?? "el producto"}" descrito abajo.`
       );
     }
     imageRolesParts.push(
-      `INSTRUCCIÓN CRÍTICA — Produce una copia casi idéntica del DISEÑO de la plantilla, pero publicitando un PRODUCTO DIFERENTE.
-REPLICACIÓN OBLIGATORIA del diseño:
+      `INSTRUCCIÓN CRÍTICA — Produce una copia casi idéntica de la ESTRUCTURA y el LAYOUT de la plantilla, pero RECOLOREADA con la paleta de marca y publicitando un PRODUCTO DIFERENTE.
+REPLICACIÓN OBLIGATORIA (estructura, NO color):
 - LAYOUT: misma estructura espacial — posición del titular, del producto, de badges/precio/CTA.
-- COLORES: mismo(s) color(es) de fondo, colores de acento, tratamiento de gradiente, distribución de color.
 - TIPOGRAFÍA: mismo estilo de peso (bold/condensado/fino), misma jerarquía de tamaños, mismas posiciones de bloques de texto.
-- ELEMENTOS GRÁFICOS: replica todos los badges, círculos, formas geométricas, divisores, overlays, texturas, iconos, stickers.
+- ELEMENTOS GRÁFICOS: replica la forma y posición de badges, círculos, formas geométricas, divisores, overlays, texturas, iconos, stickers — pero coloreados con la paleta de marca.
 - COMPOSICIÓN: mismo equilibrio visual, espacio negativo y puntos focales.
 
-CAMBIO DE PRODUCTO — esto es lo único que cambia respecto a la plantilla:
+COLOR — esto cambia respecto a la plantilla:
+- IGNORA por completo los colores de la plantilla. Aplica la PALETA DE MARCA indicada abajo. Conserva la DISTRIBUCIÓN de color de la plantilla (dónde hay fondo, dónde acento, dónde texto) pero sustituyendo cada color por el de la marca.
+${brandPaletteBlock ? brandPaletteBlock + "\n" : ""}
+CAMBIO DE PRODUCTO:
 - Coloca el producto de las FOTOS DEL PRODUCTO (NO el producto de la plantilla) donde se ubica el producto de la plantilla, con tamaño, ángulo y prominencia similares.
 - El producto mostrado DEBE verse exactamente como en las fotos. NO lo inventes, rediseñes, ni sustituyas. NO conserves el producto original de la plantilla ni su marca.
 - Reemplaza el nombre del producto por "${body.productName ?? "el producto"}" y todos los claims/estadísticas/texto con la información del producto indicada abajo.
 
-NO crees un nuevo layout. NO cambies la paleta de colores. Mantén ~95% del diseño idéntico a la plantilla; solo cambia el producto, su nombre, claims y precios.`
+NO crees un nuevo layout. Mantén la ESTRUCTURA y COMPOSICIÓN ~95% idéntica a la plantilla, pero RECOLOREA todo con la paleta de marca para mantener consistencia entre secciones.`
     );
+  } else if (brandPaletteBlock) {
+    imageRolesParts.push(brandPaletteBlock);
   }
 
   // ── Text elements ──────────────────────────────────────────────────────────
@@ -390,7 +404,7 @@ async function callGptImage1Edit(params: {
     form.append("model", "gpt-image-1");
     form.append("prompt", params.prompt);
     form.append("n", "1");
-    form.append("size", "1024x1792");
+    form.append("size", "1024x1536");
     form.append("quality", "high");
 
     for (const url of params.imageUrls.slice(0, 8)) {
@@ -426,7 +440,7 @@ async function callGptImage1Generate(params: {
         model: "gpt-image-1",
         prompt: params.prompt,
         n: 1,
-        size: "1024x1792",
+        size: "1024x1536",
         quality: "high",
         output_format: "webp",
       }),
