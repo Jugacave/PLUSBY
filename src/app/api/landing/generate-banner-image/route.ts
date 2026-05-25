@@ -610,7 +610,7 @@ export async function POST(req: NextRequest) {
   const prompt = buildImagePrompt(body, copy);
 
   const falKey = user.user_metadata?.ai_key_fal;
-  const openaiKey = user.user_metadata?.ai_key_openai;
+  const openaiKey = user.user_metadata?.ai_key_gpt_image ?? user.user_metadata?.ai_key_openai ?? process.env.OPENAI_API_KEY;
   const geminiKey = user.user_metadata?.ai_key_gemini;
   const aiModel = body.aiModel ?? "";
 
