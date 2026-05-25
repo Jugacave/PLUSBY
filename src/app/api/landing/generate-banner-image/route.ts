@@ -6,11 +6,9 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 // ─── Section-specific instructions ───────────────────────────────────────────
-// IMPORTANT: every section limits the number of text strings to 2-3 maximum.
-// Image generation models render text correctly only when there are few strings.
 
 interface SectionSpec {
-  visualDescription: string;  // visual description in Spanish
+  visualDescription: string;
   textElements: Array<"headline" | "subheadline" | "cta" | "price" | "priceOriginal" | "saleLabel" | "bullets" | "beforeAfter" | "stepNumbers" | "trustBadges" | "ourVsOthers" | "rating">;
   maxBullets: number;
 }
@@ -78,6 +76,17 @@ const COUNTRY_NAMES: Record<string, string> = {
   CL: "Chile", PY: "Paraguay", AR: "Argentina", GT: "Guatemala", ES: "España",
 };
 
+// ─── Fal.ai model routing ─────────────────────────────────────────────────────
+
+const FAL_ENDPOINTS: Record<string, string> = {
+  "fal-ideogram2":  "fal-ai/ideogram/v3",
+  "fal-flux-ultra": "fal-ai/flux-pro/v1/ultra",
+  "fal-imagen3":    "fal-ai/imagen3",
+  "fal-flux-pro":   "fal-ai/flux-pro/v1.1",
+  "fal-flux-dev":   "fal-ai/flux/dev",
+  "fal-sd-xl":      "fal-ai/stable-diffusion-xl",
+};
+
 // ─── Body type ────────────────────────────────────────────────────────────────
 
 type RequestBody = {
@@ -142,7 +151,6 @@ async function analyzeAndWriteCopy(body: RequestBody): Promise<GeneratedCopy | n
       body.angle ? `Ángulo: ${body.angle}` : "",
     ].filter(Boolean).join("\n");
 
-    // Build the JSON spec request based on what THIS section actually needs
     const needsField = (f: string) => spec.textElements.includes(f as never);
     const jsonFields: string[] = [];
     if (needsField("headline")) jsonFields.push(`"headline": "TITULAR de máximo 5 palabras, impactante, en español de ${market}"`);
@@ -154,7 +162,6 @@ async function analyzeAndWriteCopy(body: RequestBody): Promise<GeneratedCopy | n
     if (spec.maxBullets > 0 && needsField("bullets")) jsonFields.push(`"bullets": ["${spec.maxBullets} textos MUY cortos máx 2 palabras cada uno, sin emojis, sin signos raros"]`);
     if (needsField("stepNumbers")) jsonFields.push(`"steps": ["3 textos MUY cortos máx 2 palabras: paso 1, paso 2, paso 3"]`);
 
-    // Always include visual descriptors for the image model
     jsonFields.push(`"layoutDescription": "Descripción en español de la disposición visual del banner (1 oración)"`);
     jsonFields.push(`"visualStyle": "Estilo visual: paleta de colores en español, ambiente, mood (1 oración)"`);
     jsonFields.push(`"productDescription": "Descripción visual del producto en español: tipo, color, forma del envase (1 oración corta)"`);
@@ -221,10 +228,14 @@ Responde ÚNICAMENTE con este JSON (sin markdown):
   }
 }
 
-// ─── Stage 2: Build Spanish prompt with ONLY the texts needed per section ────
+// ─── Stage 2: Build Spanish prompt with IMAGE ROLES + copy ───────────────────
 
 function buildImagePrompt(body: RequestBody, copy: GeneratedCopy | null): string {
   const spec = SECTION_SPECS[body.sectionType] ?? SECTION_SPECS.hero;
+  const productImages = (body.productImages ?? []).filter(Boolean);
+  const hasTemplate = !!body.templateUrl;
+  const hasPhotos = productImages.length > 0;
+  const photoCount = productImages.length;
 
   if (!copy) {
     const productLine = body.productName ?? body.productDescription ?? "el producto";
@@ -236,8 +247,39 @@ function buildImagePrompt(body: RequestBody, copy: GeneratedCopy | null): string
     ].join(" ");
   }
 
-  // Build the EXACT list of texts to render. Each text is QUOTED.
-  // The fewer text strings, the better the rendering.
+  // ── IMAGE ROLES (critical when using edit mode with reference images) ─────
+  const imageRolesParts: string[] = [];
+  if (hasTemplate) {
+    if (hasPhotos) {
+      imageRolesParts.push(
+        `ROLES DE IMAGEN — LEE ESTO PRIMERO (es lo más importante):
+- IMAGEN 1 es la PLANTILLA DE DISEÑO. Úsala SOLO como referencia de layout, colores, tipografía, elementos gráficos y composición. El producto que aparece dentro de IMAGEN 1 es un producto COMPLETAMENTE DIFERENTE y sin relación — debes ignorarlo y eliminarlo por completo. NO renderices el producto de la plantilla en el resultado.
+- IMAGEN 2${photoCount > 1 ? ` hasta ${photoCount + 1}` : ""} ${photoCount > 1 ? "son fotos" : "es una foto"} del PRODUCTO REAL a publicitar ("${body.productName ?? "el producto"}"). ESTE es el producto que debe ser la estrella del banner. Renderízalo fielmente — exacta misma forma, proporciones, color, materiales, etiqueta y branding que se aprecia en ${photoCount > 1 ? "estas fotos" : "esta foto"}.`
+      );
+    } else {
+      imageRolesParts.push(
+        `PLANTILLA DE DISEÑO: La imagen adjunta es una PLANTILLA DE REFERENCIA. Replica su layout, colores, tipografía, elementos gráficos y composición. Sustituye el producto de la plantilla por "${body.productName ?? "el producto"}" descrito abajo.`
+      );
+    }
+    imageRolesParts.push(
+      `INSTRUCCIÓN CRÍTICA — Produce una copia casi idéntica del DISEÑO de la plantilla, pero publicitando un PRODUCTO DIFERENTE.
+REPLICACIÓN OBLIGATORIA del diseño:
+- LAYOUT: misma estructura espacial — posición del titular, del producto, de badges/precio/CTA.
+- COLORES: mismo(s) color(es) de fondo, colores de acento, tratamiento de gradiente, distribución de color.
+- TIPOGRAFÍA: mismo estilo de peso (bold/condensado/fino), misma jerarquía de tamaños, mismas posiciones de bloques de texto.
+- ELEMENTOS GRÁFICOS: replica todos los badges, círculos, formas geométricas, divisores, overlays, texturas, iconos, stickers.
+- COMPOSICIÓN: mismo equilibrio visual, espacio negativo y puntos focales.
+
+CAMBIO DE PRODUCTO — esto es lo único que cambia respecto a la plantilla:
+- Coloca el producto de las FOTOS DEL PRODUCTO (NO el producto de la plantilla) donde se ubica el producto de la plantilla, con tamaño, ángulo y prominencia similares.
+- El producto mostrado DEBE verse exactamente como en las fotos. NO lo inventes, rediseñes, ni sustituyas. NO conserves el producto original de la plantilla ni su marca.
+- Reemplaza el nombre del producto por "${body.productName ?? "el producto"}" y todos los claims/estadísticas/texto con la información del producto indicada abajo.
+
+NO crees un nuevo layout. NO cambies la paleta de colores. Mantén ~95% del diseño idéntico a la plantilla; solo cambia el producto, su nombre, claims y precios.`
+    );
+  }
+
+  // ── Text elements ──────────────────────────────────────────────────────────
   const textElements: string[] = [];
 
   if (spec.textElements.includes("headline") && copy.headline) {
@@ -282,7 +324,13 @@ function buildImagePrompt(body: RequestBody, copy: GeneratedCopy | null): string
 
   const textList = textElements.map((t, i) => `${i + 1}. ${t}`).join("\n");
 
-  return `Crea un banner publicitario vertical 9:16 (1080x1920) en español, calidad comercial premium.
+  const parts: string[] = [];
+
+  if (imageRolesParts.length > 0) {
+    parts.push(...imageRolesParts);
+  }
+
+  parts.push(`Crea un banner publicitario vertical 9:16 (1080x1920) en español, calidad comercial premium.
 
 DISEÑO: ${spec.visualDescription}
 ${copy.layoutDescription ? `Disposición: ${copy.layoutDescription}` : ""}
@@ -300,69 +348,64 @@ REGLAS ESTRICTAS:
 - NO inventes palabras. NO escribas texto en inglés.
 - Tipografía clara, bold, legible. Kerning perfecto.
 - Sin marcas de agua. Sin logos extra. Sin texto decorativo random.
-- Fotografía publicitaria de alta gama. 4K, nítido, profesional.`;
+- Fotografía publicitaria de alta gama. 4K, nítido, profesional.`);
+
+  return parts.join("\n\n");
 }
 
-// ─── Image generation calls ───────────────────────────────────────────────────
+// ─── Image generation: gpt-image-1 edit mode (with reference images) ─────────
 
-async function callIdeogramV3(params: {
+async function fetchAsBlob(url: string): Promise<{ blob: Blob; filename: string } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    const contentType = res.headers.get("content-type") ?? "image/png";
+    let ext = "png";
+    if (contentType.includes("jpeg") || contentType.includes("jpg")) ext = "jpg";
+    else if (contentType.includes("webp")) ext = "webp";
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    return { blob: new Blob([buf], { type: contentType }), filename };
+  } catch {
+    return null;
+  }
+}
+
+async function callGptImage1Edit(params: {
   apiKey: string;
   prompt: string;
-  styleImageUrls?: string[];
+  imageUrls: string[];  // template first, then product photos
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  const body: Record<string, unknown> = {
-    prompt: params.prompt,
-    rendering_speed: "QUALITY",
-    expand_prompt: false,
-    style: "AUTO",
-    image_size: { width: 1080, height: 1920 },
-    num_images: 1,
-  };
-  if (params.styleImageUrls && params.styleImageUrls.length > 0) {
-    body.image_urls = params.styleImageUrls;
-  }
   try {
-    const res = await fetch("https://fal.run/fal-ai/ideogram/v3", {
+    const form = new FormData();
+    form.append("model", "gpt-image-1");
+    form.append("prompt", params.prompt);
+    form.append("n", "1");
+    form.append("size", "1024x1792");
+    form.append("quality", "high");
+
+    for (const url of params.imageUrls.slice(0, 8)) {
+      const fetched = await fetchAsBlob(url);
+      if (!fetched) continue;
+      form.append("image[]", fetched.blob, fetched.filename);
+    }
+
+    const res = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
-      headers: { Authorization: `Key ${params.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      headers: { Authorization: `Bearer ${params.apiKey}` },
+      body: form,
     });
     const data = await res.json();
-    if (!res.ok) return { ok: false, error: data.detail ?? data.message ?? "Error Ideogram v3" };
-    const url = data.images?.[0]?.url ?? data.image?.url;
-    if (!url) return { ok: false, error: "Ideogram v3 no devolvió imagen" };
-    return { ok: true, url };
+    if (!res.ok) return { ok: false, error: data.error?.message ?? "OpenAI edit error" };
+    const b64 = data.data?.[0]?.b64_json;
+    if (!b64) return { ok: false, error: "gpt-image-1 edit no devolvió imagen" };
+    return { ok: true, url: `data:image/png;base64,${b64}` };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Error" };
   }
 }
 
-async function callRecraftV3(params: {
-  apiKey: string;
-  prompt: string;
-}): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  try {
-    const res = await fetch("https://fal.run/fal-ai/recraft/v3/text-to-image", {
-      method: "POST",
-      headers: { Authorization: `Key ${params.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt: params.prompt,
-        image_size: { width: 1080, height: 1920 },
-        style: "realistic_image",
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) return { ok: false, error: data.detail ?? data.message ?? "Error Recraft" };
-    const url = data.images?.[0]?.url ?? data.image?.url;
-    if (!url) return { ok: false, error: "Recraft no devolvió imagen" };
-    return { ok: true, url };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Error" };
-  }
-}
-
-// gpt-image-1: OpenAI's latest and best model — excellent text rendering
-async function callGptImage1(params: {
+async function callGptImage1Generate(params: {
   apiKey: string;
   prompt: string;
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
@@ -381,7 +424,6 @@ async function callGptImage1(params: {
     });
     const data = await res.json();
     if (!res.ok) return { ok: false, error: data.error?.message ?? "Error gpt-image-1" };
-    // gpt-image-1 returns base64
     const b64 = data.data?.[0]?.b64_json;
     if (!b64) return { ok: false, error: "gpt-image-1 no devolvió imagen" };
     return { ok: true, url: `data:image/webp;base64,${b64}` };
@@ -417,6 +459,49 @@ async function callDalle3HD(params: {
   }
 }
 
+// ─── Fal.ai generic caller ────────────────────────────────────────────────────
+
+async function callFalModel(params: {
+  apiKey: string;
+  endpoint: string;
+  prompt: string;
+  styleImageUrls?: string[];
+}): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const isFluxUltra = params.endpoint.includes("ultra");
+  const isIdeogram = params.endpoint.includes("ideogram");
+
+  const body: Record<string, unknown> = {
+    prompt: params.prompt,
+    num_images: 1,
+    ...(isFluxUltra
+      ? { aspect_ratio: "9:16", output_format: "jpeg" }
+      : { image_size: { width: 1080, height: 1920 } }
+    ),
+  };
+
+  if (isIdeogram && params.styleImageUrls?.length) {
+    body.image_urls = params.styleImageUrls;
+    body.rendering_speed = "QUALITY";
+    body.expand_prompt = false;
+    body.style = "AUTO";
+  }
+
+  try {
+    const res = await fetch(`https://fal.run/${params.endpoint}`, {
+      method: "POST",
+      headers: { Authorization: `Key ${params.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok: false, error: data.detail ?? data.message ?? `Error ${params.endpoint}` };
+    const url = data.images?.[0]?.url ?? data.image?.url;
+    if (!url) return { ok: false, error: `${params.endpoint} no devolvió imagen` };
+    return { ok: true, url };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Error" };
+  }
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -433,8 +518,9 @@ export async function POST(req: NextRequest) {
 
   const productImages = (body.productImages ?? []).filter((u): u is string => !!u);
   const hasTemplate = !!body.templateUrl;
+  const hasRefImages = hasTemplate || productImages.length > 0;
 
-  // ── Stage 1: Claude Vision + Spanish copywriting ───────────────────────────
+  // Stage 1: Claude Vision + Spanish copywriting
   const copy = await analyzeAndWriteCopy(body);
   const prompt = buildImagePrompt(body, copy);
 
@@ -442,52 +528,61 @@ export async function POST(req: NextRequest) {
   const openaiKey = user.user_metadata?.ai_key_openai;
   const aiModel = body.aiModel ?? "";
 
-  // ── Stage 2: Image generation ─────────────────────────────────────────────
-  //
-  // Priority for best text quality:
-  //   1. gpt-image-1  (OpenAI) — best text, photorealistic, 1024×1792
-  //   2. Ideogram v3  (Fal.ai) — best text among open-weight models
-  //   3. Recraft v3   (Fal.ai) — strong text, poster/banner specialist
-  //   4. DALL-E 3 hd  (OpenAI) — good text fallback
-  //
-  // User can override by explicitly selecting a model in the editor.
+  // ── OpenAI models ─────────────────────────────────────────────────────────
+  if (aiModel === "openai-dalle3") {
+    if (!openaiKey) return NextResponse.json({ error: "Configura tu API key de OpenAI en Ajustes > Modelos IA" }, { status: 400 });
+    const out = await callDalle3HD({ apiKey: openaiKey, prompt });
+    if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "dalle3-hd" });
+    return NextResponse.json({ error: out.error }, { status: 500 });
+  }
 
-  // ── OpenAI path ───────────────────────────────────────────────────────────
-  const isOpenAIModel = aiModel === "openai-gpt-image-1" || aiModel === "openai-dalle3";
-  if (openaiKey && (isOpenAIModel || !falKey)) {
-    if (aiModel === "openai-dalle3") {
-      const out = await callDalle3HD({ apiKey: openaiKey, prompt });
-      if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "dalle3-hd" });
-      return NextResponse.json({ error: out.error }, { status: 500 });
+  if (aiModel === "openai-gpt-image-1" || (!aiModel && openaiKey)) {
+    if (!openaiKey) return NextResponse.json({ error: "Configura tu API key de OpenAI en Ajustes > Modelos IA" }, { status: 400 });
+
+    // Use edit mode when reference images are available — much better template fidelity
+    if (hasRefImages) {
+      const imageUrls: string[] = [];
+      if (hasTemplate) imageUrls.push(body.templateUrl!);
+      imageUrls.push(...productImages.slice(0, 7)); // max 8 total including template
+
+      const out = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls });
+      if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "gpt-image-1-edit" });
+      // On edit failure, fall through to generate mode
     }
-    // gpt-image-1 (default OpenAI)
-    const out = await callGptImage1({ apiKey: openaiKey, prompt });
+
+    const out = await callGptImage1Generate({ apiKey: openaiKey, prompt });
     if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "gpt-image-1" });
-    // Failed → fall through to Fal.ai if available
     if (!falKey) return NextResponse.json({ error: out.error }, { status: 500 });
   }
 
-  // ── Fal.ai path: Ideogram v3 → Recraft v3 ────────────────────────────────
+  // ── Fal.ai models ─────────────────────────────────────────────────────────
   if (falKey) {
+    const falEndpoint = FAL_ENDPOINTS[aiModel] ?? FAL_ENDPOINTS["fal-ideogram2"];
+
     const styleRefs: string[] = [];
     if (hasTemplate) styleRefs.push(body.templateUrl!);
     if (productImages.length > 0) styleRefs.push(...productImages.slice(0, 2));
 
-    const ideogram = await callIdeogramV3({
+    const out = await callFalModel({
       apiKey: falKey,
+      endpoint: falEndpoint,
       prompt,
       styleImageUrls: styleRefs.length > 0 ? styleRefs : undefined,
     });
-    if (ideogram.ok) {
-      return NextResponse.json({ ok: true, imageUrl: ideogram.url, mode: "ideogram-v3" });
+    if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: aiModel });
+
+    // Fallback: if the chosen model failed, try ideogram as safety net
+    if (falEndpoint !== FAL_ENDPOINTS["fal-ideogram2"]) {
+      const fallback = await callFalModel({
+        apiKey: falKey,
+        endpoint: FAL_ENDPOINTS["fal-ideogram2"],
+        prompt,
+        styleImageUrls: styleRefs.length > 0 ? styleRefs : undefined,
+      });
+      if (fallback.ok) return NextResponse.json({ ok: true, imageUrl: fallback.url, mode: "ideogram-v3-fallback" });
     }
 
-    const recraft = await callRecraftV3({ apiKey: falKey, prompt });
-    if (recraft.ok) {
-      return NextResponse.json({ ok: true, imageUrl: recraft.url, mode: "recraft-v3" });
-    }
-
-    return NextResponse.json({ error: ideogram.error }, { status: 500 });
+    return NextResponse.json({ error: out.error }, { status: 500 });
   }
 
   return NextResponse.json(
