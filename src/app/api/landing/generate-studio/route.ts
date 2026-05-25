@@ -96,21 +96,38 @@ function buildStudioPrompt(req: StudioRequest): string {
 
   const sections: string[] = [];
 
-  // Header
+  // Template replication — MUST be first, it overrides everything else visually
+  if (req.templateUrl) {
+    sections.push(
+      `CRITICAL INSTRUCTION — READ THIS FIRST: The first image I provide is a REFERENCE BANNER DESIGN that you must replicate with extreme fidelity. Your job is NOT to create a new ad — your job is to produce an almost identical copy of that banner design, replacing only the product.
+
+MANDATORY replication (do not deviate):
+- LAYOUT: Keep the exact same spatial structure. Where the headline sits, where the product goes, where badges/price/CTA appear — same positions.
+- COLORS: Exact same background color(s), accent colors, gradient treatment, color distribution across the canvas.
+- TYPOGRAPHY: Same font weight style (bold/condensed/thin), same size hierarchy, same text block positioning.
+- GRAPHIC ELEMENTS: Replicate all decorative elements — circles, badges, geometric shapes, dividers, overlays, textures, icons, stickers.
+- COMPOSITION: Mirror the same visual weight, negative space, and focal point structure.
+- OVERALL MOOD: Same energy level, same photographic/illustrative style, same lighting treatment.
+
+ONLY substitute:
+- Product name → "${req.productName}"
+- Product photography → use the product photos I provide (same placement as original product in template)
+- Product-specific text, claims, or statistics → use the product information provided below
+- Pricing → use the sale/original price data provided
+
+DO NOT create a new layout. DO NOT use a different color scheme. DO NOT change the visual structure. Simply adapt the template for the new product while keeping 95% of the design identical.`
+    );
+  }
+
+  // General task
   sections.push(
     `Create a high-end e-commerce advertising banner for the ${market} market.`,
     `All text on the image MUST be in ${lang}, properly spelled, no nonsense words.`,
   );
 
-  // Visual reference instructions (most important — this is what guides composition)
-  if (req.templateUrl) {
-    sections.push(
-      `STYLE REFERENCE: I am providing a reference template image. Follow its EXACT visual style, layout, typography style, color treatment, background composition, and overall mood. Replicate the design language faithfully.`
-    );
-  }
   if (req.productImages.length > 0) {
     sections.push(
-      `PRODUCT: I am providing ${req.productImages.length} photo(s) of the actual product. The product in the final banner MUST be the same product shown in these photos — same shape, color, label, branding. Do not invent a different product. Integrate it naturally into the composition.`
+      `PRODUCT PHOTOS: I am providing ${req.productImages.length} photo(s) of the actual product. The product in the final banner MUST be the same product shown in these photos — same shape, color, label, branding. Do not invent a different product. Place it in the same position the product occupies in the reference template.`
     );
   }
 

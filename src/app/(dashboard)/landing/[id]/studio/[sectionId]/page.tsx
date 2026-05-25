@@ -122,6 +122,7 @@ export default function StudioPage() {
   // Upload tracking
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState<number | null>(null);
+  const [photoUploadErrors, setPhotoUploadErrors] = useState<Record<number, string | null>>({});
 
   // Generation
   const [generating, setGenerating] = useState(false);
@@ -212,11 +213,21 @@ export default function StudioPage() {
   async function handlePhotoUpload(idx: number, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Show local preview immediately so the user sees the photo right away
+    const previewUrl = URL.createObjectURL(file);
+    setProductImages((p) => p.map((u, i) => (i === idx ? previewUrl : u)));
+    setPhotoUploadErrors((p) => ({ ...p, [idx]: null }));
     setUploadingPhoto(idx);
     const url = await uploadFile(file, "products");
     setUploadingPhoto(null);
     if (url) {
+      URL.revokeObjectURL(previewUrl);
       setProductImages((p) => p.map((u, i) => (i === idx ? url : u)));
+    } else {
+      setPhotoUploadErrors((p) => ({
+        ...p,
+        [idx]: "Error al subir. Crea el bucket 'landing-assets' público en Supabase → Storage.",
+      }));
     }
   }
 
@@ -426,29 +437,46 @@ export default function StudioPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
                   {[0, 1, 2].map((idx) => (
-                    <div key={idx} className="aspect-square">
-                      {productImages[idx] ? (
-                        <div className="relative w-full h-full rounded-lg overflow-hidden border border-[var(--border-color)] group">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={productImages[idx]!} alt="" className="w-full h-full object-cover" />
-                          <button
-                            onClick={() => setProductImages((p) => p.map((u, i) => (i === idx ? null : u)))}
-                            className="absolute top-0.5 right-0.5 w-4 h-4 flex items-center justify-center rounded-full bg-black/70 hover:bg-black text-white opacity-0 group-hover:opacity-100">
-                            <X size={9} />
-                          </button>
+                    <div key={idx}>
+                      <div className="aspect-square">
+                        {productImages[idx] ? (
+                          <div className="relative w-full h-full rounded-lg overflow-hidden border group"
+                            style={{ borderColor: photoUploadErrors[idx] ? "#FBBF24" : "var(--border-color)" }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={productImages[idx]!} alt="" className="w-full h-full object-cover" />
+                            {uploadingPhoto === idx && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                                <Loader2 size={12} className="animate-spin text-white" />
+                              </div>
+                            )}
+                            <button
+                              onClick={() => {
+                                setProductImages((p) => p.map((u, i) => (i === idx ? null : u)));
+                                setPhotoUploadErrors((p) => ({ ...p, [idx]: null }));
+                              }}
+                              className="absolute top-0.5 right-0.5 w-4 h-4 flex items-center justify-center rounded-full bg-black/70 hover:bg-black text-white opacity-0 group-hover:opacity-100">
+                              <X size={9} />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="w-full h-full flex flex-col items-center justify-center rounded-lg border border-dashed border-[var(--border-color)] hover:border-[#7C3AED] cursor-pointer transition-colors bg-[var(--bg-elevated)]">
+                            {uploadingPhoto === idx ? (
+                              <Loader2 size={12} className="animate-spin text-[var(--text-muted)]" />
+                            ) : (
+                              <>
+                                <Plus size={12} className="text-[var(--text-muted)]" />
+                                <span className="text-[8px] text-[var(--text-muted)] mt-0.5">Imagen {idx + 1}</span>
+                              </>
+                            )}
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(idx, e)} />
+                          </label>
+                        )}
+                      </div>
+                      {photoUploadErrors[idx] && (
+                        <div className="flex items-start gap-0.5 mt-1">
+                          <AlertCircle size={8} className="text-yellow-400 mt-0.5 shrink-0" />
+                          <p className="text-[7px] text-yellow-400 leading-tight">{photoUploadErrors[idx]}</p>
                         </div>
-                      ) : (
-                        <label className="w-full h-full flex flex-col items-center justify-center rounded-lg border border-dashed border-[var(--border-color)] hover:border-[#7C3AED] cursor-pointer transition-colors bg-[var(--bg-elevated)]">
-                          {uploadingPhoto === idx ? (
-                            <Loader2 size={12} className="animate-spin text-[var(--text-muted)]" />
-                          ) : (
-                            <>
-                              <Plus size={12} className="text-[var(--text-muted)]" />
-                              <span className="text-[8px] text-[var(--text-muted)] mt-0.5">Imagen {idx + 1}</span>
-                            </>
-                          )}
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(idx, e)} />
-                        </label>
                       )}
                     </div>
                   ))}
