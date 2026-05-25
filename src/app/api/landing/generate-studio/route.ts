@@ -96,26 +96,40 @@ function buildStudioPrompt(req: StudioRequest): string {
 
   const sections: string[] = [];
 
-  // Template replication — MUST be first, it overrides everything else visually
-  if (req.templateUrl) {
+  // ── Image roles + replication instructions (must be first, dominant) ──
+  const hasTemplate = !!req.templateUrl;
+  const photoCount = req.productImages.length;
+  const hasPhotos = photoCount > 0;
+
+  if (hasTemplate) {
+    const imageRoles = hasPhotos
+      ? `IMAGE ROLES (this is the most important part — read carefully):
+- IMAGE 1 is the DESIGN TEMPLATE. Use it ONLY as a reference for layout, colors, typography, graphic elements and composition. The product shown inside IMAGE 1 is a COMPLETELY DIFFERENT, unrelated product — you MUST ignore it and remove it entirely. Do NOT render the template's product in the output.
+- IMAGE 2${photoCount > 1 ? ` through ${photoCount + 1}` : ""} ${photoCount > 1 ? "are" : "is"} ${photoCount > 1 ? "photos" : "a photo"} of the ACTUAL product to advertise ("${req.productName}"). THIS is the product that must be the star of the banner. Render it faithfully — exact same shape, proportions, color, materials, label and branding as shown in ${photoCount > 1 ? "these photos" : "this photo"}.`
+      : `IMAGE 1 is the DESIGN TEMPLATE. Replicate its layout, colors, typography, graphic elements and composition. Replace the template's product with "${req.productName}" as described below.`;
+
     sections.push(
-      `CRITICAL INSTRUCTION — READ THIS FIRST: The first image I provide is a REFERENCE BANNER DESIGN that you must replicate with extreme fidelity. Your job is NOT to create a new ad — your job is to produce an almost identical copy of that banner design, replacing only the product.
+      `CRITICAL INSTRUCTION — READ THIS FIRST: I am providing a REFERENCE BANNER DESIGN. Produce an almost identical copy of its DESIGN, but advertising a DIFFERENT product.
 
-MANDATORY replication (do not deviate):
-- LAYOUT: Keep the exact same spatial structure. Where the headline sits, where the product goes, where badges/price/CTA appear — same positions.
-- COLORS: Exact same background color(s), accent colors, gradient treatment, color distribution across the canvas.
-- TYPOGRAPHY: Same font weight style (bold/condensed/thin), same size hierarchy, same text block positioning.
-- GRAPHIC ELEMENTS: Replicate all decorative elements — circles, badges, geometric shapes, dividers, overlays, textures, icons, stickers.
-- COMPOSITION: Mirror the same visual weight, negative space, and focal point structure.
-- OVERALL MOOD: Same energy level, same photographic/illustrative style, same lighting treatment.
+${imageRoles}
 
-ONLY substitute:
-- Product name → "${req.productName}"
-- Product photography → use the product photos I provide (same placement as original product in template)
-- Product-specific text, claims, or statistics → use the product information provided below
-- Pricing → use the sale/original price data provided
+MANDATORY replication of the template's DESIGN:
+- LAYOUT: same spatial structure — headline position, product position, badges/price/CTA positions.
+- COLORS: same background color(s), accent colors, gradient treatment, color distribution.
+- TYPOGRAPHY: same font weight style (bold/condensed/thin), same size hierarchy, same text block positions.
+- GRAPHIC ELEMENTS: replicate all badges, circles, geometric shapes, dividers, overlays, textures, icons, stickers.
+- COMPOSITION: same visual balance, negative space and focal points.
 
-DO NOT create a new layout. DO NOT use a different color scheme. DO NOT change the visual structure. Simply adapt the template for the new product while keeping 95% of the design identical.`
+PRODUCT SWAP — this is what changes versus the template:
+- Place the product from the PRODUCT PHOTOS (NOT the template's product) where the template's product sits, at a similar size, angle and prominence.
+- The featured product MUST look exactly like the product photos. Do NOT invent, redesign, or substitute a different-looking product. Do NOT keep the template's original product or its brand.
+- Replace the product name with "${req.productName}" and all claims/statistics/text with the product info below. Use the provided prices.
+
+DO NOT create a new layout. DO NOT change the color scheme. Keep ~95% of the design identical to the template; only the product itself, its name, claims and prices change.`
+    );
+  } else if (hasPhotos) {
+    sections.push(
+      `PRODUCT PHOTOS: I am providing ${photoCount} photo(s) of the actual product ("${req.productName}"). The product in the final banner MUST be exactly the product shown in these photos — same shape, color, label, branding. Do not invent a different product.`
     );
   }
 
@@ -124,12 +138,6 @@ DO NOT create a new layout. DO NOT use a different color scheme. DO NOT change t
     `Create a high-end e-commerce advertising banner for the ${market} market.`,
     `All text on the image MUST be in ${lang}, properly spelled, no nonsense words.`,
   );
-
-  if (req.productImages.length > 0) {
-    sections.push(
-      `PRODUCT PHOTOS: I am providing ${req.productImages.length} photo(s) of the actual product. The product in the final banner MUST be the same product shown in these photos — same shape, color, label, branding. Do not invent a different product. Place it in the same position the product occupies in the reference template.`
-    );
-  }
 
   // Section-specific layout
   const sectionGuide: Record<string, string> = {
