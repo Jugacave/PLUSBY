@@ -162,6 +162,8 @@ const COUNTRIES = [
 ];
 
 const AI_MODELS = [
+  { id: "gemini-nano-banana-2",   label: "Nano Banana 2",     price: "~$0.03", desc: "⭐ Google · Rápido y económico · Ideal landings" },
+  { id: "gemini-nano-banana-pro", label: "Nano Banana Pro",   price: "~$0.04", desc: "⭐ Google · Máxima calidad · Texto 4K" },
   { id: "openai-gpt-image-1", label: "GPT Image 1",          price: "~$0.04", desc: "⭐ OpenAI · Mejor texto · Recomendado" },
   { id: "fal-ideogram2",      label: "Ideogram v3",           price: "~$0.08", desc: "Fal.ai · Ideal para banners con copy" },
   { id: "fal-flux-ultra",     label: "Flux Pro Ultra",        price: "~$0.06", desc: "Fal.ai · Fotorrealismo extremo" },

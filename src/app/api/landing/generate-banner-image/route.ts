@@ -87,6 +87,15 @@ const FAL_ENDPOINTS: Record<string, string> = {
   "fal-sd-xl":      "fal-ai/stable-diffusion-xl",
 };
 
+// ─── Gemini (Nano Banana) model routing ───────────────────────────────────────
+// Each selector id maps to a list of candidate Google model ids, tried in order
+// so the call survives model-id drift / availability per API key.
+
+const GEMINI_MODELS: Record<string, string[]> = {
+  "gemini-nano-banana-2":   ["gemini-2.5-flash-image", "gemini-2.0-flash-preview-image-generation"],
+  "gemini-nano-banana-pro": ["gemini-3-pro-image-preview", "gemini-2.5-flash-image", "gemini-2.0-flash-preview-image-generation"],
+};
+
 // ─── Body type ────────────────────────────────────────────────────────────────
 
 type RequestBody = {
@@ -502,6 +511,68 @@ async function callFalModel(params: {
   }
 }
 
+// ─── Gemini (Nano Banana) — multimodal edit/generate ─────────────────────────
+
+async function fetchAsBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    const contentType = res.headers.get("content-type") ?? "image/png";
+    const mimeType = contentType.split(";")[0].trim();
+    const data = Buffer.from(buf).toString("base64");
+    return { data, mimeType };
+  } catch {
+    return null;
+  }
+}
+
+async function callGeminiImage(params: {
+  apiKey: string;
+  prompt: string;
+  imageUrls: string[];
+  models: string[];   // candidate model ids, tried in order
+}): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const parts: unknown[] = [{ text: params.prompt }];
+  for (const url of params.imageUrls.slice(0, 8)) {
+    const img = await fetchAsBase64(url);
+    if (!img) continue;
+    parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
+  }
+
+  let lastError = "Gemini no devolvió imagen";
+  for (const model of params.models) {
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${params.apiKey}`;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        lastError = data.error?.message ?? JSON.stringify(data);
+        continue;
+      }
+      for (const candidate of data.candidates ?? []) {
+        for (const part of candidate.content?.parts ?? []) {
+          if (part.inlineData?.data) {
+            const mime = part.inlineData.mimeType ?? "image/png";
+            return { ok: true, url: `data:${mime};base64,${part.inlineData.data}` };
+          }
+        }
+      }
+      lastError = "Gemini no devolvió imagen";
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : "Error";
+    }
+  }
+  return { ok: false, error: `Gemini error: ${lastError}` };
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -526,7 +597,20 @@ export async function POST(req: NextRequest) {
 
   const falKey = user.user_metadata?.ai_key_fal;
   const openaiKey = user.user_metadata?.ai_key_openai;
+  const geminiKey = user.user_metadata?.ai_key_gemini;
   const aiModel = body.aiModel ?? "";
+
+  // ── Gemini (Nano Banana) models ───────────────────────────────────────────
+  if (GEMINI_MODELS[aiModel]) {
+    if (!geminiKey) return NextResponse.json({ error: "Configura tu API key de Gemini (Google) en Ajustes > Modelos IA" }, { status: 400 });
+    const imageUrls: string[] = [];
+    if (hasTemplate) imageUrls.push(body.templateUrl!);
+    imageUrls.push(...productImages.slice(0, 7));
+
+    const out = await callGeminiImage({ apiKey: geminiKey, prompt, imageUrls, models: GEMINI_MODELS[aiModel] });
+    if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: aiModel });
+    return NextResponse.json({ error: out.error }, { status: 500 });
+  }
 
   // ── OpenAI models ─────────────────────────────────────────────────────────
   if (aiModel === "openai-dalle3") {
