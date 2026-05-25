@@ -87,6 +87,15 @@ const FAL_ENDPOINTS: Record<string, string> = {
   "fal-sd-xl":      "fal-ai/stable-diffusion-xl",
 };
 
+// ─── Gemini (Nano Banana) model routing ───────────────────────────────────────
+// Each selector id maps to a list of candidate Google model ids, tried in order
+// so the call survives model-id drift / availability per API key.
+
+const GEMINI_MODELS: Record<string, string[]> = {
+  "gemini-nano-banana-2":   ["gemini-2.5-flash-image", "gemini-2.0-flash-preview-image-generation"],
+  "gemini-nano-banana-pro": ["gemini-3-pro-image-preview", "gemini-2.5-flash-image", "gemini-2.0-flash-preview-image-generation"],
+};
+
 // ─── Body type ────────────────────────────────────────────────────────────────
 
 type RequestBody = {
@@ -177,7 +186,22 @@ async function analyzeAndWriteCopy(body: RequestBody): Promise<GeneratedCopy | n
 
     userContent.push({
       type: "text",
-      text: `${body.templateUrl ? "Analiza la plantilla de banner adjunta para inspirarte en el diseño.\n\n" : ""}Eres copywriter publicitario senior de ecommerce en ${market}.\n\nTIPO DE BANNER: ${spec.visualDescription}\n\nINFORMACIÓN DEL PRODUCTO:\n${productSummary}\n\nREGLAS CRÍTICAS:\n1. Todo el texto debe estar en ESPAÑOL real de ${market} — palabras correctamente escritas\n2. NO inventes palabras. NO mezcles con inglés.\n3. Sé EXTREMADAMENTE breve. Mejor 2 palabras que 5.\n4. NO uses tildes raras ni caracteres especiales.\n5. Si tienes el precio "${body.priceSale ?? ""}", úsalo EXACTAMENTE como está.\n\nResponde ÚNICAMENTE con este JSON (sin markdown):\n{${jsonFields.join(",\n")}}`,
+      text: `${body.templateUrl ? "Analiza la plantilla de banner adjunta para inspirarte en el diseño.\n\n" : ""}Eres copywriter publicitario senior de ecommerce en ${market}.
+
+TIPO DE BANNER: ${spec.visualDescription}
+
+INFORMACIÓN DEL PRODUCTO:
+${productSummary}
+
+REGLAS CRÍTICAS:
+1. Todo el texto debe estar en ESPAÑOL real de ${market} — palabras correctamente escritas
+2. NO inventes palabras. NO mezcles con inglés.
+3. Sé EXTREMADAMENTE breve. Mejor 2 palabras que 5.
+4. NO uses tildes raras ni caracteres especiales.
+5. Si tienes el precio "${body.priceSale ?? ""}", úsalo EXACTAMENTE como está.
+
+Responde ÚNICAMENTE con este JSON (sin markdown):
+{${jsonFields.join(",\n")}}`,
     });
 
     const message = await anthropic.messages.create({
@@ -237,7 +261,9 @@ function buildImagePrompt(body: RequestBody, copy: GeneratedCopy | null): string
   if (hasTemplate) {
     if (hasPhotos) {
       imageRolesParts.push(
-        `ROLES DE IMAGEN — LEE ESTO PRIMERO (es lo más importante):\n- IMAGEN 1 es la PLANTILLA DE DISEÑO. Úsala SOLO como referencia de layout, colores, tipografía, elementos gráficos y composición. El producto que aparece dentro de IMAGEN 1 es un producto COMPLETAMENTE DIFERENTE y sin relación — debes ignorarlo y eliminarlo por completo. NO renderices el producto de la plantilla en el resultado.\n- IMAGEN 2${photoCount > 1 ? ` hasta ${photoCount + 1}` : ""} ${photoCount > 1 ? "son fotos" : "es una foto"} del PRODUCTO REAL a publicitar ("${body.productName ?? "el producto"}"). ESTE es el producto que debe ser la estrella del banner. Renderízalo fielmente — exacta misma forma, proporciones, color, materiales, etiqueta y branding que se aprecia en ${photoCount > 1 ? "estas fotos" : "esta foto"}.`
+        `ROLES DE IMAGEN — LEE ESTO PRIMERO (es lo más importante):
+- IMAGEN 1 es la PLANTILLA DE DISEÑO. Úsala SOLO como referencia de layout, colores, tipografía, elementos gráficos y composición. El producto que aparece dentro de IMAGEN 1 es un producto COMPLETAMENTE DIFERENTE y sin relación — debes ignorarlo y eliminarlo por completo. NO renderices el producto de la plantilla en el resultado.
+- IMAGEN 2${photoCount > 1 ? ` hasta ${photoCount + 1}` : ""} ${photoCount > 1 ? "son fotos" : "es una foto"} del PRODUCTO REAL a publicitar ("${body.productName ?? "el producto"}"). ESTE es el producto que debe ser la estrella del banner. Renderízalo fielmente — exacta misma forma, proporciones, color, materiales, etiqueta y branding que se aprecia en ${photoCount > 1 ? "estas fotos" : "esta foto"}.`
       );
     } else {
       imageRolesParts.push(
@@ -245,7 +271,20 @@ function buildImagePrompt(body: RequestBody, copy: GeneratedCopy | null): string
       );
     }
     imageRolesParts.push(
-      `INSTRUCCIÓN CRÍTICA — Produce una copia casi idéntica del DISEÑO de la plantilla, pero publicitando un PRODUCTO DIFERENTE.\nREPLICACIÓN OBLIGATORIA del diseño:\n- LAYOUT: misma estructura espacial — posición del titular, del producto, de badges/precio/CTA.\n- COLORES: mismo(s) color(es) de fondo, colores de acento, tratamiento de gradiente, distribución de color.\n- TIPOGRAFÍA: mismo estilo de peso (bold/condensado/fino), misma jerarquía de tamaños, mismas posiciones de bloques de texto.\n- ELEMENTOS GRÁFICOS: replica todos los badges, círculos, formas geométricas, divisores, overlays, texturas, iconos, stickers.\n- COMPOSICIÓN: mismo equilibrio visual, espacio negativo y puntos focales.\n\nCAMBIO DE PRODUCTO — esto es lo único que cambia respecto a la plantilla:\n- Coloca el producto de las FOTOS DEL PRODUCTO (NO el producto de la plantilla) donde se ubica el producto de la plantilla, con tamaño, ángulo y prominencia similares.\n- El producto mostrado DEBE verse exactamente como en las fotos. NO lo inventes, rediseñes, ni sustituyas. NO conserves el producto original de la plantilla ni su marca.\n- Reemplaza el nombre del producto por "${body.productName ?? "el producto"}" y todos los claims/estadísticas/texto con la información del producto indicada abajo.\n\nNO crees un nuevo layout. NO cambies la paleta de colores. Mantén ~95% del diseño idéntico a la plantilla; solo cambia el producto, su nombre, claims y precios.`
+      `INSTRUCCIÓN CRÍTICA — Produce una copia casi idéntica del DISEÑO de la plantilla, pero publicitando un PRODUCTO DIFERENTE.
+REPLICACIÓN OBLIGATORIA del diseño:
+- LAYOUT: misma estructura espacial — posición del titular, del producto, de badges/precio/CTA.
+- COLORES: mismo(s) color(es) de fondo, colores de acento, tratamiento de gradiente, distribución de color.
+- TIPOGRAFÍA: mismo estilo de peso (bold/condensado/fino), misma jerarquía de tamaños, mismas posiciones de bloques de texto.
+- ELEMENTOS GRÁFICOS: replica todos los badges, círculos, formas geométricas, divisores, overlays, texturas, iconos, stickers.
+- COMPOSICIÓN: mismo equilibrio visual, espacio negativo y puntos focales.
+
+CAMBIO DE PRODUCTO — esto es lo único que cambia respecto a la plantilla:
+- Coloca el producto de las FOTOS DEL PRODUCTO (NO el producto de la plantilla) donde se ubica el producto de la plantilla, con tamaño, ángulo y prominencia similares.
+- El producto mostrado DEBE verse exactamente como en las fotos. NO lo inventes, rediseñes, ni sustituyas. NO conserves el producto original de la plantilla ni su marca.
+- Reemplaza el nombre del producto por "${body.productName ?? "el producto"}" y todos los claims/estadísticas/texto con la información del producto indicada abajo.
+
+NO crees un nuevo layout. NO cambies la paleta de colores. Mantén ~95% del diseño idéntico a la plantilla; solo cambia el producto, su nombre, claims y precios.`
     );
   }
 
@@ -300,7 +339,25 @@ function buildImagePrompt(body: RequestBody, copy: GeneratedCopy | null): string
     parts.push(...imageRolesParts);
   }
 
-  parts.push(`Crea un banner publicitario vertical 9:16 (1080x1920) en español, calidad comercial premium.\n\nDISEÑO: ${spec.visualDescription}\n${copy.layoutDescription ? `Disposición: ${copy.layoutDescription}` : ""}\n\nPRODUCTO A MOSTRAR: ${copy.productDescription || body.productName || ""}. Debe verse fotorealista, nítido, con iluminación profesional de estudio.\n\nESTILO VISUAL: ${copy.visualStyle || "moderno, limpio, profesional"}\n\nTEXTO EN EL BANNER — RENDERIZA EXACTAMENTE ESTAS PALABRAS EN ESPAÑOL CORRECTO, NADA MÁS:\n${textList}\n\nREGLAS ESTRICTAS:\n- Renderiza ÚNICAMENTE los textos listados arriba. NO añadas ningún otro texto.\n- Cada palabra debe estar PERFECTAMENTE escrita en español, letra por letra.\n- NO inventes palabras. NO escribas texto en inglés.\n- Tipografía clara, bold, legible. Kerning perfecto.\n- Sin marcas de agua. Sin logos extra. Sin texto decorativo random.\n- Fotografía publicitaria de alta gama. 4K, nítido, profesional.`);
+  parts.push(`Crea un banner publicitario vertical 9:16 (1080x1920) en español, calidad comercial premium.
+
+DISEÑO: ${spec.visualDescription}
+${copy.layoutDescription ? `Disposición: ${copy.layoutDescription}` : ""}
+
+PRODUCTO A MOSTRAR: ${copy.productDescription || body.productName || ""}. Debe verse fotorealista, nítido, con iluminación profesional de estudio.
+
+ESTILO VISUAL: ${copy.visualStyle || "moderno, limpio, profesional"}
+
+TEXTO EN EL BANNER — RENDERIZA EXACTAMENTE ESTAS PALABRAS EN ESPAÑOL CORRECTO, NADA MÁS:
+${textList}
+
+REGLAS ESTRICTAS:
+- Renderiza ÚNICAMENTE los textos listados arriba. NO añadas ningún otro texto.
+- Cada palabra debe estar PERFECTAMENTE escrita en español, letra por letra.
+- NO inventes palabras. NO escribas texto en inglés.
+- Tipografía clara, bold, legible. Kerning perfecto.
+- Sin marcas de agua. Sin logos extra. Sin texto decorativo random.
+- Fotografía publicitaria de alta gama. 4K, nítido, profesional.`);
 
   return parts.join("\n\n");
 }
@@ -454,6 +511,68 @@ async function callFalModel(params: {
   }
 }
 
+// ─── Gemini (Nano Banana) — multimodal edit/generate ─────────────────────────
+
+async function fetchAsBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    const contentType = res.headers.get("content-type") ?? "image/png";
+    const mimeType = contentType.split(";")[0].trim();
+    const data = Buffer.from(buf).toString("base64");
+    return { data, mimeType };
+  } catch {
+    return null;
+  }
+}
+
+async function callGeminiImage(params: {
+  apiKey: string;
+  prompt: string;
+  imageUrls: string[];
+  models: string[];   // candidate model ids, tried in order
+}): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const parts: unknown[] = [{ text: params.prompt }];
+  for (const url of params.imageUrls.slice(0, 8)) {
+    const img = await fetchAsBase64(url);
+    if (!img) continue;
+    parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
+  }
+
+  let lastError = "Gemini no devolvió imagen";
+  for (const model of params.models) {
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${params.apiKey}`;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        lastError = data.error?.message ?? JSON.stringify(data);
+        continue;
+      }
+      for (const candidate of data.candidates ?? []) {
+        for (const part of candidate.content?.parts ?? []) {
+          if (part.inlineData?.data) {
+            const mime = part.inlineData.mimeType ?? "image/png";
+            return { ok: true, url: `data:${mime};base64,${part.inlineData.data}` };
+          }
+        }
+      }
+      lastError = "Gemini no devolvió imagen";
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : "Error";
+    }
+  }
+  return { ok: false, error: `Gemini error: ${lastError}` };
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -478,7 +597,20 @@ export async function POST(req: NextRequest) {
 
   const falKey = user.user_metadata?.ai_key_fal;
   const openaiKey = user.user_metadata?.ai_key_openai;
+  const geminiKey = user.user_metadata?.ai_key_gemini;
   const aiModel = body.aiModel ?? "";
+
+  // ── Gemini (Nano Banana) models ───────────────────────────────────────────
+  if (GEMINI_MODELS[aiModel]) {
+    if (!geminiKey) return NextResponse.json({ error: "Configura tu API key de Gemini (Google) en Ajustes > Modelos IA" }, { status: 400 });
+    const imageUrls: string[] = [];
+    if (hasTemplate) imageUrls.push(body.templateUrl!);
+    imageUrls.push(...productImages.slice(0, 7));
+
+    const out = await callGeminiImage({ apiKey: geminiKey, prompt, imageUrls, models: GEMINI_MODELS[aiModel] });
+    if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: aiModel });
+    return NextResponse.json({ error: out.error }, { status: 500 });
+  }
 
   // ── OpenAI models ─────────────────────────────────────────────────────────
   if (aiModel === "openai-dalle3") {
