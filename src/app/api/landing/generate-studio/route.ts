@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAnthropicClient } from "@/lib/anthropic";
 
 export const runtime = "nodejs";
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -261,7 +261,7 @@ async function callGptImage1Edit(params: {
     form.append("prompt", params.prompt);
     form.append("n", "1");
     form.append("size", params.size);
-    form.append("quality", "high");
+    form.append("quality", params.model === "gpt-image-2" ? "medium" : "high");
 
     // gpt-image-1 accepts up to 16 images via repeated "image[]" field
     for (const url of params.imageUrls.slice(0, 8)) {
@@ -300,7 +300,7 @@ async function callGptImage1Generate(params: {
         prompt: params.prompt,
         n: 1,
         size: params.size,
-        quality: "high",
+        quality: params.model === "gpt-image-2" ? "medium" : "high",
       }),
     });
     const data = await res.json();
@@ -344,7 +344,7 @@ async function callGeminiFlashImage(params: {
       parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
     }
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${params.apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${params.apiKey}`;
 
     const res = await fetch(endpoint, {
       method: "POST",

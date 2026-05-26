@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAnthropicClient } from "@/lib/anthropic";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 // ─── Section-specific instructions ───────────────────────────────────────────
 
@@ -92,8 +92,8 @@ const FAL_ENDPOINTS: Record<string, string> = {
 // so the call survives model-id drift / availability per API key.
 
 const GEMINI_MODELS: Record<string, string[]> = {
-  "gemini-nano-banana-2":   ["gemini-2.0-flash-exp-image-generation", "gemini-2.0-flash-preview-image-generation"],
-  "gemini-nano-banana-pro": ["gemini-2.5-flash-exp-image-generation", "gemini-2.0-flash-exp-image-generation", "gemini-2.0-flash-preview-image-generation"],
+  "gemini-nano-banana-2":   ["gemini-3.1-flash-image-preview", "gemini-2.5-flash-image"],
+  "gemini-nano-banana-pro": ["gemini-3-pro-image-preview", "gemini-2.5-flash-image"],
 };
 
 // ─── Body type ────────────────────────────────────────────────────────────────
@@ -400,6 +400,7 @@ async function callGptImage1Edit(params: {
   imageUrls: string[];  // template first, then product photos
   model?: "gpt-image-1" | "gpt-image-2";
   size?: string;
+  quality?: string;
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
     const model = params.model ?? "gpt-image-1";
@@ -408,7 +409,7 @@ async function callGptImage1Edit(params: {
     form.append("prompt", params.prompt);
     form.append("n", "1");
     form.append("size", params.size ?? "1024x1536");
-    form.append("quality", "high");
+    form.append("quality", params.quality ?? "high");
 
     for (const url of params.imageUrls.slice(0, 8)) {
       const fetched = await fetchAsBlob(url);
@@ -436,6 +437,7 @@ async function callGptImage1Generate(params: {
   prompt: string;
   model?: "gpt-image-1" | "gpt-image-2";
   size?: string;
+  quality?: string;
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
     const model = params.model ?? "gpt-image-1";
@@ -447,7 +449,7 @@ async function callGptImage1Generate(params: {
         prompt: params.prompt,
         n: 1,
         size: params.size ?? "1024x1536",
-        quality: "high",
+        quality: params.quality ?? "high",
       }),
     });
     const data = await res.json();
@@ -645,6 +647,8 @@ export async function POST(req: NextRequest) {
     const model: "gpt-image-1" | "gpt-image-2" = aiModel === "openai-gpt-image-2" ? "gpt-image-2" : "gpt-image-1";
     // gpt-image-2 accepts arbitrary multiples of 16; gpt-image-1 only fixed sizes
     const size = model === "gpt-image-2" ? "1088x1920" : "1024x1536";
+    // gpt-image-2 "high" is agentic and can take ~200s — too slow for serverless; use "medium"
+    const quality = model === "gpt-image-2" ? "medium" : "high";
 
     // Use edit mode when reference images are available — much better template fidelity
     if (hasRefImages) {
@@ -652,12 +656,12 @@ export async function POST(req: NextRequest) {
       if (hasTemplate) imageUrls.push(body.templateUrl!);
       imageUrls.push(...productImages.slice(0, 7)); // max 8 total including template
 
-      const out = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls, model, size });
+      const out = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls, model, size, quality });
       if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: `${model}-edit` });
       // On edit failure, fall through to generate mode
     }
 
-    const out = await callGptImage1Generate({ apiKey: openaiKey, prompt, model, size });
+    const out = await callGptImage1Generate({ apiKey: openaiKey, prompt, model, size, quality });
     if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: model });
     if (!falKey) return NextResponse.json({ error: out.error }, { status: 500 });
   }
