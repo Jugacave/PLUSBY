@@ -5,7 +5,7 @@ import { getAnthropicClient } from "@/lib/anthropic";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-// ─── Section-specific instructions ─────────────────────────────────────────────
+// ─── Section-specific instructions ───────────────────────────────────────────
 
 interface SectionSpec {
   visualDescription: string;
@@ -96,7 +96,7 @@ const GEMINI_MODELS: Record<string, string[]> = {
   "gemini-nano-banana-pro": ["gemini-3-pro-image-preview", "gemini-2.5-flash-image", "gemini-2.0-flash-preview-image-generation"],
 };
 
-// ─── Body type ────────────────────────────────────────────────────────────────────
+// ─── Body type ────────────────────────────────────────────────────────────────
 
 type RequestBody = {
   sectionType: string;
@@ -190,7 +190,7 @@ async function analyzeAndWriteCopy(body: RequestBody): Promise<GeneratedCopy | n
 
 TIPO DE BANNER: ${spec.visualDescription}
 
-INFORMACION DEL PRODUCTO:
+INFORMACIÓN DEL PRODUCTO:
 ${productSummary}
 
 REGLAS CRÍTICAS:
@@ -237,7 +237,7 @@ Responde ÚNICAMENTE con este JSON (sin markdown):
   }
 }
 
-// ─── Stage 2: Build Spanish prompt with IMAGE ROLES + copy ─────────────────────
+// ─── Stage 2: Build Spanish prompt with IMAGE ROLES + copy ───────────────────
 
 function buildImagePrompt(body: RequestBody, copy: GeneratedCopy | null): string {
   const spec = SECTION_SPECS[body.sectionType] ?? SECTION_SPECS.hero;
@@ -273,7 +273,7 @@ Recolorea TODO el banner con esta paleta de marca de forma coherente. Esta palet
       imageRolesParts.push(
         `ROLES DE IMAGEN — LEE ESTO PRIMERO (es lo más importante):
 - IMAGEN 1 es la PLANTILLA DE DISEÑO. Úsala SOLO como referencia de LAYOUT, ESTRUCTURA, tipografía, elementos gráficos y composición — NO copies sus colores. El producto que aparece dentro de IMAGEN 1 es un producto COMPLETAMENTE DIFERENTE y sin relación — debes ignorarlo y eliminarlo por completo. NO renderices el producto de la plantilla en el resultado.
-- IMAGEN 2${photoCount > 1 ? ` hasta ${photoCount + 1}` : ""} ${photoCount > 1 ? "son fotos" : "es una foto"} del PRODUCTO REAL a publicitar ("${body.productName ?? "el producto"}"). ESTE es el producto que debe ser la estrella del banner. Rendírízalo fielmente — exacta misma forma, proporciones, color, materiales, etiqueta y branding que se aprecia en ${photoCount > 1 ? "estas fotos" : "esta foto"}.`
+- IMAGEN 2${photoCount > 1 ? ` hasta ${photoCount + 1}` : ""} ${photoCount > 1 ? "son fotos" : "es una foto"} del PRODUCTO REAL a publicitar ("${body.productName ?? "el producto"}"). ESTE es el producto que debe ser la estrella del banner. Renderízalo fielmente — exacta misma forma, proporciones, color, materiales, etiqueta y branding que se aprecia en ${photoCount > 1 ? "estas fotos" : "esta foto"}.`
       );
     } else {
       imageRolesParts.push(
@@ -282,7 +282,7 @@ Recolorea TODO el banner con esta paleta de marca de forma coherente. Esta palet
     }
     imageRolesParts.push(
       `INSTRUCCIÓN CRÍTICA — Produce una copia casi idéntica de la ESTRUCTURA y el LAYOUT de la plantilla, pero RECOLOREADA con la paleta de marca y publicitando un PRODUCTO DIFERENTE.
-REPLICACION OBLIGATORIA (estructura, NO color):
+REPLICACIÓN OBLIGATORIA (estructura, NO color):
 - LAYOUT: misma estructura espacial — posición del titular, del producto, de badges/precio/CTA.
 - TIPOGRAFÍA: mismo estilo de peso (bold/condensado/fino), misma jerarquía de tamaños, mismas posiciones de bloques de texto.
 - ELEMENTOS GRÁFICOS: replica la forma y posición de badges, círculos, formas geométricas, divisores, overlays, texturas, iconos, stickers — pero coloreados con la paleta de marca.
@@ -302,7 +302,7 @@ NO crees un nuevo layout. Mantén la ESTRUCTURA y COMPOSICIÓN ~95% idéntica a 
     imageRolesParts.push(brandPaletteBlock);
   }
 
-  // ── Text elements ──────────────────────────────────────────────────────
+  // ── Text elements ──────────────────────────────────────────────────────────
   const textElements: string[] = [];
 
   if (spec.textElements.includes("headline") && copy.headline) {
@@ -398,13 +398,16 @@ async function callGptImage1Edit(params: {
   apiKey: string;
   prompt: string;
   imageUrls: string[];  // template first, then product photos
+  model?: "gpt-image-1" | "gpt-image-2";
+  size?: string;
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
+    const model = params.model ?? "gpt-image-1";
     const form = new FormData();
-    form.append("model", "gpt-image-1");
+    form.append("model", model);
     form.append("prompt", params.prompt);
     form.append("n", "1");
-    form.append("size", "1024x1536");
+    form.append("size", params.size ?? "1024x1536");
     form.append("quality", "high");
 
     for (const url of params.imageUrls.slice(0, 8)) {
@@ -421,7 +424,7 @@ async function callGptImage1Edit(params: {
     const data = await res.json();
     if (!res.ok) return { ok: false, error: data.error?.message ?? "OpenAI edit error" };
     const b64 = data.data?.[0]?.b64_json;
-    if (!b64) return { ok: false, error: "gpt-image-1 edit no devolvió imagen" };
+    if (!b64) return { ok: false, error: `${model} edit no devolvió imagen` };
     return { ok: true, url: `data:image/png;base64,${b64}` };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Error" };
@@ -431,25 +434,27 @@ async function callGptImage1Edit(params: {
 async function callGptImage1Generate(params: {
   apiKey: string;
   prompt: string;
+  model?: "gpt-image-1" | "gpt-image-2";
+  size?: string;
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
+    const model = params.model ?? "gpt-image-1";
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { Authorization: `Bearer ${params.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-image-1",
+        model,
         prompt: params.prompt,
         n: 1,
-        size: "1024x1536",
+        size: params.size ?? "1024x1536",
         quality: "high",
-        output_format: "webp",
       }),
     });
     const data = await res.json();
-    if (!res.ok) return { ok: false, error: data.error?.message ?? "Error gpt-image-1" };
+    if (!res.ok) return { ok: false, error: data.error?.message ?? `Error ${model}` };
     const b64 = data.data?.[0]?.b64_json;
-    if (!b64) return { ok: false, error: "gpt-image-1 no devolvió imagen" };
-    return { ok: true, url: `data:image/webp;base64,${b64}` };
+    if (!b64) return { ok: false, error: `${model} no devolvió imagen` };
+    return { ok: true, url: `data:image/png;base64,${b64}` };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Error" };
   }
@@ -614,7 +619,7 @@ export async function POST(req: NextRequest) {
   const geminiKey = user.user_metadata?.ai_key_gemini;
   const aiModel = body.aiModel ?? "";
 
-  // ── Gemini (Nano Banana) models ─────────────────────────────────────────
+  // ── Gemini (Nano Banana) models ───────────────────────────────────────────
   if (GEMINI_MODELS[aiModel]) {
     if (!geminiKey) return NextResponse.json({ error: "Configura tu API key de Gemini (Google) en Ajustes > Modelos IA" }, { status: 400 });
     const imageUrls: string[] = [];
@@ -626,7 +631,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: out.error }, { status: 500 });
   }
 
-  // ── OpenAI models ─────────────────────────────────────────────────────
+  // ── OpenAI models ─────────────────────────────────────────────────────────
   if (aiModel === "openai-dalle3") {
     if (!openaiKey) return NextResponse.json({ error: "Configura tu API key de OpenAI en Ajustes > Modelos IA" }, { status: 400 });
     const out = await callDalle3HD({ apiKey: openaiKey, prompt });
@@ -634,8 +639,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: out.error }, { status: 500 });
   }
 
-  if (aiModel === "openai-gpt-image-1" || (!aiModel && openaiKey)) {
+  if (aiModel === "openai-gpt-image-1" || aiModel === "openai-gpt-image-2" || (!aiModel && openaiKey)) {
     if (!openaiKey) return NextResponse.json({ error: "Configura tu API key de OpenAI en Ajustes > Modelos IA" }, { status: 400 });
+
+    const model: "gpt-image-1" | "gpt-image-2" = aiModel === "openai-gpt-image-2" ? "gpt-image-2" : "gpt-image-1";
+    // gpt-image-2 accepts arbitrary multiples of 16; gpt-image-1 only fixed sizes
+    const size = model === "gpt-image-2" ? "1088x1920" : "1024x1536";
 
     // Use edit mode when reference images are available — much better template fidelity
     if (hasRefImages) {
@@ -643,17 +652,17 @@ export async function POST(req: NextRequest) {
       if (hasTemplate) imageUrls.push(body.templateUrl!);
       imageUrls.push(...productImages.slice(0, 7)); // max 8 total including template
 
-      const out = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls });
-      if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "gpt-image-1-edit" });
+      const out = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls, model, size });
+      if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: `${model}-edit` });
       // On edit failure, fall through to generate mode
     }
 
-    const out = await callGptImage1Generate({ apiKey: openaiKey, prompt });
-    if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "gpt-image-1" });
+    const out = await callGptImage1Generate({ apiKey: openaiKey, prompt, model, size });
+    if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: model });
     if (!falKey) return NextResponse.json({ error: out.error }, { status: 500 });
   }
 
-  // ── Fal.ai models ─────────────────────────────────────────────────────
+  // ── Fal.ai models ─────────────────────────────────────────────────────────
   if (falKey) {
     const falEndpoint = FAL_ENDPOINTS[aiModel] ?? FAL_ENDPOINTS["fal-ideogram2"];
 
