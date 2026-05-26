@@ -115,6 +115,8 @@ type RequestBody = {
   aiModel: string;
   priceSale?: string;
   priceOriginal?: string;
+  editInstruction?: string;
+  editRefImageBase64?: string;
 };
 
 // ─── Stage 1: Claude Vision — analyze template + write Spanish copy ──────────
@@ -353,6 +355,10 @@ NO crees un nuevo layout. Mantén la ESTRUCTURA y COMPOSICIÓN ~95% idéntica a 
     parts.push(...imageRolesParts);
   }
 
+  if (body.editInstruction) {
+    parts.push(`EDICIÓN SOLICITADA POR EL USUARIO (prioridad máxima — aplica este cambio específico al resultado):\n"${body.editInstruction}"`);
+  }
+
   parts.push(`Crea un banner publicitario vertical 9:16 (1080x1920) en español, calidad comercial premium.
 
 DISEÑO: ${spec.visualDescription}
@@ -401,6 +407,7 @@ async function callGptImage1Edit(params: {
   model?: "gpt-image-1" | "gpt-image-2";
   size?: string;
   quality?: string;
+  extraBlobs?: Array<{ blob: Blob; filename: string }>;
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
     const model = params.model ?? "gpt-image-1";
@@ -415,6 +422,9 @@ async function callGptImage1Edit(params: {
       const fetched = await fetchAsBlob(url);
       if (!fetched) continue;
       form.append("image[]", fetched.blob, fetched.filename);
+    }
+    for (const extra of params.extraBlobs ?? []) {
+      form.append("image[]", extra.blob, extra.filename);
     }
 
     const res = await fetch("https://api.openai.com/v1/images/edits", {
@@ -556,6 +566,12 @@ async function callGeminiImage(params: {
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const parts: unknown[] = [{ text: params.prompt }];
   for (const url of params.imageUrls.slice(0, 8)) {
+    if (url.startsWith("data:")) {
+      const [meta, data] = url.split(",");
+      const mimeType = meta.replace("data:", "").replace(";base64", "");
+      parts.push({ inlineData: { mimeType, data } });
+      continue;
+    }
     const img = await fetchAsBase64(url);
     if (!img) continue;
     parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
@@ -612,6 +628,18 @@ export async function POST(req: NextRequest) {
   const hasTemplate = !!body.templateUrl;
   const hasRefImages = hasTemplate || productImages.length > 0;
 
+  // Parse edit ref image base64 → blob (for GPT edit mode)
+  let editRefBlob: { blob: Blob; filename: string } | undefined;
+  if (body.editRefImageBase64) {
+    try {
+      const [meta, b64data] = body.editRefImageBase64.split(",");
+      const mime = meta.match(/data:([^;]+)/)?.[1] ?? "image/png";
+      const ext = mime.split("/")[1] ?? "png";
+      const buf = Buffer.from(b64data, "base64");
+      editRefBlob = { blob: new Blob([buf], { type: mime }), filename: `edit-ref.${ext}` };
+    } catch { /* ignore invalid base64 */ }
+  }
+
   // Stage 1: Claude Vision + Spanish copywriting
   const copy = await analyzeAndWriteCopy(body);
   const prompt = buildImagePrompt(body, copy);
@@ -627,6 +655,7 @@ export async function POST(req: NextRequest) {
     const imageUrls: string[] = [];
     if (hasTemplate) imageUrls.push(body.templateUrl!);
     imageUrls.push(...productImages.slice(0, 7));
+    if (body.editRefImageBase64) imageUrls.push(body.editRefImageBase64);
 
     const out = await callGeminiImage({ apiKey: geminiKey, prompt, imageUrls, models: GEMINI_MODELS[aiModel] });
     if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: aiModel });
@@ -656,7 +685,7 @@ export async function POST(req: NextRequest) {
       if (hasTemplate) imageUrls.push(body.templateUrl!);
       imageUrls.push(...productImages.slice(0, 7)); // max 8 total including template
 
-      const out = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls, model, size, quality });
+      const out = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls, model, size, quality, extraBlobs: editRefBlob ? [editRefBlob] : undefined });
       if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: `${model}-edit` });
       // On edit failure, fall through to generate mode
     }
