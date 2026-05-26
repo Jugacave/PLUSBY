@@ -398,13 +398,16 @@ async function callGptImage1Edit(params: {
   apiKey: string;
   prompt: string;
   imageUrls: string[];  // template first, then product photos
+  model?: "gpt-image-1" | "gpt-image-2";
+  size?: string;
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
+    const model = params.model ?? "gpt-image-1";
     const form = new FormData();
-    form.append("model", "gpt-image-1");
+    form.append("model", model);
     form.append("prompt", params.prompt);
     form.append("n", "1");
-    form.append("size", "1024x1536");
+    form.append("size", params.size ?? "1024x1536");
     form.append("quality", "high");
 
     for (const url of params.imageUrls.slice(0, 8)) {
@@ -421,7 +424,7 @@ async function callGptImage1Edit(params: {
     const data = await res.json();
     if (!res.ok) return { ok: false, error: data.error?.message ?? "OpenAI edit error" };
     const b64 = data.data?.[0]?.b64_json;
-    if (!b64) return { ok: false, error: "gpt-image-1 edit no devolvió imagen" };
+    if (!b64) return { ok: false, error: `${model} edit no devolvió imagen` };
     return { ok: true, url: `data:image/png;base64,${b64}` };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Error" };
@@ -431,25 +434,27 @@ async function callGptImage1Edit(params: {
 async function callGptImage1Generate(params: {
   apiKey: string;
   prompt: string;
+  model?: "gpt-image-1" | "gpt-image-2";
+  size?: string;
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
+    const model = params.model ?? "gpt-image-1";
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { Authorization: `Bearer ${params.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-image-1",
+        model,
         prompt: params.prompt,
         n: 1,
-        size: "1024x1536",
+        size: params.size ?? "1024x1536",
         quality: "high",
-        output_format: "webp",
       }),
     });
     const data = await res.json();
-    if (!res.ok) return { ok: false, error: data.error?.message ?? "Error gpt-image-1" };
+    if (!res.ok) return { ok: false, error: data.error?.message ?? `Error ${model}` };
     const b64 = data.data?.[0]?.b64_json;
-    if (!b64) return { ok: false, error: "gpt-image-1 no devolvió imagen" };
-    return { ok: true, url: `data:image/webp;base64,${b64}` };
+    if (!b64) return { ok: false, error: `${model} no devolvió imagen` };
+    return { ok: true, url: `data:image/png;base64,${b64}` };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Error" };
   }
@@ -634,8 +639,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: out.error }, { status: 500 });
   }
 
-  if (aiModel === "openai-gpt-image-1" || (!aiModel && openaiKey)) {
+  if (aiModel === "openai-gpt-image-1" || aiModel === "openai-gpt-image-2" || (!aiModel && openaiKey)) {
     if (!openaiKey) return NextResponse.json({ error: "Configura tu API key de OpenAI en Ajustes > Modelos IA" }, { status: 400 });
+
+    const model: "gpt-image-1" | "gpt-image-2" = aiModel === "openai-gpt-image-2" ? "gpt-image-2" : "gpt-image-1";
+    // gpt-image-2 accepts arbitrary multiples of 16; gpt-image-1 only fixed sizes
+    const size = model === "gpt-image-2" ? "1088x1920" : "1024x1536";
 
     // Use edit mode when reference images are available — much better template fidelity
     if (hasRefImages) {
@@ -643,13 +652,13 @@ export async function POST(req: NextRequest) {
       if (hasTemplate) imageUrls.push(body.templateUrl!);
       imageUrls.push(...productImages.slice(0, 7)); // max 8 total including template
 
-      const out = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls });
-      if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "gpt-image-1-edit" });
+      const out = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls, model, size });
+      if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: `${model}-edit` });
       // On edit failure, fall through to generate mode
     }
 
-    const out = await callGptImage1Generate({ apiKey: openaiKey, prompt });
-    if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: "gpt-image-1" });
+    const out = await callGptImage1Generate({ apiKey: openaiKey, prompt, model, size });
+    if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: model });
     if (!falKey) return NextResponse.json({ error: out.error }, { status: 500 });
   }
 
