@@ -92,8 +92,8 @@ const FAL_ENDPOINTS: Record<string, string> = {
 // so the call survives model-id drift / availability per API key.
 
 const GEMINI_MODELS: Record<string, string[]> = {
-  "gemini-nano-banana-2":   ["gemini-2.5-flash-image", "gemini-2.0-flash-preview-image-generation"],
-  "gemini-nano-banana-pro": ["gemini-3-pro-image-preview", "gemini-2.5-flash-image", "gemini-2.0-flash-preview-image-generation"],
+  "gemini-nano-banana-2":   ["gemini-2.0-flash-exp-image-generation", "gemini-2.0-flash-preview-image-generation"],
+  "gemini-nano-banana-pro": ["gemini-2.5-flash-exp-image-generation", "gemini-2.0-flash-exp-image-generation", "gemini-2.0-flash-preview-image-generation"],
 };
 
 // ─── Body type ────────────────────────────────────────────────────────────────

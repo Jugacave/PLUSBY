@@ -344,7 +344,7 @@ async function callGeminiFlashImage(params: {
       parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
     }
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${params.apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${params.apiKey}`;
 
     const res = await fetch(endpoint, {
       method: "POST",
