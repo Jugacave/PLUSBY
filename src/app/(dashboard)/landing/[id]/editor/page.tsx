@@ -90,7 +90,7 @@ const DEFAULT_BANNER_CONFIG: BannerConfig = {
   colors: ["#FF6B35", "#1C1C26", "#F0F0F5"],
   font: "Poppins",
   country: "CO",
-  aiModel: "openai-gpt-image-1",
+  aiModel: "openai-gpt-image-2",
   priceSale: "",
   priceOriginal: "",
   priceBundle2: "",
@@ -162,17 +162,15 @@ const COUNTRIES = [
 ];
 
 const AI_MODELS = [
-  { id: "gemini-nano-banana-2",   label: "Nano Banana 2",     price: "~$0.03", desc: "⭐ Google · Rápido y económico · Ideal landings" },
-  { id: "gemini-nano-banana-pro", label: "Nano Banana Pro",   price: "~$0.04", desc: "⭐ Google · Máxima calidad · Texto 4K" },
-  { id: "openai-gpt-image-2", label: "GPT Image 2",          price: "~$0.06", desc: "⭐ OpenAI · Máxima fidelidad · El mejor para plantillas" },
-  { id: "openai-gpt-image-1", label: "GPT Image 1",          price: "~$0.04", desc: "OpenAI · Buen texto · Recomendado" },
-  { id: "fal-ideogram2",      label: "Ideogram v3",           price: "~$0.08", desc: "Fal.ai · Ideal para banners con copy" },
-  { id: "fal-flux-ultra",     label: "Flux Pro Ultra",        price: "~$0.06", desc: "Fal.ai · Fotorrealismo extremo" },
-  { id: "fal-imagen3",        label: "Google Imagen 3",       price: "~$0.04", desc: "Fal.ai · Google · Alta calidad" },
-  { id: "fal-flux-pro",       label: "Flux Pro 1.1",          price: "~$0.05", desc: "Fal.ai · Alta calidad · 4K" },
-  { id: "fal-flux-dev",       label: "Flux Dev",              price: "~$0.03", desc: "Fal.ai · Rápido · Volumen" },
-  { id: "openai-dalle3",      label: "DALL·E 3 HD",           price: "~$0.04", desc: "OpenAI · Requiere key OpenAI" },
-  { id: "fal-sd-xl",          label: "Stable Diffusion XL",   price: "~$0.02", desc: "Fal.ai · Creativo · Versátil" },
+  { id: "gemini-nano-banana-2",   label: "Nano Banana 2",       price: "~$0.03", desc: "⭐ Google · Rápido y económico · Ideal landings" },
+  { id: "gemini-nano-banana-pro", label: "Nano Banana Pro",     price: "~$0.04", desc: "⭐ Google · Máxima calidad · Texto 4K" },
+  { id: "openai-gpt-image-2",     label: "GPT Image 2",         price: "~$0.06", desc: "⭐ OpenAI · Máxima fidelidad · El mejor para plantillas" },
+  { id: "fal-ideogram2",          label: "Ideogram v3",          price: "~$0.08", desc: "Fal.ai · Ideal para banners con copy" },
+  { id: "fal-flux-ultra",         label: "Flux Pro Ultra",       price: "~$0.06", desc: "Fal.ai · Fotorrealismo extremo" },
+  { id: "fal-imagen3",            label: "Google Imagen 3",      price: "~$0.04", desc: "Fal.ai · Google · Alta calidad" },
+  { id: "fal-flux-pro",           label: "Flux Pro 1.1",         price: "~$0.05", desc: "Fal.ai · Alta calidad · 4K" },
+  { id: "fal-flux-dev",           label: "Flux Dev",             price: "~$0.03", desc: "Fal.ai · Rápido · Volumen" },
+  { id: "fal-sd-xl",              label: "Stable Diffusion XL",  price: "~$0.02", desc: "Fal.ai · Creativo · Versátil" },
 ];
 
 const FONTS = [
@@ -228,7 +226,7 @@ function EditPanel({ section, onSave, onClose, product }: {
           </button>
         </div>
         <div className="p-4 flex-1 space-y-4">
-          <button onClick={handleGenerate} disabled={generating}
+          <button onClick={() => handleGenerate()} disabled={generating}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] text-white font-semibold text-sm hover:opacity-90 disabled:opacity-60 transition-all">
             {generating ? <><Loader2 size={14} className="animate-spin" />Generando...</> : <><Sparkles size={14} />Generar con IA</>}
           </button>
@@ -736,6 +734,261 @@ function DesignGalleryModal({ initialSectionId, templates, loadingSections, curr
   );
 }
 
+// ─── Banner Mode: SectionImageModal ──────────────────────────────────────────
+
+function SectionImageModal({
+  imageUrl, sectionLabel, sectionIcon, color, applying,
+  onClose, onApplyEdit, onNewVersion,
+}: {
+  imageUrl: string;
+  sectionLabel: string;
+  sectionIcon: string;
+  color: string;
+  applying: boolean;
+  onClose: () => void;
+  onApplyEdit: (instruction: string, refImageBase64: string | null) => void;
+  onNewVersion: () => void;
+}) {
+  const [activePanel, setActivePanel] = useState<"edit" | null>(null);
+  const [editInstruction, setEditInstruction] = useState("");
+  const [editRefImage, setEditRefImage] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [canvaCopied, setCanvaCopied] = useState(false);
+  const editRefFileRef = useRef<HTMLInputElement>(null);
+
+  async function downloadImage(filename: string) {
+    setDownloading(true);
+    try {
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(imageUrl, "_blank");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  function handleEditRefFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => setEditRefImage(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function openCanva() {
+    navigator.clipboard.writeText(imageUrl).catch(() => {});
+    setCanvaCopied(true);
+    setTimeout(() => setCanvaCopied(false), 3000);
+    window.open("https://www.canva.com/", "_blank");
+  }
+
+  function shareWhatsApp() {
+    const text = encodeURIComponent(`🔥 Banner generado con PlusBy\n${imageUrl}`);
+    window.open(`https://wa.me/?text=${text}`, "_blank");
+  }
+
+  const slug = sectionLabel.toLowerCase().replace(/\s+/g, "-");
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl shadow-2xl flex overflow-hidden"
+        style={{ width: "min(96vw, 860px)", maxHeight: "92vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Left: image preview */}
+        <div className="relative bg-[#0A0A0F] flex items-center justify-center flex-shrink-0" style={{ width: 220 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imageUrl} alt={sectionLabel} className="w-full h-full object-contain" style={{ maxHeight: "92vh" }} />
+          <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/70 backdrop-blur-sm">
+            <span className="text-sm">{sectionIcon}</span>
+            <span className="text-white text-[10px] font-semibold">{sectionLabel}</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90 transition-colors"
+          >
+            <X size={13} />
+          </button>
+        </div>
+
+        {/* Right: actions */}
+        <div className="flex-1 overflow-y-auto p-5 border-l border-[#2A2A3A]">
+          <div className="mb-4">
+            <p className="text-[#F0F0F5] font-bold text-sm">Acciones</p>
+            <p className="text-[#555568] text-[10px] mt-0.5">Descarga, edita o comparte tu banner</p>
+          </div>
+
+          <div className="space-y-2">
+            {/* Download 2K */}
+            <button
+              onClick={() => downloadImage(`${slug}-2k.png`)}
+              disabled={downloading}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[#2A2A3A] hover:border-[#3A3A4A] hover:bg-[#1C1C26] transition-all text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[rgba(167,139,250,0.12)] border border-[rgba(167,139,250,0.25)] flex items-center justify-center flex-shrink-0">
+                {downloading ? <Loader2 size={14} className="animate-spin text-[#A78BFA]" /> : <Download size={14} className="text-[#A78BFA]" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[#F0F0F5] text-xs font-semibold">Descargar en 2K</p>
+                <p className="text-[#555568] text-[10px]">Resolución original · Máxima calidad</p>
+              </div>
+            </button>
+
+            {/* Download optimizada */}
+            <button
+              onClick={() => downloadImage(`${slug}-optimizada.jpg`)}
+              disabled={downloading}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[#2A2A3A] hover:border-[#3A3A4A] hover:bg-[#1C1C26] transition-all text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[#1C1C26] border border-[#2A2A3A] flex items-center justify-center flex-shrink-0">
+                {downloading ? <Loader2 size={14} className="animate-spin text-[#8888A0]" /> : <Download size={14} className="text-[#8888A0]" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[#F0F0F5] text-xs font-semibold">Descargar optimizada</p>
+                <p className="text-[#555568] text-[10px]">1080×1920 · Lista para redes sociales</p>
+              </div>
+            </button>
+
+            {/* Edit section toggle */}
+            <button
+              onClick={() => setActivePanel(activePanel === "edit" ? null : "edit")}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left"
+              style={activePanel === "edit"
+                ? { borderColor: color + "60", background: color + "10" }
+                : { borderColor: "#2A2A3A" }}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: color + "1A", border: "1px solid " + color + "40" }}
+              >
+                <Pencil size={14} style={{ color }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[#F0F0F5] text-xs font-semibold">Editar Sección</p>
+                <p className="text-[#555568] text-[10px]">Instrucción de edición con IA</p>
+              </div>
+              {activePanel === "edit"
+                ? <ChevronUp size={14} className="text-[#555568] flex-shrink-0" />
+                : <ChevronDown size={14} className="text-[#555568] flex-shrink-0" />}
+            </button>
+
+            {/* Edit sub-panel */}
+            {activePanel === "edit" && (
+              <div className="rounded-xl border border-[#2A2A3A] bg-[#1C1C26] p-4 space-y-3">
+                <div>
+                  <label className="block text-[10px] text-[#555568] mb-1.5">Instrucción de edición</label>
+                  <textarea
+                    value={editInstruction}
+                    onChange={(e) => setEditInstruction(e.target.value)}
+                    rows={3}
+                    placeholder="Ej: Cambia el fondo a azul oscuro, hazlo más minimalista..."
+                    className="w-full px-3 py-2 rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#3A3A4A] focus:outline-none focus:border-[#7C3AED] text-xs resize-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-[#555568] mb-1.5">Imagen de referencia <span className="text-[#3A3A4A]">(opcional)</span></label>
+                  <input
+                    ref={editRefFileRef} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleEditRefFile(f); }}
+                  />
+                  <button
+                    onClick={() => editRefFileRef.current?.click()}
+                    className="w-full h-16 rounded-lg border-2 border-dashed border-[#2A2A3A] hover:border-[#7C3AED] flex items-center justify-center gap-2 text-[#555568] hover:text-[#8888A0] transition-colors overflow-hidden"
+                  >
+                    {editRefImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={editRefImage} alt="ref" className="h-full w-auto object-cover" />
+                    ) : (
+                      <><Upload size={14} /><span className="text-[10px]">Subir imagen de referencia</span></>
+                    )}
+                  </button>
+                  {editRefImage && (
+                    <button onClick={() => setEditRefImage(null)} className="mt-1 text-[9px] text-[#555568] hover:text-red-400 transition-colors">
+                      × Quitar imagen
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    if (editInstruction.trim() || editRefImage) {
+                      onApplyEdit(editInstruction, editRefImage);
+                    }
+                  }}
+                  disabled={applying || (!editInstruction.trim() && !editRefImage)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                  style={{ background: color }}
+                >
+                  {applying
+                    ? <><Loader2 size={13} className="animate-spin" />Aplicando edición...</>
+                    : <><Wand2 size={13} />Aplicar Edición</>}
+                </button>
+              </div>
+            )}
+
+            {/* Canva */}
+            <button
+              onClick={openCanva}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[rgba(139,92,246,0.35)] hover:border-[#8B5CF6] hover:bg-[rgba(139,92,246,0.07)] transition-all text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[rgba(139,92,246,0.15)] border border-[rgba(139,92,246,0.3)] flex items-center justify-center flex-shrink-0">
+                <span className="text-base">🎨</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[#A78BFA] text-xs font-semibold">Editar en Canva</p>
+                <p className="text-[#555568] text-[10px]">
+                  {canvaCopied ? "✅ URL copiada — importa en Canva" : "Abre Canva · copia URL al portapapeles"}
+                </p>
+              </div>
+              <ChevronRight size={14} className="text-[#8B5CF6] flex-shrink-0" />
+            </button>
+
+            {/* WhatsApp */}
+            <button
+              onClick={shareWhatsApp}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[rgba(37,211,102,0.3)] hover:border-[#25D366] hover:bg-[rgba(37,211,102,0.07)] transition-all text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[rgba(37,211,102,0.15)] border border-[rgba(37,211,102,0.3)] flex items-center justify-center flex-shrink-0">
+                <span className="text-base">💬</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold" style={{ color: "#25D366" }}>Compartir por WhatsApp</p>
+                <p className="text-[#555568] text-[10px]">Enviar a clientes o equipo</p>
+              </div>
+              <ChevronRight size={14} style={{ color: "#25D366" }} className="flex-shrink-0" />
+            </button>
+
+            {/* Nueva versión */}
+            <button
+              onClick={onNewVersion}
+              disabled={applying}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[#2A2A3A] hover:border-[#3A3A4A] hover:bg-[#1C1C26] transition-all text-left disabled:opacity-60"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[#1C1C26] border border-[#2A2A3A] flex items-center justify-center flex-shrink-0">
+                <RefreshCw size={14} className="text-[#8888A0]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[#F0F0F5] text-xs font-semibold">Nueva versión</p>
+                <p className="text-[#555568] text-[10px]">Regenerar con las mismas configuraciones</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Banner Mode: SectionRow (inline template gallery + image generation) ─────
 
 function SectionRow({ section, config, images, isGenerating, templates, isLoadingTemplates, selectedTemplateId, productName, landingId, onSelectTemplate, onImageGenerated, onOpenGallery }: {
@@ -757,13 +1010,15 @@ function SectionRow({ section, config, images, isGenerating, templates, isLoadin
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [previewIdx, setPreviewIdx] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalApplying, setModalApplying] = useState(false);
   const generating = localGenerating || isGenerating;
   const selectedTemplate = selectedTemplateId
     ? templates.find((t) => t.id === selectedTemplateId) ?? null
     : null;
   const currentImage = images[previewIdx] ?? null;
 
-  async function handleGenerate() {
+  async function handleGenerate(editOpts?: { instruction: string; refImageBase64: string | null }) {
     setLocalGenerating(true);
     setError(null);
     try {
@@ -787,6 +1042,8 @@ function SectionRow({ section, config, images, isGenerating, templates, isLoadin
           aiModel: config.aiModel,
           priceSale: config.priceSale,
           priceOriginal: config.priceOriginal,
+          editInstruction: editOpts?.instruction || undefined,
+          editRefImageBase64: editOpts?.refImageBase64 || undefined,
         }),
       });
       const data = await res.json();
@@ -801,6 +1058,14 @@ function SectionRow({ section, config, images, isGenerating, templates, isLoadin
     } finally {
       setLocalGenerating(false);
     }
+  }
+
+  async function handleApplyEdit(instruction: string, refImageBase64: string | null) {
+    setModalApplying(true);
+    setModalOpen(false);
+    await handleGenerate({ instruction, refImageBase64 });
+    setModalApplying(false);
+    setModalOpen(true);
   }
 
   async function handleDownload(url: string) {
@@ -825,6 +1090,18 @@ function SectionRow({ section, config, images, isGenerating, templates, isLoadin
 
   return (
     <div className="rounded-2xl border border-[#2A2A3A] bg-[#13131A] overflow-hidden">
+      {modalOpen && currentImage && (
+        <SectionImageModal
+          imageUrl={currentImage}
+          sectionLabel={section.label}
+          sectionIcon={section.icon}
+          color={color}
+          applying={modalApplying}
+          onClose={() => setModalOpen(false)}
+          onApplyEdit={handleApplyEdit}
+          onNewVersion={() => { setModalOpen(false); handleGenerate(); }}
+        />
+      )}
       <div className="h-0.5 w-full" style={{ background: color }} />
       <div className="p-4">
         {/* Header */}
@@ -851,7 +1128,7 @@ function SectionRow({ section, config, images, isGenerating, templates, isLoadin
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[rgba(124,58,237,0.4)] bg-[rgba(124,58,237,0.10)] text-[#A78BFA] text-[10px] font-semibold hover:bg-[rgba(124,58,237,0.18)] transition-colors flex-shrink-0">
             <Wand2 size={11} />Studio
           </Link>
-          <button onClick={handleGenerate} disabled={generating}
+          <button onClick={() => handleGenerate()} disabled={generating}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-semibold transition-colors disabled:opacity-60 flex-shrink-0"
             style={{ background: color }}>
             {generating ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
@@ -924,16 +1201,23 @@ function SectionRow({ section, config, images, isGenerating, templates, isLoadin
 
         {currentImage ? (
           <div className="flex gap-3">
-            <div className="relative rounded-xl overflow-hidden bg-[#0A0A0F] border border-[#2A2A3A] flex-shrink-0"
-              style={{ width: 132, aspectRatio: "9/16" }}>
+            <button
+              onClick={() => setModalOpen(true)}
+              className="relative rounded-xl overflow-hidden bg-[#0A0A0F] border border-[#2A2A3A] flex-shrink-0 cursor-pointer hover:border-[#555568] transition-colors group"
+              style={{ width: 132, aspectRatio: "9/16" }}
+              title="Ver y editar imagen"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={currentImage} alt={section.label} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/45 transition-all">
+                <Eye size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
               {images.length > 1 && (
                 <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] backdrop-blur-sm">
                   {previewIdx + 1}/{images.length}
                 </div>
               )}
-            </div>
+            </button>
             <div className="flex-1 min-w-0 flex flex-col gap-2">
               {images.length > 1 && (
                 <div className="flex gap-1.5 flex-wrap">
@@ -952,7 +1236,7 @@ function SectionRow({ section, config, images, isGenerating, templates, isLoadin
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] text-[10px] font-medium transition-colors disabled:opacity-60">
                   {downloading ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}Descargar
                 </button>
-                <button onClick={handleGenerate} disabled={generating}
+                <button onClick={() => handleGenerate()} disabled={generating}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-medium transition-colors disabled:opacity-60"
                   style={{ borderColor: color + "55", color, background: color + "12" }}>
                   <RefreshCw size={11} />Nueva version
