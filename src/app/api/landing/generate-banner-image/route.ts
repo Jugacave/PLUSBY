@@ -125,6 +125,10 @@ interface GeneratedCopy {
   layoutDescription: string;
   visualStyle: string;
   productDescription: string;
+  sceneDescription: string;
+  cinematicEffects: string;
+  moodKeywords: string;
+  lightingStyle: string;
   headline: string;
   subheadline: string;
   bodyText: string;
@@ -176,6 +180,10 @@ async function analyzeAndWriteCopy(body: RequestBody): Promise<GeneratedCopy | n
     jsonFields.push(`"layoutDescription": "Descripción en español de la disposición visual del banner (1 oración)"`);
     jsonFields.push(`"visualStyle": "Estilo visual: paleta de colores en español, ambiente, mood (1 oración)"`);
     jsonFields.push(`"productDescription": "Descripción visual del producto en español: tipo, color, forma del envase (1 oración corta)"`);
+    jsonFields.push(`"sceneDescription": "Escena/ambiente cinematográfico en español que encaje con el producto y el ángulo de venta: describe el entorno y, SOLO si encaja naturalmente con el producto, un personaje (modelo/atleta/persona) usando o disfrutando el producto, con su expresión y pose emocional. Estilo publicidad ecommerce premium. 1-2 oraciones."`);
+    jsonFields.push(`"cinematicEffects": "Lista corta separada por comas de efectos visuales cinematográficos que encajen con el producto (ej: partículas flotantes, salpicaduras de agua, lens flares, glow neón, motion blur, rayos de luz). Máx 5."`);
+    jsonFields.push(`"moodKeywords": "4-6 palabras de mood/emoción separadas por comas en español (ej: explosivo, energético, aspiracional, premium, motivacional)"`);
+    jsonFields.push(`"lightingStyle": "Estilo de iluminación en español, lenguaje de fotografía publicitaria (ej: iluminación comercial de alta gama con rim light volumétrico, reflejos glossy y contraste cinematográfico)"`);
 
     const userContent: Array<
       | { type: "image"; source: { type: "url"; url: string } }
@@ -208,7 +216,7 @@ Responde ÚNICAMENTE con este JSON (sin markdown):
 
     const message = await anthropic.messages.create({
       model: "claude-opus-4-7",
-      max_tokens: 800,
+      max_tokens: 1100,
       messages: [{ role: "user", content: userContent }],
     });
 
@@ -221,6 +229,10 @@ Responde ÚNICAMENTE con este JSON (sin markdown):
       layoutDescription: parsed.layoutDescription ?? "",
       visualStyle: parsed.visualStyle ?? "",
       productDescription: parsed.productDescription ?? "",
+      sceneDescription: (parsed.sceneDescription ?? "").trim(),
+      cinematicEffects: (parsed.cinematicEffects ?? "").trim(),
+      moodKeywords: (parsed.moodKeywords ?? "").trim(),
+      lightingStyle: (parsed.lightingStyle ?? "").trim(),
       headline: (parsed.headline ?? "").trim(),
       subheadline: (parsed.subheadline ?? "").trim(),
       bodyText: "",
@@ -359,14 +371,33 @@ NO crees un nuevo layout. Mantén la ESTRUCTURA y COMPOSICIÓN ~95% idéntica a 
     parts.push(`EDICIÓN SOLICITADA POR EL USUARIO (prioridad máxima — aplica este cambio específico al resultado):\n"${body.editInstruction}"`);
   }
 
+  // ── Cinematic enhancement blocks ──────────────────────────────────────────
+  // Quality/lighting/mood are SAFE with templates (they don't alter layout).
+  // Scene + dramatic composition apply ONLY without a template, to avoid
+  // fighting the template's structure.
+  const renderQualityBlock = `CALIDAD DE RENDER (publicidad premium):
+- Fotografía comercial cinematográfica ultra realista con realce CGI del producto.
+- Producto hero ultra detallado: texturas reales, reflejos glossy, highlights metálicos, rim light volumétrico.
+- Iluminación: ${copy.lightingStyle || "iluminación comercial de alta gama, rim light fuerte, contraste cinematográfico, reflejos glossy, glow volumétrico, sombras profundas con highlights limpios"}.
+- Profundidad de campo cinematográfica, enfoque nítido, detalle 8K, calidad de campaña publicitaria.`;
+
+  const moodBlock = copy.moodKeywords ? `MOOD: ${copy.moodKeywords}.` : "";
+
+  const sceneBlock = !hasTemplate && copy.sceneDescription
+    ? `ESCENA / AMBIENTE: ${copy.sceneDescription}
+${copy.cinematicEffects ? `EFECTOS CINEMATOGRÁFICOS: ${copy.cinematicEffects}.` : ""}COMPOSICIÓN: layout vertical dinámico optimizado para conversión ecommerce — producto hero sobredimensionado con perspectiva dramática, composición por capas, jerarquía tipográfica fuerte.`
+    : "";
+
   parts.push(`Crea un banner publicitario vertical 9:16 (1080x1920) en español, calidad comercial premium.
 
 DISEÑO: ${spec.visualDescription}
 ${copy.layoutDescription ? `Disposición: ${copy.layoutDescription}` : ""}
-
-PRODUCTO A MOSTRAR: ${copy.productDescription || body.productName || ""}. Debe verse fotorealista, nítido, con iluminación profesional de estudio.
+${sceneBlock ? "\n" + sceneBlock + "\n" : ""}
+PRODUCTO A MOSTRAR: ${copy.productDescription || body.productName || ""}. Producto hero ultra detallado y fotorealista.
 
 ESTILO VISUAL: ${copy.visualStyle || "moderno, limpio, profesional"}
+${moodBlock ? "\n" + moodBlock + "\n" : ""}
+${renderQualityBlock}
 
 TEXTO EN EL BANNER — RENDERIZA EXACTAMENTE ESTAS PALABRAS EN ESPAÑOL CORRECTO, NADA MÁS:
 ${textList}
@@ -375,9 +406,8 @@ REGLAS ESTRICTAS:
 - Renderiza ÚNICAMENTE los textos listados arriba. NO añadas ningún otro texto.
 - Cada palabra debe estar PERFECTAMENTE escrita en español, letra por letra.
 - NO inventes palabras. NO escribas texto en inglés.
-- Tipografía clara, bold, legible. Kerning perfecto.
-- Sin marcas de agua. Sin logos extra. Sin texto decorativo random.
-- Fotografía publicitaria de alta gama. 4K, nítido, profesional.`);
+- Tipografía bold, condensada, alto contraste, legible, con jerarquía fuerte estilo campaña publicitaria. Kerning perfecto.
+- Sin marcas de agua. Sin logos extra. Sin texto decorativo random.`);
 
   return parts.join("\n\n");
 }
