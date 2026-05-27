@@ -115,6 +115,8 @@ type RequestBody = {
   aiModel: string;
   priceSale?: string;
   priceOriginal?: string;
+  editInstruction?: string;
+  editRefImageBase64?: string;
 };
 
 // ─── Stage 1: Claude Vision — analyze template + write Spanish copy ──────────
@@ -123,6 +125,10 @@ interface GeneratedCopy {
   layoutDescription: string;
   visualStyle: string;
   productDescription: string;
+  sceneDescription: string;
+  cinematicEffects: string;
+  moodKeywords: string;
+  lightingStyle: string;
   headline: string;
   subheadline: string;
   bodyText: string;
@@ -174,6 +180,10 @@ async function analyzeAndWriteCopy(body: RequestBody): Promise<GeneratedCopy | n
     jsonFields.push(`"layoutDescription": "Descripción en español de la disposición visual del banner (1 oración)"`);
     jsonFields.push(`"visualStyle": "Estilo visual: paleta de colores en español, ambiente, mood (1 oración)"`);
     jsonFields.push(`"productDescription": "Descripción visual del producto en español: tipo, color, forma del envase (1 oración corta)"`);
+    jsonFields.push(`"sceneDescription": "Escena/ambiente cinematográfico en español que encaje con el producto y el ángulo de venta: describe el entorno y, SOLO si encaja naturalmente con el producto, un personaje (modelo/atleta/persona) usando o disfrutando el producto, con su expresión y pose emocional. Estilo publicidad ecommerce premium. 1-2 oraciones."`);
+    jsonFields.push(`"cinematicEffects": "Lista corta separada por comas de efectos visuales cinematográficos que encajen con el producto (ej: partículas flotantes, salpicaduras de agua, lens flares, glow neón, motion blur, rayos de luz). Máx 5."`);
+    jsonFields.push(`"moodKeywords": "4-6 palabras de mood/emoción separadas por comas en español (ej: explosivo, energético, aspiracional, premium, motivacional)"`);
+    jsonFields.push(`"lightingStyle": "Estilo de iluminación en español, lenguaje de fotografía publicitaria (ej: iluminación comercial de alta gama con rim light volumétrico, reflejos glossy y contraste cinematográfico)"`);
 
     const userContent: Array<
       | { type: "image"; source: { type: "url"; url: string } }
@@ -206,7 +216,7 @@ Responde ÚNICAMENTE con este JSON (sin markdown):
 
     const message = await anthropic.messages.create({
       model: "claude-opus-4-7",
-      max_tokens: 800,
+      max_tokens: 1100,
       messages: [{ role: "user", content: userContent }],
     });
 
@@ -219,6 +229,10 @@ Responde ÚNICAMENTE con este JSON (sin markdown):
       layoutDescription: parsed.layoutDescription ?? "",
       visualStyle: parsed.visualStyle ?? "",
       productDescription: parsed.productDescription ?? "",
+      sceneDescription: (parsed.sceneDescription ?? "").trim(),
+      cinematicEffects: (parsed.cinematicEffects ?? "").trim(),
+      moodKeywords: (parsed.moodKeywords ?? "").trim(),
+      lightingStyle: (parsed.lightingStyle ?? "").trim(),
       headline: (parsed.headline ?? "").trim(),
       subheadline: (parsed.subheadline ?? "").trim(),
       bodyText: "",
@@ -353,14 +367,37 @@ NO crees un nuevo layout. Mantén la ESTRUCTURA y COMPOSICIÓN ~95% idéntica a 
     parts.push(...imageRolesParts);
   }
 
+  if (body.editInstruction) {
+    parts.push(`EDICIÓN SOLICITADA POR EL USUARIO (prioridad máxima — aplica este cambio específico al resultado):\n"${body.editInstruction}"`);
+  }
+
+  // ── Cinematic enhancement blocks ──────────────────────────────────────────
+  // Quality/lighting/mood are SAFE with templates (they don't alter layout).
+  // Scene + dramatic composition apply ONLY without a template, to avoid
+  // fighting the template's structure.
+  const renderQualityBlock = `CALIDAD DE RENDER (publicidad premium):
+- Fotografía comercial cinematográfica ultra realista con realce CGI del producto.
+- Producto hero ultra detallado: texturas reales, reflejos glossy, highlights metálicos, rim light volumétrico.
+- Iluminación: ${copy.lightingStyle || "iluminación comercial de alta gama, rim light fuerte, contraste cinematográfico, reflejos glossy, glow volumétrico, sombras profundas con highlights limpios"}.
+- Profundidad de campo cinematográfica, enfoque nítido, detalle 8K, calidad de campaña publicitaria.`;
+
+  const moodBlock = copy.moodKeywords ? `MOOD: ${copy.moodKeywords}.` : "";
+
+  const sceneBlock = !hasTemplate && copy.sceneDescription
+    ? `ESCENA / AMBIENTE: ${copy.sceneDescription}
+${copy.cinematicEffects ? `EFECTOS CINEMATOGRÁFICOS: ${copy.cinematicEffects}.` : ""}COMPOSICIÓN: layout vertical dinámico optimizado para conversión ecommerce — producto hero sobredimensionado con perspectiva dramática, composición por capas, jerarquía tipográfica fuerte.`
+    : "";
+
   parts.push(`Crea un banner publicitario vertical 9:16 (1080x1920) en español, calidad comercial premium.
 
 DISEÑO: ${spec.visualDescription}
 ${copy.layoutDescription ? `Disposición: ${copy.layoutDescription}` : ""}
-
-PRODUCTO A MOSTRAR: ${copy.productDescription || body.productName || ""}. Debe verse fotorealista, nítido, con iluminación profesional de estudio.
+${sceneBlock ? "\n" + sceneBlock + "\n" : ""}
+PRODUCTO A MOSTRAR: ${copy.productDescription || body.productName || ""}. Producto hero ultra detallado y fotorealista.
 
 ESTILO VISUAL: ${copy.visualStyle || "moderno, limpio, profesional"}
+${moodBlock ? "\n" + moodBlock + "\n" : ""}
+${renderQualityBlock}
 
 TEXTO EN EL BANNER — RENDERIZA EXACTAMENTE ESTAS PALABRAS EN ESPAÑOL CORRECTO, NADA MÁS:
 ${textList}
@@ -369,9 +406,8 @@ REGLAS ESTRICTAS:
 - Renderiza ÚNICAMENTE los textos listados arriba. NO añadas ningún otro texto.
 - Cada palabra debe estar PERFECTAMENTE escrita en español, letra por letra.
 - NO inventes palabras. NO escribas texto en inglés.
-- Tipografía clara, bold, legible. Kerning perfecto.
-- Sin marcas de agua. Sin logos extra. Sin texto decorativo random.
-- Fotografía publicitaria de alta gama. 4K, nítido, profesional.`);
+- Tipografía bold, condensada, alto contraste, legible, con jerarquía fuerte estilo campaña publicitaria. Kerning perfecto.
+- Sin marcas de agua. Sin logos extra. Sin texto decorativo random.`);
 
   return parts.join("\n\n");
 }
@@ -401,6 +437,7 @@ async function callGptImage1Edit(params: {
   model?: "gpt-image-1" | "gpt-image-2";
   size?: string;
   quality?: string;
+  extraBlobs?: Array<{ blob: Blob; filename: string }>;
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
     const model = params.model ?? "gpt-image-1";
@@ -415,6 +452,9 @@ async function callGptImage1Edit(params: {
       const fetched = await fetchAsBlob(url);
       if (!fetched) continue;
       form.append("image[]", fetched.blob, fetched.filename);
+    }
+    for (const extra of params.extraBlobs ?? []) {
+      form.append("image[]", extra.blob, extra.filename);
     }
 
     const res = await fetch("https://api.openai.com/v1/images/edits", {
@@ -556,6 +596,12 @@ async function callGeminiImage(params: {
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const parts: unknown[] = [{ text: params.prompt }];
   for (const url of params.imageUrls.slice(0, 8)) {
+    if (url.startsWith("data:")) {
+      const [meta, data] = url.split(",");
+      const mimeType = meta.replace("data:", "").replace(";base64", "");
+      parts.push({ inlineData: { mimeType, data } });
+      continue;
+    }
     const img = await fetchAsBase64(url);
     if (!img) continue;
     parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
@@ -612,6 +658,18 @@ export async function POST(req: NextRequest) {
   const hasTemplate = !!body.templateUrl;
   const hasRefImages = hasTemplate || productImages.length > 0;
 
+  // Parse edit ref image base64 → blob (for GPT edit mode)
+  let editRefBlob: { blob: Blob; filename: string } | undefined;
+  if (body.editRefImageBase64) {
+    try {
+      const [meta, b64data] = body.editRefImageBase64.split(",");
+      const mime = meta.match(/data:([^;]+)/)?.[1] ?? "image/png";
+      const ext = mime.split("/")[1] ?? "png";
+      const buf = Buffer.from(b64data, "base64");
+      editRefBlob = { blob: new Blob([buf], { type: mime }), filename: `edit-ref.${ext}` };
+    } catch { /* ignore invalid base64 */ }
+  }
+
   // Stage 1: Claude Vision + Spanish copywriting
   const copy = await analyzeAndWriteCopy(body);
   const prompt = buildImagePrompt(body, copy);
@@ -627,6 +685,7 @@ export async function POST(req: NextRequest) {
     const imageUrls: string[] = [];
     if (hasTemplate) imageUrls.push(body.templateUrl!);
     imageUrls.push(...productImages.slice(0, 7));
+    if (body.editRefImageBase64) imageUrls.push(body.editRefImageBase64);
 
     const out = await callGeminiImage({ apiKey: geminiKey, prompt, imageUrls, models: GEMINI_MODELS[aiModel] });
     if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: aiModel });
@@ -656,7 +715,7 @@ export async function POST(req: NextRequest) {
       if (hasTemplate) imageUrls.push(body.templateUrl!);
       imageUrls.push(...productImages.slice(0, 7)); // max 8 total including template
 
-      const out = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls, model, size, quality });
+      const out = await callGptImage1Edit({ apiKey: openaiKey, prompt, imageUrls, model, size, quality, extraBlobs: editRefBlob ? [editRefBlob] : undefined });
       if (out.ok) return NextResponse.json({ ok: true, imageUrl: out.url, mode: `${model}-edit` });
       // On edit failure, fall through to generate mode
     }
