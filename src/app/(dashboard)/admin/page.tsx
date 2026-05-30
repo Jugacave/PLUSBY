@@ -46,6 +46,16 @@ interface PendingProfile {
   created_at: string;
 }
 
+interface RealProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: string;
+  plan: string;
+  status: string;
+  created_at: string;
+}
+
 type AdminTab = "overview" | "academia" | "proveedores" | "suscripciones" | "usuarios";
 
 type Plan = "free" | "basico" | "premium" | "superadmin";
@@ -578,35 +588,68 @@ function SuscripcionesTab({ users, setUsers }: { users: AdminUser[]; setUsers: R
 
 // ─── Tab: Usuarios ────────────────────────────────────────────────────────────
 
-function UsuariosTab({ users, setUsers }: { users: AdminUser[]; setUsers: React.Dispatch<React.SetStateAction<AdminUser[]>> }) {
-  const ROLES = ["user", "mentor", "superadmin"];
-  const ROLE_COLORS: Record<string, string> = { user: "#555568", mentor: "#8B5CF6", superadmin: "#FF6B35" };
+const ROLE_COLORS: Record<string, string> = { user: "#555568", admin: "#8B5CF6", superadmin: "#FF6B35" };
+const PLAN_LABEL: Record<string, string> = { free: "Free", starter: "Starter", pro: "Pro", enterprise: "Enterprise" };
+const PLAN_COLOR: Record<string, string> = { free: "#555568", starter: "#3B82F6", pro: "#F59E0B", enterprise: "#FF6B35" };
 
+function UsuariosTab({ users: _users }: { users: AdminUser[]; setUsers: React.Dispatch<React.SetStateAction<AdminUser[]>> }) {
   const [pending, setPending] = useState<PendingProfile[]>([]);
+  const [approved, setApproved] = useState<RealProfile[]>([]);
   const [loadingPending, setLoadingPending] = useState(true);
+  const [loadingApproved, setLoadingApproved] = useState(true);
   const [actioning, setActioning] = useState<string | null>(null);
+  const [pendingError, setPendingError] = useState<string | null>(null);
+  const [approvedError, setApprovedError] = useState<string | null>(null);
 
-  useEffect(() => {
+  function loadData() {
     const supabase = createClient();
+    setLoadingPending(true);
+    setLoadingApproved(true);
+    setPendingError(null);
+    setApprovedError(null);
+
     supabase
       .from("profiles")
       .select("id, email, full_name, created_at")
       .eq("status", "pending")
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setPending(data ?? []);
+      .then(({ data, error }) => {
+        if (error) setPendingError(error.message);
+        else setPending(data ?? []);
         setLoadingPending(false);
       });
-  }, []);
+
+    supabase
+      .from("profiles")
+      .select("id, email, full_name, role, plan, status, created_at")
+      .in("status", ["approved"])
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) setApprovedError(error.message);
+        else setApproved(data ?? []);
+        setLoadingApproved(false);
+      });
+  }
+
+  useEffect(() => { loadData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function approve(profileId: string) {
     setActioning(profileId);
     const supabase = createClient();
-    await supabase
+    const { error } = await supabase
       .from("profiles")
       .update({ status: "approved", approved_at: new Date().toISOString() })
       .eq("id", profileId);
-    setPending(prev => prev.filter(p => p.id !== profileId));
+    if (!error) {
+      const moved = pending.find(p => p.id === profileId);
+      setPending(prev => prev.filter(p => p.id !== profileId));
+      if (moved) {
+        setApproved(prev => [
+          { id: moved.id, email: moved.email, full_name: moved.full_name, role: "user", plan: "free", status: "approved", created_at: moved.created_at },
+          ...prev,
+        ]);
+      }
+    }
     setActioning(null);
   }
 
@@ -621,11 +664,10 @@ function UsuariosTab({ users, setUsers }: { users: AdminUser[]; setUsers: React.
     setActioning(null);
   }
 
-  function changeRole(userId: string, role: string) {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
-  }
-  function toggleActive(userId: string) {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, active: !u.active } : u));
+  async function changeRole(profileId: string, role: string) {
+    const supabase = createClient();
+    await supabase.from("profiles").update({ role }).eq("id", profileId);
+    setApproved(prev => prev.map(u => u.id === profileId ? { ...u, role } : u));
   }
 
   function initials(name: string | null, email: string) {
@@ -649,19 +691,33 @@ function UsuariosTab({ users, setUsers }: { users: AdminUser[]; setUsers: React.
               {pending.length}
             </span>
           )}
+          <button onClick={loadData} className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-lg border border-[#2A2A3A] text-[#8888A0] text-xs hover:bg-[#1C1C26] transition-colors">
+            <Activity size={12} /> Actualizar
+          </button>
         </div>
+
+        {pendingError && (
+          <div className="flex items-start gap-3 p-4 rounded-xl border border-[#EF4444]/30 bg-[rgba(239,68,68,0.05)] mb-3">
+            <AlertCircle size={15} className="text-[#EF4444] shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[#EF4444] text-xs font-semibold mb-1">Error al cargar pendientes</p>
+              <p className="text-[#EF4444]/70 text-xs font-mono">{pendingError}</p>
+              <p className="text-[#8888A0] text-xs mt-1">Verifica que las políticas RLS estén aplicadas en Supabase (migración 001_profiles_plans.sql).</p>
+            </div>
+          </div>
+        )}
 
         {loadingPending ? (
           <div className="flex items-center justify-center py-8 text-[#555568]">
             <Loader2 size={18} className="animate-spin mr-2" />
             <span className="text-sm">Cargando...</span>
           </div>
-        ) : pending.length === 0 ? (
+        ) : pending.length === 0 && !pendingError ? (
           <div className="flex items-center gap-3 p-4 rounded-xl border border-[#2A2A3A] bg-[#13131A]">
             <CheckCircle2 size={16} className="text-[#10B981] shrink-0" />
             <p className="text-[#8888A0] text-sm">No hay solicitudes pendientes.</p>
           </div>
-        ) : (
+        ) : pending.length > 0 ? (
           <div className="rounded-xl border border-[rgba(245,158,11,0.3)] bg-[#13131A] overflow-hidden">
             <table className="w-full">
               <thead>
@@ -713,7 +769,7 @@ function UsuariosTab({ users, setUsers }: { users: AdminUser[]; setUsers: React.
               </tbody>
             </table>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* ── SQL hint ── */}
@@ -722,61 +778,91 @@ function UsuariosTab({ users, setUsers }: { users: AdminUser[]; setUsers: React.
         <p className="text-[#F59E0B] text-xs">Para asignar rol <strong>superadmin</strong>: <code className="bg-[#1C1C26] px-1 rounded">UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || &#123;&apos;&quot;role&quot;: &quot;superadmin&quot;&apos;&#125; WHERE email = &apos;tu@email.com&apos;;</code></p>
       </div>
 
-      {/* ── Active users table (mock) ── */}
+      {/* ── Approved users (real data from Supabase) ── */}
       <div>
         <h3 className="text-[#F0F0F5] font-semibold text-sm mb-3 flex items-center gap-2">
           <Users size={15} className="text-[#8888A0]" />
-          Usuarios activos
+          Usuarios aprobados
+          {!loadingApproved && <span className="text-[#555568] text-xs font-normal">({approved.length})</span>}
         </h3>
-        <div className="rounded-xl border border-[#2A2A3A] bg-[#13131A] overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[#2A2A3A]">
-                <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Usuario</th>
-                <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Rol</th>
-                <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Plan</th>
-                <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Estado</th>
-                <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Cambiar Rol</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => (
-                <tr key={u.id} className="border-b border-[#2A2A3A] last:border-0">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div className="w-8 h-8 rounded-full bg-[#FF6B35] flex items-center justify-center text-white text-xs font-bold">{u.avatar}</div>
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#13131A] ${u.active ? "bg-[#10B981]" : "bg-[#555568]"}`} />
-                      </div>
-                      <div>
-                        <p className="text-[#F0F0F5] text-sm font-medium">{u.name}</p>
-                        <p className="text-[#555568] text-xs">{u.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ color: ROLE_COLORS[u.role] ?? "#555568", background: `${ROLE_COLORS[u.role] ?? "#555568"}18` }}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3"><PlanBadge plan={u.plan} /></td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => toggleActive(u.id)} className="flex items-center gap-1.5 text-xs">
-                      {u.active ? <><UserCheck size={13} className="text-[#10B981]" /><span className="text-[#10B981]">Activo</span></> : <><X size={13} className="text-[#555568]" /><span className="text-[#555568]">Inactivo</span></>}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    {u.role !== "superadmin" && (
-                      <select value={u.role} onChange={e => changeRole(u.id, e.target.value)} className="bg-[#0A0A0F] border border-[#2A2A3A] rounded-lg px-2 py-1 text-[#F0F0F5] text-xs focus:outline-none focus:border-[#FF6B35]">
-                        {ROLES.filter(r => r !== "superadmin").map(r => <option key={r}>{r}</option>)}
-                      </select>
-                    )}
-                  </td>
+
+        {approvedError && (
+          <div className="flex items-start gap-3 p-4 rounded-xl border border-[#EF4444]/30 bg-[rgba(239,68,68,0.05)] mb-3">
+            <AlertCircle size={15} className="text-[#EF4444] shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[#EF4444] text-xs font-semibold mb-1">Error al cargar usuarios</p>
+              <p className="text-[#EF4444]/70 text-xs font-mono">{approvedError}</p>
+            </div>
+          </div>
+        )}
+
+        {loadingApproved ? (
+          <div className="flex items-center justify-center py-8 text-[#555568]">
+            <Loader2 size={18} className="animate-spin mr-2" />
+            <span className="text-sm">Cargando usuarios...</span>
+          </div>
+        ) : approved.length === 0 && !approvedError ? (
+          <div className="flex items-center gap-3 p-4 rounded-xl border border-[#2A2A3A] bg-[#13131A]">
+            <Users size={16} className="text-[#555568] shrink-0" />
+            <p className="text-[#8888A0] text-sm">No hay usuarios aprobados todavía.</p>
+          </div>
+        ) : approved.length > 0 ? (
+          <div className="rounded-xl border border-[#2A2A3A] bg-[#13131A] overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#2A2A3A]">
+                  <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Usuario</th>
+                  <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Rol</th>
+                  <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Plan</th>
+                  <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Registro</th>
+                  <th className="text-left px-4 py-3 text-[#555568] text-xs font-semibold uppercase tracking-wide">Cambiar Rol</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {approved.map(u => (
+                  <tr key={u.id} className="border-b border-[#2A2A3A] last:border-0">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#FF6B35] flex items-center justify-center text-white text-xs font-bold">
+                          {initials(u.full_name, u.email)}
+                        </div>
+                        <div>
+                          <p className="text-[#F0F0F5] text-sm font-medium">{u.full_name || "—"}</p>
+                          <p className="text-[#555568] text-xs">{u.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ color: ROLE_COLORS[u.role] ?? "#555568", background: `${ROLE_COLORS[u.role] ?? "#555568"}18` }}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ color: PLAN_COLOR[u.plan] ?? "#555568", background: `${PLAN_COLOR[u.plan] ?? "#555568"}18` }}>
+                        {PLAN_LABEL[u.plan] ?? u.plan}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-[#555568] text-xs">{formatDate(u.created_at)}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.role !== "superadmin" && (
+                        <select
+                          value={u.role}
+                          onChange={e => changeRole(u.id, e.target.value)}
+                          className="bg-[#0A0A0F] border border-[#2A2A3A] rounded-lg px-2 py-1 text-[#F0F0F5] text-xs focus:outline-none focus:border-[#FF6B35]"
+                        >
+                          <option value="user">user</option>
+                          <option value="admin">admin</option>
+                        </select>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       </div>
     </div>
   );
