@@ -74,27 +74,47 @@ function slugify(text: string) {
     .replace(/\s+/g, "-");
 }
 
+interface ForgeConfig {
+  country: string;
+  priceOriginal: string;
+  price1u: string;
+  price2u: string;
+  price3u: string;
+  benefits: string;
+  urgency: string;
+}
+
+const COUNTRIES = ["Colombia", "México", "Perú", "Ecuador", "Chile", "Argentina", "Venezuela", "España"];
+
 function CreateModal({
   onClose,
   onCreate,
 }: {
   onClose: () => void;
-  onCreate: (name: string, product: string, template: string, mode: LandingMode) => Promise<string | null>;
+  onCreate: (name: string, product: string, template: string, mode: LandingMode, forgeConfig?: ForgeConfig) => Promise<string | null>;
 }) {
-  const [step, setStep] = useState<"mode" | "template" | "details">("mode");
+  const [step, setStep] = useState<"mode" | "template" | "details" | "forge">("mode");
   const [selectedMode, setSelectedMode] = useState<LandingMode>("page");
   const [selectedTemplate, setSelectedTemplate] = useState("impact");
   const [name, setName] = useState("");
   const [product, setProduct] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [forgeConfig, setForgeConfig] = useState<ForgeConfig>({
+    country: "Colombia", priceOriginal: "", price1u: "", price2u: "", price3u: "", benefits: "", urgency: "",
+  });
 
-  async function handleCreate() {
+  function setForge<K extends keyof ForgeConfig>(key: K, val: ForgeConfig[K]) {
+    setForgeConfig(p => ({ ...p, [key]: val }));
+  }
+
+  async function handleCreate(withForge?: boolean) {
     if (!name.trim() || !product.trim()) return;
     setError(null);
     setCreating(true);
     try {
-      const err = await onCreate(name.trim(), product.trim(), selectedTemplate, selectedMode);
+      const cfg = withForge ? forgeConfig : undefined;
+      const err = await onCreate(name.trim(), product.trim(), selectedTemplate, selectedMode, cfg);
       if (err) setError(err);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error inesperado. Intenta de nuevo.");
@@ -363,14 +383,106 @@ function CreateModal({
                 >
                   Atrás
                 </button>
-                <button
-                  onClick={handleCreate}
-                  disabled={!name.trim() || !product.trim() || creating}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: selectedMode === "banners" ? "#7C3AED" : "#FF6B35" }}
-                >
+                {selectedMode === "page" ? (
+                  <button
+                    onClick={() => setStep("forge")}
+                    disabled={!name.trim() || !product.trim()}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#FF6B35] hover:bg-[#FF8C5A] text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Continuar
+                    <ChevronRight size={16} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleCreate(false)}
+                    disabled={!name.trim() || !product.trim() || creating}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: "#7C3AED" }}
+                  >
+                    {creating && <Loader2 size={15} className="animate-spin" />}
+                    {creating ? "Creando..." : "Crear"}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 4: Forge (page mode only) ── */}
+          {step === "forge" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.25)]">
+                <FileText size={14} className="text-[#10B981] shrink-0" />
+                <p className="text-[#10B981] text-xs font-medium">
+                  Configura tu landing para Shopify — estructura AIDA de alta conversión en 4 bloques.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#F0F0F5] mb-1.5">País / mercado objetivo</label>
+                <select value={forgeConfig.country} onChange={e => setForge("country", e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] focus:outline-none focus:border-[#10B981] text-sm">
+                  {COUNTRIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#F0F0F5] mb-1.5">Precio original (tachado)</label>
+                  <input value={forgeConfig.priceOriginal} onChange={e => setForge("priceOriginal", e.target.value)}
+                    placeholder="$299.900"
+                    className="w-full px-3 py-2.5 rounded-lg bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#10B981] text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#F0F0F5] mb-1.5">Precio 1 unidad</label>
+                  <input value={forgeConfig.price1u} onChange={e => setForge("price1u", e.target.value)}
+                    placeholder="$149.900"
+                    className="w-full px-3 py-2.5 rounded-lg bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#10B981] text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#F0F0F5] mb-1.5">Precio 2 unidades</label>
+                  <input value={forgeConfig.price2u} onChange={e => setForge("price2u", e.target.value)}
+                    placeholder="$259.900"
+                    className="w-full px-3 py-2.5 rounded-lg bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#10B981] text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#F0F0F5] mb-1.5">Precio 3 unidades</label>
+                  <input value={forgeConfig.price3u} onChange={e => setForge("price3u", e.target.value)}
+                    placeholder="$339.900"
+                    className="w-full px-3 py-2.5 rounded-lg bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#10B981] text-sm" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#F0F0F5] mb-1.5">Beneficios principales <span className="text-[#555568] font-normal">(uno por línea)</span></label>
+                <textarea value={forgeConfig.benefits} onChange={e => setForge("benefits", e.target.value)}
+                  placeholder={"Reduce el azúcar en sangre en 30 días\nFórmula 100% natural sin efectos secundarios\nResultados visibles desde la primera semana"}
+                  rows={4}
+                  className="w-full px-3 py-2.5 rounded-lg bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#10B981] text-sm resize-none" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#F0F0F5] mb-1.5">Urgencia / escasez <span className="text-[#555568] font-normal">(opcional)</span></label>
+                <input value={forgeConfig.urgency} onChange={e => setForge("urgency", e.target.value)}
+                  placeholder="Solo 37 unidades disponibles · Oferta termina hoy"
+                  className="w-full px-3 py-2.5 rounded-lg bg-[#1C1C26] border border-[#2A2A3A] text-[#F0F0F5] placeholder-[#555568] focus:outline-none focus:border-[#10B981] text-sm" />
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2">
+                  <X size={13} className="text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-red-400 text-xs leading-snug">{error}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setStep("details")} disabled={creating}
+                  className="flex-1 py-3 rounded-xl border border-[#2A2A3A] text-[#8888A0] hover:text-[#F0F0F5] hover:border-[#3A3A4A] font-semibold text-sm transition-colors disabled:opacity-50">
+                  Atrás
+                </button>
+                <button onClick={() => handleCreate(true)} disabled={creating}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white font-semibold text-sm transition-colors disabled:opacity-50">
                   {creating && <Loader2 size={15} className="animate-spin" />}
-                  {creating ? "Creando..." : "Crear"}
+                  {creating ? "Creando..." : "Crear Landing Shopify"}
                 </button>
               </div>
             </div>
@@ -575,14 +687,20 @@ export default function LandingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleCreate(name: string, product: string, template: string, mode: LandingMode): Promise<string | null> {
+  async function handleCreate(name: string, product: string, template: string, mode: LandingMode, forgeConfig?: ForgeConfig): Promise<string | null> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return "No hay sesión activa. Recarga la página e inicia sesión de nuevo.";
 
     const slug = slugify(name);
+    const insertPayload: Record<string, unknown> = {
+      user_id: user.id, name, product, slug, template, mode,
+      published: false, views: 0, conversions: 0,
+    };
+    if (forgeConfig) insertPayload.forge_config = forgeConfig;
+
     const { data, error } = await supabase
       .from("landings")
-      .insert({ user_id: user.id, name, product, slug, template, mode, published: false, views: 0, conversions: 0 })
+      .insert(insertPayload)
       .select()
       .single();
 

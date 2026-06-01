@@ -405,9 +405,120 @@ function AddSectionModal({ onAdd, onClose, existing }: { onAdd: (t: SectionType)
   );
 }
 
-function PageEditorContent({ sections, setSections, product }: {
-  sections: Section[]; setSections: React.Dispatch<React.SetStateAction<Section[]>>; product: string;
+function ShopifyExportTab({ forgeConfig, product, landingName }: {
+  forgeConfig: Record<string, string>;
+  product: string;
+  landingName: string;
 }) {
+  const [generating, setGenerating] = useState(false);
+  const [blocks, setBlocks] = useState<{ title: string; html: string }[]>([]);
+  const [genError, setGenError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<number | null>(null);
+
+  async function generate() {
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const res = await fetch("/api/landing/generate-shopify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ landingName, product, forgeConfig }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error generando bloques");
+      setBlocks(data.blocks ?? []);
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : "Error inesperado");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function copyBlock(idx: number, html: string) {
+    navigator.clipboard.writeText(html);
+    setCopied(idx);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-4">
+      <div className="bg-[#13131A] border border-[rgba(16,185,129,0.3)] rounded-2xl p-5">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-[#F0F0F5] font-semibold mb-1">Exportar para Shopify</h3>
+            <p className="text-[#8888A0] text-xs">4 bloques HTML/Liquid listos para pegar en tu tema Shopify.</p>
+          </div>
+          <button
+            onClick={generate}
+            disabled={generating}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white font-semibold text-sm transition-colors disabled:opacity-60 shrink-0"
+          >
+            {generating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+            {generating ? "Generando..." : blocks.length ? "Regenerar" : "Generar bloques"}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          {[
+            ["País", forgeConfig.country],
+            ["Precio original", forgeConfig.priceOriginal || "—"],
+            ["1 unidad", forgeConfig.price1u || "—"],
+            ["2 unidades", forgeConfig.price2u || "—"],
+          ].map(([k, v]) => (
+            <div key={k} className="bg-[#1C1C26] rounded-lg px-3 py-2">
+              <span className="text-[#555568]">{k}: </span>
+              <span className="text-[#F0F0F5] font-medium">{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {genError && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-[#EF4444]/30 bg-[rgba(239,68,68,0.05)]">
+          <AlertCircle size={15} className="text-[#EF4444] shrink-0 mt-0.5" />
+          <p className="text-[#EF4444] text-xs">{genError}</p>
+        </div>
+      )}
+
+      {blocks.map((block, idx) => (
+        <div key={idx} className="bg-[#13131A] border border-[#2A2A3A] rounded-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[#2A2A3A]">
+            <span className="text-[#F0F0F5] text-sm font-semibold">{block.title}</span>
+            <button
+              onClick={() => copyBlock(idx, block.html)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#1C1C26] hover:bg-[#2A2A3A] text-xs font-medium transition-colors"
+              style={{ color: copied === idx ? "#10B981" : "#8888A0" }}
+            >
+              {copied === idx ? <Check size={12} /> : <Copy size={12} />}
+              {copied === idx ? "Copiado" : "Copiar"}
+            </button>
+          </div>
+          <pre className="p-4 text-[11px] text-[#8888A0] font-mono overflow-x-auto max-h-48 leading-relaxed whitespace-pre-wrap break-all">
+            {block.html.length > 800 ? block.html.slice(0, 800) + "\n\n[... ver completo al copiar]" : block.html}
+          </pre>
+          <div className="px-4 py-2 bg-[#0A0A0F] border-t border-[#2A2A3A]">
+            <p className="text-[#555568] text-[10px]">
+              📌 Shopify: Tema › Editar código › Sección &quot;Liquid personalizado&quot; › Pegar › Añadir botón de compra antes del siguiente bloque.
+            </p>
+          </div>
+        </div>
+      ))}
+
+      {blocks.length === 0 && !generating && !genError && (
+        <div className="bg-[#13131A] border-2 border-dashed border-[#2A2A3A] rounded-2xl py-14 flex flex-col items-center gap-3 text-center">
+          <Sparkles size={28} className="text-[#10B981] opacity-50" />
+          <p className="text-[#8888A0] text-sm">Haz clic en &quot;Generar bloques&quot; para crear tu landing Shopify.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PageEditorContent({ sections, setSections, product, forgeConfig, landingName }: {
+  sections: Section[]; setSections: React.Dispatch<React.SetStateAction<Section[]>>; product: string;
+  forgeConfig?: Record<string, string> | null; landingName?: string;
+}) {
+  const [activeTab, setActiveTab] = useState<"sections" | "shopify">("sections");
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [showAddSection, setShowAddSection] = useState(false);
   const [dragOver, setDragOver] = useState<string | null>(null);
@@ -425,6 +536,22 @@ function PageEditorContent({ sections, setSections, product }: {
     <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-3">
       {editingSection && <EditPanel section={editingSection} product={product} onSave={handleSaveSection} onClose={() => setEditingSection(null)} />}
       {showAddSection && <AddSectionModal onAdd={handleAddSection} onClose={() => setShowAddSection(false)} existing={sections.map((s) => s.type)} />}
+
+      {forgeConfig && (
+        <div className="flex gap-1 bg-[#13131A] border border-[#2A2A3A] rounded-xl p-1 mb-2">
+          <button onClick={() => setActiveTab("sections")} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${activeTab === "sections" ? "bg-[#FF6B35] text-white" : "text-[#8888A0] hover:text-[#F0F0F5]"}`}>
+            Secciones
+          </button>
+          <button onClick={() => setActiveTab("shopify")} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${activeTab === "shopify" ? "bg-[#10B981] text-white" : "text-[#8888A0] hover:text-[#F0F0F5]"}`}>
+            🛍️ Shopify Export
+          </button>
+        </div>
+      )}
+
+      {activeTab === "shopify" && forgeConfig ? (
+        <ShopifyExportTab forgeConfig={forgeConfig} product={product} landingName={landingName ?? product} />
+      ) : (
+      <>
       <div className="flex items-center justify-between mb-2">
         <p className="text-[#8888A0] text-xs">{sections.length} sección{sections.length !== 1 ? "es" : ""}</p>
         <button onClick={() => setShowAddSection(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[#3A3A4A] hover:border-[#FF6B35] text-[#555568] hover:text-[#FF6B35] text-xs font-medium transition-colors">
@@ -462,6 +589,8 @@ function PageEditorContent({ sections, setSections, product }: {
       <button onClick={() => setShowAddSection(true)} className="w-full py-4 rounded-2xl border-2 border-dashed border-[#2A2A3A] hover:border-[#FF6B35] text-[#555568] hover:text-[#FF6B35] text-sm font-medium transition-colors flex items-center justify-center gap-2">
         <Plus size={16} />Agregar nueva sección
       </button>
+      </>
+      )}
     </div>
   );
 }
@@ -1796,6 +1925,7 @@ export default function LandingEditorPage() {
   const [sections, setSections] = useState<Section[]>([]);
   const [bannerConfig, setBannerConfig] = useState<BannerConfig>(DEFAULT_BANNER_CONFIG);
   const [generatedImages, setGeneratedImages] = useState<Record<string, string[]>>({});
+  const [forgeConfig, setForgeConfig] = useState<Record<string, string> | null>(null);
 
   const supabase = createClient();
 
@@ -1816,6 +1946,7 @@ export default function LandingEditorPage() {
       setSlug(landingData.slug ?? "");
       setPublished(landingData.published ?? false);
       setMode(landingMode);
+      if (landingData.forge_config) setForgeConfig(landingData.forge_config as Record<string, string>);
 
       if (landingMode === "banners") {
         if (landingData.banner_config && Object.keys(landingData.banner_config).length > 0) {
@@ -1897,7 +2028,8 @@ export default function LandingEditorPage() {
           product={product} landingId={id}
         />
       ) : (
-        <PageEditorContent sections={sections} setSections={setSections} product={product} />
+        <PageEditorContent sections={sections} setSections={setSections} product={product}
+          forgeConfig={forgeConfig} landingName={landingName} />
       )}
     </div>
   );
